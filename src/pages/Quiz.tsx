@@ -125,7 +125,7 @@ const Quiz = () => {
           email: email.trim().toLowerCase(),
           answers: answers,
           component_scores: scores,
-          top_components: topComponents,
+          top_components: topComponents as ("all_or_nothing" | "overgeneralization" | "mental_filter" | "disqualifying_positive" | "jumping_conclusions" | "magnification" | "emotional_reasoning" | "should_statements" | "labeling" | "personalization")[],
         })
         .select()
         .single();
