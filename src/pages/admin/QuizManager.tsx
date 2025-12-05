@@ -163,7 +163,7 @@ const QuizManager = () => {
         const newOptions = formData.options.map((o, index) => ({
           question_id: editingQuestion.id,
           option_text: o.option_text,
-          component_key: o.component_key,
+          component_key: o.component_key as "all_or_nothing" | "overgeneralization" | "mental_filter" | "disqualifying_positive" | "jumping_conclusions" | "magnification" | "emotional_reasoning" | "should_statements" | "labeling" | "personalization",
           display_order: index + 1,
         }));
 
@@ -192,7 +192,7 @@ const QuizManager = () => {
         const newOptions = formData.options.map((o, index) => ({
           question_id: newQuestion.id,
           option_text: o.option_text,
-          component_key: o.component_key,
+          component_key: o.component_key as "all_or_nothing" | "overgeneralization" | "mental_filter" | "disqualifying_positive" | "jumping_conclusions" | "magnification" | "emotional_reasoning" | "should_statements" | "labeling" | "personalization",
           display_order: index + 1,
         }));
 
