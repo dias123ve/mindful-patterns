@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      component_pdfs: {
+        Row: {
+          component_id: string
+          created_at: string
+          id: string
+          pdf_id: string
+        }
+        Insert: {
+          component_id: string
+          created_at?: string
+          id?: string
+          pdf_id: string
+        }
+        Update: {
+          component_id?: string
+          created_at?: string
+          id?: string
+          pdf_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "component_pdfs_component_id_fkey"
+            columns: ["component_id"]
+            isOneToOne: false
+            referencedRelation: "components"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "component_pdfs_pdf_id_fkey"
+            columns: ["pdf_id"]
+            isOneToOne: false
+            referencedRelation: "pdf_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       components: {
         Row: {
           component_key: Database["public"]["Enums"]["thinking_component"]
@@ -83,18 +119,21 @@ export type Database = {
       pdf_documents: {
         Row: {
           created_at: string
+          file_name: string | null
           file_url: string
           id: string
           title: string
         }
         Insert: {
           created_at?: string
+          file_name?: string | null
           file_url: string
           id?: string
           title: string
         }
         Update: {
           created_at?: string
+          file_name?: string | null
           file_url?: string
           id?: string
           title?: string
@@ -138,7 +177,9 @@ export type Database = {
       }
       questions: {
         Row: {
+          category: string | null
           component_key: string | null
+          correct_answer: string | null
           created_at: string
           display_order: number
           id: string
@@ -147,7 +188,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          category?: string | null
           component_key?: string | null
+          correct_answer?: string | null
           created_at?: string
           display_order?: number
           id?: string
@@ -156,7 +199,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          category?: string | null
           component_key?: string | null
+          correct_answer?: string | null
           created_at?: string
           display_order?: number
           id?: string
