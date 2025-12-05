@@ -80,30 +80,51 @@ export type Database = {
         }
         Relationships: []
       }
+      pdf_documents: {
+        Row: {
+          created_at: string
+          file_url: string
+          id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          file_url: string
+          id?: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          file_url?: string
+          id?: string
+          title?: string
+        }
+        Relationships: []
+      }
       question_options: {
         Row: {
-          component_key: Database["public"]["Enums"]["thinking_component"]
           created_at: string
           display_order: number
           id: string
           option_text: string
           question_id: string
+          score: number | null
         }
         Insert: {
-          component_key: Database["public"]["Enums"]["thinking_component"]
           created_at?: string
           display_order?: number
           id?: string
           option_text: string
           question_id: string
+          score?: number | null
         }
         Update: {
-          component_key?: Database["public"]["Enums"]["thinking_component"]
           created_at?: string
           display_order?: number
           id?: string
           option_text?: string
           question_id?: string
+          score?: number | null
         }
         Relationships: [
           {
@@ -117,6 +138,7 @@ export type Database = {
       }
       questions: {
         Row: {
+          component_key: string | null
           created_at: string
           display_order: number
           id: string
@@ -125,6 +147,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          component_key?: string | null
           created_at?: string
           display_order?: number
           id?: string
@@ -133,6 +156,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          component_key?: string | null
           created_at?: string
           display_order?: number
           id?: string

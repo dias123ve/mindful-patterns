@@ -10,6 +10,7 @@ import { toast } from "sonner";
 interface Question {
   id: string;
   question_text: string;
+  component_key: string | null;
   display_order: number;
 }
 
@@ -17,7 +18,7 @@ interface QuestionOption {
   id: string;
   question_id: string;
   option_text: string;
-  component_key: string;
+  score: number;
   display_order: number;
 }
 
@@ -26,7 +27,7 @@ const Quiz = () => {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [options, setOptions] = useState<QuestionOption[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [answers, setAnswers] = useState<Record<string, { optionId: string; score: number }>>({});
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -68,12 +69,12 @@ const Quiz = () => {
     ? ((currentQuestionIndex + 1) / questions.length) * 100
     : 0;
 
-  const handleSelectOption = (optionId: string, componentKey: string) => {
+  const handleSelectOption = (optionId: string, score: number) => {
     if (!currentQuestion) return;
 
     setAnswers((prev) => ({
       ...prev,
-      [currentQuestion.id]: componentKey,
+      [currentQuestion.id]: { optionId, score },
     }));
 
     // Delay then move to next question
@@ -89,11 +90,15 @@ const Quiz = () => {
   const calculateScores = () => {
     const scores: Record<string, number> = {};
     
-    Object.values(answers).forEach((componentKey) => {
-      scores[componentKey] = (scores[componentKey] || 0) + 1;
+    // For each answered question, add the score to the component
+    questions.forEach((question) => {
+      const answer = answers[question.id];
+      if (answer && question.component_key) {
+        scores[question.component_key] = (scores[question.component_key] || 0) + answer.score;
+      }
     });
 
-    // Get top 3 components
+    // Get top 3 components by score
     const sortedComponents = Object.entries(scores)
       .sort(([, a], [, b]) => b - a)
       .slice(0, 3)
@@ -134,7 +139,7 @@ const Quiz = () => {
 
       // Store submission ID for results page
       sessionStorage.setItem("quiz_submission_id", data.id);
-      navigate("/enter-email");
+      navigate("/results");
     } catch (error) {
       console.error("Error submitting quiz:", error);
       toast.error("Failed to submit quiz. Please try again.");
@@ -204,10 +209,10 @@ const Quiz = () => {
                   <button
                     key={option.id}
                     onClick={() =>
-                      handleSelectOption(option.id, option.component_key)
+                      handleSelectOption(option.id, option.score)
                     }
                     className={`w-full text-left p-5 rounded-xl border-2 transition-all duration-200 ${
-                      answers[currentQuestion?.id] === option.component_key
+                      answers[currentQuestion?.id]?.optionId === option.id
                         ? "border-primary bg-primary/10 shadow-soft"
                         : "border-border bg-card hover:border-primary/50 hover:bg-primary/5"
                     }`}
