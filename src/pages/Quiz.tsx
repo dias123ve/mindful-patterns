@@ -134,7 +134,7 @@ const Quiz = () => {
 
       // Store submission ID for results page
       sessionStorage.setItem("quiz_submission_id", data.id);
-      navigate("/results");
+      navigate("/enter-email");
     } catch (error) {
       console.error("Error submitting quiz:", error);
       toast.error("Failed to submit quiz. Please try again.");
