@@ -17,6 +17,7 @@ import PDFModules from "./pages/admin/PDFModules";
 import EmailSettings from "./pages/admin/EmailSettings";
 import Submissions from "./pages/admin/Submissions";
 import NotFound from "./pages/NotFound";
+import EnterEmail from "./pages/EnterEmail";
 
 const queryClient = new QueryClient();
 
@@ -29,10 +30,12 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/quiz" element={<Quiz />} />
+          <Route path="/enter-email" element={<EnterEmail />} />
+
           <Route path="/results" element={<Results />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/thank-you" element={<ThankYou />} />
-          
+
           {/* Admin Routes */}
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />}>
@@ -43,7 +46,7 @@ const App = () => (
             <Route path="email" element={<EmailSettings />} />
             <Route path="submissions" element={<Submissions />} />
           </Route>
-          
+
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
