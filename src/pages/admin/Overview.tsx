@@ -1,14 +1,15 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileQuestion, Users, CreditCard, Puzzle, Loader2 } from "lucide-react";
+import { FileQuestion, Users, FileText, Puzzle, Loader2, TrendingUp } from "lucide-react";
 
 const AdminOverview = () => {
   const [stats, setStats] = useState({
     totalQuestions: 0,
+    totalComponents: 0,
+    totalPdfs: 0,
     totalSubmissions: 0,
     purchases: 0,
-    components: 10,
   });
   const [loading, setLoading] = useState(true);
 
@@ -18,8 +19,10 @@ const AdminOverview = () => {
 
   const fetchStats = async () => {
     try {
-      const [questionsRes, submissionsRes, purchasesRes] = await Promise.all([
+      const [questionsRes, componentsRes, pdfsRes, submissionsRes, purchasesRes] = await Promise.all([
         supabase.from("questions").select("id", { count: "exact", head: true }),
+        supabase.from("components").select("id", { count: "exact", head: true }),
+        supabase.from("pdf_documents").select("id", { count: "exact", head: true }),
         supabase.from("quiz_submissions").select("id", { count: "exact", head: true }),
         supabase
           .from("quiz_submissions")
@@ -29,9 +32,10 @@ const AdminOverview = () => {
 
       setStats({
         totalQuestions: questionsRes.count || 0,
+        totalComponents: componentsRes.count || 0,
+        totalPdfs: pdfsRes.count || 0,
         totalSubmissions: submissionsRes.count || 0,
         purchases: purchasesRes.count || 0,
-        components: 10,
       });
     } catch (error) {
       console.error("Error fetching stats:", error);
@@ -57,25 +61,32 @@ const AdminOverview = () => {
       bg: "bg-primary/10",
     },
     {
-      title: "Quiz Submissions",
-      value: stats.totalSubmissions,
-      icon: Users,
+      title: "Components",
+      value: stats.totalComponents,
+      icon: Puzzle,
       color: "text-accent",
       bg: "bg-accent/10",
     },
     {
-      title: "Ebook Purchases",
-      value: stats.purchases,
-      icon: CreditCard,
-      color: "text-success",
-      bg: "bg-success/10",
+      title: "PDF Modules",
+      value: stats.totalPdfs,
+      icon: FileText,
+      color: "text-chart-3",
+      bg: "bg-chart-3/10",
     },
     {
-      title: "Components",
-      value: stats.components,
-      icon: Puzzle,
-      color: "text-primary",
-      bg: "bg-primary/10",
+      title: "Quiz Submissions",
+      value: stats.totalSubmissions,
+      icon: Users,
+      color: "text-chart-4",
+      bg: "bg-chart-4/10",
+    },
+    {
+      title: "Ebook Purchases",
+      value: stats.purchases,
+      icon: TrendingUp,
+      color: "text-chart-2",
+      bg: "bg-chart-2/10",
     },
   ];
 
@@ -91,7 +102,7 @@ const AdminOverview = () => {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {statCards.map((stat) => {
           const Icon = stat.icon;
           return (
@@ -121,9 +132,10 @@ const AdminOverview = () => {
         </CardHeader>
         <CardContent className="space-y-2 text-sm text-muted-foreground">
           <p>• Add or edit quiz questions in the Quiz Manager</p>
-          <p>• Update component descriptions and examples</p>
-          <p>• Upload PDF modules for each thinking component</p>
-          <p>• Configure email templates for ebook delivery</p>
+          <p>• Create and manage thinking components</p>
+          <p>• Upload PDF modules and assign them to components</p>
+          <p>• Configure email settings for ebook delivery</p>
+          <p>• View all quiz submissions and user results</p>
         </CardContent>
       </Card>
     </div>

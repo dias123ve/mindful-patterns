@@ -36,17 +36,19 @@ const EmailSettingsPage = () => {
       const { data, error } = await supabase
         .from("email_settings")
         .select("*")
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
 
-      setSettings(data);
-      setFormData({
-        sender_email: data.sender_email,
-        sender_name: data.sender_name,
-        subject: data.subject,
-        body_template: data.body_template,
-      });
+      if (data) {
+        setSettings(data);
+        setFormData({
+          sender_email: data.sender_email,
+          sender_name: data.sender_name,
+          subject: data.subject,
+          body_template: data.body_template,
+        });
+      }
     } catch (error) {
       console.error("Error fetching email settings:", error);
       toast.error("Failed to load email settings");
@@ -56,22 +58,32 @@ const EmailSettingsPage = () => {
   };
 
   const handleSave = async () => {
-    if (!settings) return;
-
     setSaving(true);
 
     try {
-      const { error } = await supabase
-        .from("email_settings")
-        .update({
+      if (settings) {
+        const { error } = await supabase
+          .from("email_settings")
+          .update({
+            sender_email: formData.sender_email,
+            sender_name: formData.sender_name,
+            subject: formData.subject,
+            body_template: formData.body_template,
+          })
+          .eq("id", settings.id);
+
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("email_settings").insert({
           sender_email: formData.sender_email,
           sender_name: formData.sender_name,
           subject: formData.subject,
           body_template: formData.body_template,
-        })
-        .eq("id", settings.id);
+        });
 
-      if (error) throw error;
+        if (error) throw error;
+        fetchSettings();
+      }
 
       toast.success("Email settings saved successfully");
     } catch (error) {
@@ -167,7 +179,7 @@ const EmailSettingsPage = () => {
               </div>
 
               <div>
-                <Label>Email Body</Label>
+                <Label>Email Body (Rich Text Template)</Label>
                 <Textarea
                   value={formData.body_template}
                   onChange={(e) =>
@@ -178,6 +190,7 @@ const EmailSettingsPage = () => {
                   }
                   rows={12}
                   className="mt-1 font-mono text-sm"
+                  placeholder="Hi {{user_name}},&#10;&#10;Thank you for taking the MindProfile quiz!&#10;&#10;Your top thinking patterns are:&#10;1. {{component_1}}&#10;2. {{component_2}}&#10;3. {{component_3}}&#10;&#10;Download your ebook modules:&#10;{{ebook_links}}&#10;&#10;Best regards,&#10;The MindProfile Team"
                 />
               </div>
 

@@ -1,109 +1,157 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, Upload, Loader2, Check, X, ExternalLink } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Upload, Trash2, Loader2, ExternalLink, FileText } from "lucide-react";
 import { toast } from "sonner";
+import { format } from "date-fns";
 
-interface Component {
+interface PdfDocument {
   id: string;
-  component_key: string;
-  name: string;
-  pdf_url: string | null;
+  title: string;
+  file_name: string | null;
+  file_url: string;
+  created_at: string;
 }
 
 const PDFModules = () => {
-  const [components, setComponents] = useState<Component[]>([]);
+  const [pdfs, setPdfs] = useState<PdfDocument[]>([]);
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState<string | null>(null);
-  const fileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
+  const [uploading, setUploading] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    title: "",
+    file: null as File | null,
+  });
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    fetchComponents();
+    fetchPdfs();
   }, []);
 
-  const fetchComponents = async () => {
+  const fetchPdfs = async () => {
     try {
       const { data, error } = await supabase
-        .from("components")
-        .select("id, component_key, name, pdf_url")
-        .order("display_order");
+        .from("pdf_documents")
+        .select("*")
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setComponents(data || []);
+      setPdfs(data || []);
     } catch (error) {
-      console.error("Error fetching components:", error);
-      toast.error("Failed to load components");
+      console.error("Error fetching PDFs:", error);
+      toast.error("Failed to load PDFs");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleUpload = async (componentId: string, file: File) => {
-    if (!file.type.includes("pdf")) {
-      toast.error("Please upload a PDF file");
+  const resetForm = () => {
+    setFormData({ title: "", file: null });
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.type !== "application/pdf") {
+        toast.error("Please select a PDF file");
+        return;
+      }
+      if (file.size > 20 * 1024 * 1024) {
+        toast.error("File size must be less than 20MB");
+        return;
+      }
+      setFormData((prev) => ({ ...prev, file }));
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!formData.file) {
+      toast.error("Please select a PDF file");
       return;
     }
 
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error("File size must be less than 10MB");
-      return;
-    }
-
-    setUploading(componentId);
-
+    setUploading(true);
     try {
-      const component = components.find((c) => c.id === componentId);
-      if (!component) return;
+      const fileName = `${Date.now()}-${formData.file.name}`;
 
-      const filePath = `${component.component_key}/${Date.now()}_${file.name}`;
-
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      // Upload to Supabase Storage
+      const { error: uploadError } = await supabase.storage
         .from("pdf-modules")
-        .upload(filePath, file, {
-          cacheControl: "3600",
-          upsert: true,
-        });
+        .upload(fileName, formData.file);
 
       if (uploadError) throw uploadError;
 
+      // Get public URL
       const { data: urlData } = supabase.storage
         .from("pdf-modules")
-        .getPublicUrl(filePath);
+        .getPublicUrl(fileName);
 
-      const { error: updateError } = await supabase
-        .from("components")
-        .update({ pdf_url: urlData.publicUrl })
-        .eq("id", componentId);
+      // Insert metadata into pdf_documents table
+      const { error: insertError } = await supabase.from("pdf_documents").insert({
+        title: formData.title || formData.file.name,
+        file_name: formData.file.name,
+        file_url: urlData.publicUrl,
+      });
 
-      if (updateError) throw updateError;
+      if (insertError) throw insertError;
 
       toast.success("PDF uploaded successfully");
-      fetchComponents();
+      setDialogOpen(false);
+      resetForm();
+      fetchPdfs();
     } catch (error) {
       console.error("Error uploading PDF:", error);
       toast.error("Failed to upload PDF");
     } finally {
-      setUploading(null);
+      setUploading(false);
     }
   };
 
-  const handleRemove = async (componentId: string) => {
-    if (!confirm("Are you sure you want to remove this PDF?")) return;
+  const handleDelete = async (pdf: PdfDocument) => {
+    if (!confirm("Are you sure you want to delete this PDF? This will also remove it from any assigned components.")) {
+      return;
+    }
 
     try {
+      // Extract file path from URL
+      const urlParts = pdf.file_url.split("/");
+      const fileName = urlParts[urlParts.length - 1];
+
+      // Delete from storage
+      await supabase.storage.from("pdf-modules").remove([fileName]);
+
+      // Delete from database (cascade will handle component_pdfs)
       const { error } = await supabase
-        .from("components")
-        .update({ pdf_url: null })
-        .eq("id", componentId);
+        .from("pdf_documents")
+        .delete()
+        .eq("id", pdf.id);
 
       if (error) throw error;
 
-      toast.success("PDF removed");
-      fetchComponents();
+      toast.success("PDF deleted successfully");
+      fetchPdfs();
     } catch (error) {
-      console.error("Error removing PDF:", error);
-      toast.error("Failed to remove PDF");
+      console.error("Error deleting PDF:", error);
+      toast.error("Failed to delete PDF");
     }
   };
 
@@ -117,100 +165,133 @@ const PDFModules = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-display font-bold text-foreground">
-          PDF Modules
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          Upload PDF ebook modules for each thinking component
-        </p>
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <h1 className="text-2xl font-display font-bold text-foreground">
+            PDF Modules
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Upload and manage PDF files for ebook delivery
+          </p>
+        </div>
+
+        <Button onClick={() => setDialogOpen(true)}>
+          <Upload className="h-4 w-4 mr-2" />
+          Upload PDF
+        </Button>
       </div>
 
-      {/* Upload Grid */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {components.map((component) => (
-          <Card key={component.id} className="animate-fade-in">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <FileText className="h-4 w-4 text-primary" />
-                {component.name}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {component.pdf_url ? (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 p-3 bg-success/10 rounded-lg">
-                    <Check className="h-4 w-4 text-success" />
-                    <span className="text-sm text-success font-medium">
-                      PDF uploaded
-                    </span>
-                  </div>
-                  <div className="flex gap-2">
-                    <a
-                      href={component.pdf_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-1"
-                    >
-                      <Button variant="outline" size="sm" className="w-full">
-                        <ExternalLink className="h-4 w-4 mr-2" />
-                        View PDF
+      {/* PDF Table */}
+      <div className="border rounded-lg">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>File Name</TableHead>
+              <TableHead>Title</TableHead>
+              <TableHead>Created At</TableHead>
+              <TableHead className="w-32">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {pdfs.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                  No PDFs uploaded yet. Click "Upload PDF" to add one.
+                </TableCell>
+              </TableRow>
+            ) : (
+              pdfs.map((pdf) => (
+                <TableRow key={pdf.id}>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-primary" />
+                      <span className="truncate max-w-xs">
+                        {pdf.file_name || "—"}
+                      </span>
+                    </div>
+                  </TableCell>
+                  <TableCell>{pdf.title || "—"}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {format(new Date(pdf.created_at), "MMM d, yyyy")}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1">
+                      <a
+                        href={pdf.file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <Button variant="ghost" size="icon" title="View/Download">
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
+                      </a>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete(pdf)}
+                        className="text-destructive hover:text-destructive"
+                        title="Delete"
+                      >
+                        <Trash2 className="h-4 w-4" />
                       </Button>
-                    </a>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => fileInputRefs.current[component.id]?.click()}
-                      disabled={uploading === component.id}
-                    >
-                      Replace
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRemove(component.id)}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div
-                  onClick={() => fileInputRefs.current[component.id]?.click()}
-                  className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-colors"
-                >
-                  {uploading === component.id ? (
-                    <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-2" />
-                  ) : (
-                    <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                  )}
-                  <p className="text-sm text-muted-foreground">
-                    {uploading === component.id
-                      ? "Uploading..."
-                      : "Click to upload PDF"}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Max 10MB
-                  </p>
-                </div>
-              )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
-              <input
-                ref={(el) => (fileInputRefs.current[component.id] = el)}
+      {/* Upload Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={(open) => {
+        setDialogOpen(open);
+        if (!open) resetForm();
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Upload PDF</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div>
+              <Label>PDF File</Label>
+              <Input
+                ref={fileInputRef}
                 type="file"
                 accept=".pdf"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handleUpload(component.id, file);
-                  e.target.value = "";
-                }}
+                onChange={handleFileChange}
+                className="mt-1"
               />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Max file size: 20MB
+              </p>
+            </div>
+
+            <div>
+              <Label>Title (optional)</Label>
+              <Input
+                value={formData.title}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, title: e.target.value }))
+                }
+                placeholder="Enter a title for this PDF"
+                className="mt-1"
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4">
+              <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleUpload} disabled={uploading || !formData.file}>
+                {uploading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Upload
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
