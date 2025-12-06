@@ -106,10 +106,10 @@ const ComponentsManager = () => {
   const openEditDialog = (component: Component) => {
     setEditingComponent(component);
     setFormData({
-      name: component.name,
-      description: component.description,
-      examples: component.examples,
-    });
+  name: component.name,
+  description: component.content?.description || "",
+  examples: component.content?.examples || "",
+});
     setDialogOpen(true);
   };
 
@@ -122,14 +122,16 @@ const ComponentsManager = () => {
     setSaving(true);
     try {
       if (editingComponent) {
-        const { error } = await supabase
-          .from("components")
-          .update({
-            name: formData.name,
-            description: formData.description,
-            examples: formData.examples,
-          })
-          .eq("id", editingComponent.id);
+  const { error } = await supabase
+    .from("components")
+    .update({
+      name: formData.name,
+      content: {
+        description: formData.description,
+        examples: formData.examples,
+      },
+    })
+    .eq("id", editingComponent.id);
 
         if (error) throw error;
         toast.success("Component updated successfully");
@@ -143,12 +145,14 @@ const ComponentsManager = () => {
         const maxOrder = Math.max(...components.map((c) => c.display_order), 0);
 
         const { error } = await supabase.from("components").insert({
-          component_key: componentKey as any,
-          name: formData.name,
-          description: formData.description,
-          examples: formData.examples,
-          display_order: maxOrder + 1,
-        });
+  name: formData.name,
+  type: "component",
+  content: {
+    description: formData.description,
+    examples: formData.examples,
+  },
+});
+
 
         if (error) throw error;
         toast.success("Component created successfully");
