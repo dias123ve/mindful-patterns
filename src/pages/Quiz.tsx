@@ -46,11 +46,13 @@ const Quiz = () => {
         supabase
           .from("quiz_questions")
           .select("*")
-          .order("display_order"),
+          .order("display_order", { ascending: true }),
+
         supabase
           .from("quiz_question_options")
           .select("*")
-          .order("display_order"),
+          .order("question_id", { ascending: true })
+          .order("display_order", { ascending: true }),
       ]);
 
       if (qRes.error) throw qRes.error;
@@ -59,8 +61,7 @@ const Quiz = () => {
       setQuestions(qRes.data || []);
       setOptions(oRes.data || []);
     } catch (err) {
-      console.error("Quiz load error:", err);
-      toast.error("Failed to load quiz. Try again.");
+      toast.error("Failed to load quiz.");
     } finally {
       setLoading(false);
     }
@@ -143,8 +144,7 @@ const Quiz = () => {
 
       sessionStorage.setItem("quiz_submission_id", data.id);
       navigate("/results");
-    } catch (err) {
-      console.error("Submit error:", err);
+    } catch {
       toast.error("Failed to submit");
     } finally {
       setSubmitting(false);
