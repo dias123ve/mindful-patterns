@@ -128,11 +128,11 @@ const ComponentsManager = () => {
     .from("components")
     .update({
   name: formData.name,
-  type: editingComponent.type, // tambahkan
+  type: editingComponent.type || "component", // tambahkan
   content: {
-    description: formData.description,
-    examples: formData.examples,
-  },
+  description: formData.description || "",
+  examples: formData.examples || "",
+},
 })
 
     .eq("id", editingComponent.id);
@@ -164,7 +164,7 @@ const ComponentsManager = () => {
       resetForm();
       fetchData();
     } catch (error: any) {
-      console.error("Error saving component:", error);
+      console.error("Supabase error:", JSON.stringify(error, null, 2));
       if (error.code === "23505") {
         toast.error("A component with this name already exists");
       } else {
