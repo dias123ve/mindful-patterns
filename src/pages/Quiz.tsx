@@ -45,6 +45,7 @@ const Quiz = () => {
       const { data: qData, error: qErr } = await supabase
         .from("quiz_questions")
         .select("*")
+        .eq("quiz_id", import.meta.env.VITE_QUIZ_ID)
         .order("display_order", { ascending: true });
 
       const { data: oData, error: oErr } = await supabase
