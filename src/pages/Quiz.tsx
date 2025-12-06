@@ -36,12 +36,14 @@ const Quiz = () => {
   const [submitting, setSubmitting] = useState(false);
   const [showEmailCapture, setShowEmailCapture] = useState(false);
 
+  // ------------------------------------------------------------
+  // FETCH QUIZ DATA
+  // ------------------------------------------------------------
   useEffect(() => {
     fetchQuizData();
   }, []);
 
   const fetchQuizData = async () => {
-     console.log("Quiz ID ENV:", import.meta.env.VITE_QUIZ_ID);
     try {
       const { data: qData, error: qErr } = await supabase
         .from("quiz_questions")
@@ -49,9 +51,6 @@ const Quiz = () => {
         .eq("quiz_id", import.meta.env.VITE_QUIZ_ID)
         .order("display_order", { ascending: true });
 
-console.log("qData:", qData);
-console.log("qErr:", qErr);
-      
       const { data: oData, error: oErr } = await supabase
         .from("quiz_question_options")
         .select("*")
@@ -70,6 +69,9 @@ console.log("qErr:", qErr);
     }
   };
 
+  // ------------------------------------------------------------
+  // QUIZ PROGRESS
+  // ------------------------------------------------------------
   const currentQuestion = questions[currentQuestionIndex];
   const currentOptions = options.filter(
     (o) => o.question_id === currentQuestion?.id
@@ -79,6 +81,9 @@ console.log("qErr:", qErr);
     ? ((currentQuestionIndex + 1) / questions.length) * 100
     : 0;
 
+  // ------------------------------------------------------------
+  // ANSWER SELECT
+  // ------------------------------------------------------------
   const handleSelectOption = (optionId: string, score: number) => {
     if (!currentQuestion) return;
 
@@ -96,6 +101,9 @@ console.log("qErr:", qErr);
     }, 250);
   };
 
+  // ------------------------------------------------------------
+  // SCORE CALCULATION
+  // ------------------------------------------------------------
   const calculateScores = () => {
     const scores: Record<string, number> = {};
 
@@ -115,66 +123,68 @@ console.log("qErr:", qErr);
     return { scores, topComponents };
   };
 
-const handleSubmit = async () => {
-  if (!email.trim()) {
-    toast.error("Enter your email");
-    return;
-  }
+  // ------------------------------------------------------------
+  // SUBMIT QUIZ
+  // ------------------------------------------------------------
+  const handleSubmit = async () => {
+    if (!email.trim()) {
+      toast.error("Enter your email");
+      return;
+    }
 
-  const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  if (!valid) {
-    toast.error("Email is invalid");
-    return;
-  }
+    const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    if (!valid) {
+      toast.error("Email is invalid");
+      return;
+    }
 
-  setSubmitting(true);
+    setSubmitting(true);
 
-  try {
-    const { scores, topComponents } = calculateScores();
+    try {
+      const { scores, topComponents } = calculateScores();
 
-    // 1) Ambil nama komponen dari tabel components
-    const { data: compData, error: compErr } = await supabase
-      .from("components")
-      .select("id, name")
-      .in("id", topComponents);
+      // Fetch component names
+      const { data: compData, error: compErr } = await supabase
+        .from("components")
+        .select("id, name")
+        .in("id", topComponents);
 
-    if (compErr) throw compErr;
+      if (compErr) throw compErr;
 
-    // 2) Urutkan nama sesuai urutan topComponents
-    const topComponentNames = topComponents.map(
-      (cid) => compData?.find((c) => c.id === cid)?.name || "Unknown"
-    );
+      const topComponentNames = topComponents.map(
+        (cid) => compData?.find((c) => c.id === cid)?.name || "Unknown"
+      );
 
-    // 3) Hitung total score (opsional)
-    const totalScore = Object.values(scores).reduce((a, b) => a + b, 0);
+      const totalScore = Object.values(scores).reduce((a, b) => a + b, 0);
 
-    // 4) INSERT sesuai nama kolom di DB
-    const { data, error } = await supabase
-      .from("quiz_submissions")
-      .insert({
-        quiz_id: import.meta.env.VITE_QUIZ_ID,
-        user_email: email.trim().toLowerCase(),
-        answers,
-        score: totalScore,
-        top_components: topComponents,
-        top_component_names: topComponentNames,
-      })
-      .select()
-      .single();
+      const { data, error } = await supabase
+        .from("quiz_submissions")
+        .insert({
+          quiz_id: import.meta.env.VITE_QUIZ_ID,
+          user_email: email.trim().toLowerCase(),
+          answers,
+          score: totalScore,
+          top_components: topComponents,
+          top_component_names: topComponentNames,
+        })
+        .select()
+        .single();
 
-    if (error) throw error;
+      if (error) throw error;
 
-    sessionStorage.setItem("quiz_submission_id", data.id);
-    navigate("/results");
-  } catch (err) {
-    console.error(err);
-    toast.error("Failed to submit");
-  } finally {
-    setSubmitting(false);
-  }
-};
+      sessionStorage.setItem("quiz_submission_id", data.id);
+      navigate("/results");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to submit");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
-
+  // ------------------------------------------------------------
+  // UI
+  // ------------------------------------------------------------
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-hero flex items-center justify-center">
@@ -230,9 +240,7 @@ const handleSubmit = async () => {
                 {currentOptions.map((opt, i) => (
                   <button
                     key={opt.id}
-                    onClick={() =>
-                      handleSelectOption(opt.id, opt.score)
-                    }
+                    onClick={() => handleSelectOption(opt.id, opt.score)}
                     className={`w-full text-left p-5 rounded-xl border-2 transition-all ${
                       answers[currentQuestion.id]?.optionId === opt.id
                         ? "border-primary bg-primary/10 shadow-soft"
@@ -288,9 +296,7 @@ const handleSubmit = async () => {
                   )}
                 </Button>
 
-                <p className="text-xs text-muted-foreground">
-                  No spam. Ever.
-                </p>
+                <p className="text-xs text-muted-foreground">No spam. Ever.</p>
               </div>
             </div>
           )}
