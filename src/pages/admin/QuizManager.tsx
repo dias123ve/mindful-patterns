@@ -80,6 +80,9 @@ const QuizManager = () => {
         supabase.from("components").select("id,name,type").order("name"),
       ]);
 
+console.log("componentsRes", componentsRes);
+
+      
       if (questionsRes.error) throw questionsRes.error;
       if (optionsRes.error) throw optionsRes.error;
       if (componentsRes.error) throw componentsRes.error;
