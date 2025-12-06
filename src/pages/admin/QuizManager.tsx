@@ -147,6 +147,7 @@ const QuizManager = () => {
           .update({
             question_text: formData.question_text,
             component_id: formData.component_id || null,
+            quiz_id: import.meta.env.VITE_QUIZ_ID,
           })
           .eq("id", editingQuestion.id);
 
@@ -188,6 +189,7 @@ const QuizManager = () => {
             question_text: formData.question_text,
             component_id: formData.component_id || null,
             display_order: maxOrder + 1,
+            quiz_id: import.meta.env.VITE_QUIZ_ID,
           })
           .select()
           .single();
