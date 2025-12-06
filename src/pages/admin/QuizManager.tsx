@@ -1,3 +1,4 @@
+// src/components/QuizManager.tsx
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -24,10 +25,9 @@ import { toast } from "sonner";
 interface Question {
   id: string;
   question_text: string;
-  category: string | null;
-  correct_answer: string | null;
   display_order: number;
   is_active: boolean;
+  component_id?: string | null;
 }
 
 interface QuestionOption {
@@ -38,18 +38,25 @@ interface QuestionOption {
   display_order: number;
 }
 
+interface ComponentRow {
+  id: string;
+  name: string;
+  type: string;
+  // other fields ignored
+}
+
 const QuizManager = () => {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [options, setOptions] = useState<QuestionOption[]>([]);
+  const [components, setComponents] = useState<ComponentRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
-  
+
   const [formData, setFormData] = useState({
     question_text: "",
-    category: "",
-    correct_answer: "",
+    component_id: "",
     options: [
       { option_text: "", score: 1 },
       { option_text: "", score: 2 },
@@ -64,17 +71,22 @@ const QuizManager = () => {
   }, []);
 
   const fetchData = async () => {
+    setLoading(true);
     try {
-      const [questionsRes, optionsRes] = await Promise.all([
+      // Fetch questions, options, components in parallel
+      const [questionsRes, optionsRes, componentsRes] = await Promise.all([
         supabase.from("questions").select("*").order("display_order"),
         supabase.from("question_options").select("*").order("display_order"),
+        supabase.from("components").select("id,name,type").order("name"),
       ]);
 
       if (questionsRes.error) throw questionsRes.error;
       if (optionsRes.error) throw optionsRes.error;
+      if (componentsRes.error) throw componentsRes.error;
 
       setQuestions(questionsRes.data || []);
       setOptions(optionsRes.data || []);
+      setComponents(componentsRes.data || []);
     } catch (error) {
       console.error("Error fetching data:", error);
       toast.error("Failed to load quiz data");
@@ -86,8 +98,7 @@ const QuizManager = () => {
   const resetForm = () => {
     setFormData({
       question_text: "",
-      category: "",
-      correct_answer: "",
+      component_id: "",
       options: [
         { option_text: "", score: 1 },
         { option_text: "", score: 2 },
@@ -112,8 +123,7 @@ const QuizManager = () => {
     setEditingQuestion(question);
     setFormData({
       question_text: question.question_text,
-      category: question.category || "",
-      correct_answer: question.correct_answer || "",
+      component_id: question.component_id || "",
       options:
         questionOptions.length > 0
           ? questionOptions.map((o) => ({
@@ -130,6 +140,9 @@ const QuizManager = () => {
       toast.error("Please enter a question");
       return;
     }
+
+    // component selection optional or required? currently allow empty (nullable). If you want required, uncomment below:
+    // if (!formData.component_id) { toast.error("Please select a related component"); return; }
 
     const hasEmptyOption = formData.options.some((o) => !o.option_text.trim());
     if (hasEmptyOption) {
@@ -151,18 +164,19 @@ const QuizManager = () => {
           .from("questions")
           .update({
             question_text: formData.question_text,
-            category: formData.category || null,
-            correct_answer: formData.correct_answer || null,
+            component_id: formData.component_id || null,
           })
           .eq("id", editingQuestion.id);
 
         if (questionError) throw questionError;
 
         // Delete old options and insert new ones
-        await supabase
+        const { error: deleteError } = await supabase
           .from("question_options")
           .delete()
           .eq("question_id", editingQuestion.id);
+
+        if (deleteError) throw deleteError;
 
         const newOptions = formData.options.map((o, index) => ({
           question_id: editingQuestion.id,
@@ -180,20 +194,23 @@ const QuizManager = () => {
         toast.success("Question updated successfully");
       } else {
         // Create new question
-        const maxOrder = Math.max(...questions.map((q) => q.display_order), 0);
+        const maxOrder =
+          questions.length > 0
+            ? Math.max(...questions.map((q) => q.display_order))
+            : 0;
 
         const { data: newQuestion, error: questionError } = await supabase
           .from("questions")
           .insert({
             question_text: formData.question_text,
-            category: formData.category || null,
-            correct_answer: formData.correct_answer || null,
-            display_order: maxOrder + 1,
+            component_id: formData.component_id || null,
+            display_order: (maxOrder || 0) + 1,
           })
           .select()
           .single();
 
         if (questionError) throw questionError;
+        if (!newQuestion) throw new Error("Failed to create question");
 
         const newOptions = formData.options.map((o, index) => ({
           question_id: newQuestion.id,
@@ -226,10 +243,10 @@ const QuizManager = () => {
     if (!confirm("Are you sure you want to delete this question?")) return;
 
     try {
-      const { error } = await supabase
-        .from("questions")
-        .delete()
-        .eq("id", questionId);
+      // optionally delete options first to avoid foreign key constraints
+      await supabase.from("question_options").delete().eq("question_id", questionId);
+
+      const { error } = await supabase.from("questions").delete().eq("id", questionId);
 
       if (error) throw error;
 
@@ -245,6 +262,11 @@ const QuizManager = () => {
     return options
       .filter((o) => o.question_id === questionId)
       .sort((a, b) => a.display_order - b.display_order);
+  };
+
+  const findComponentName = (component_id?: string | null) => {
+    if (!component_id) return "—";
+    return components.find((c) => c.id === component_id)?.name || "—";
   };
 
   if (loading) {
@@ -280,7 +302,7 @@ const QuizManager = () => {
             <TableRow>
               <TableHead className="w-12">#</TableHead>
               <TableHead>Question</TableHead>
-              <TableHead>Category</TableHead>
+              <TableHead>Component</TableHead>
               <TableHead>Options</TableHead>
               <TableHead className="w-24">Actions</TableHead>
             </TableRow>
@@ -301,7 +323,7 @@ const QuizManager = () => {
                     <TableCell className="max-w-md">
                       <p className="truncate">{question.question_text}</p>
                     </TableCell>
-                    <TableCell>{question.category || "—"}</TableCell>
+                    <TableCell>{findComponentName(question.component_id)}</TableCell>
                     <TableCell>
                       <div className="space-y-1 text-xs text-muted-foreground">
                         {questionOptions.slice(0, 3).map((opt, i) => (
@@ -376,32 +398,24 @@ const QuizManager = () => {
 
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <Label>Category (optional)</Label>
-                <Input
-                  value={formData.category}
+                <Label>Related Component (optional)</Label>
+                <select
+                  value={formData.component_id}
                   onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      category: e.target.value,
-                    }))
+                    setFormData((prev) => ({ ...prev, component_id: e.target.value }))
                   }
-                  placeholder="e.g., Psychology, General"
-                  className="mt-1"
-                />
+                  className="mt-1 w-full border rounded p-2 bg-background"
+                >
+                  <option value="">Select component…</option>
+                  {components.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} {c.type ? `(${c.type})` : ""}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
-                <Label>Correct Answer (optional)</Label>
-                <Input
-                  value={formData.correct_answer}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      correct_answer: e.target.value,
-                    }))
-                  }
-                  placeholder="Reference answer..."
-                  className="mt-1"
-                />
+                {/* placeholder to keep grid layout balanced; remove or use for another field */}
               </div>
             </div>
 
