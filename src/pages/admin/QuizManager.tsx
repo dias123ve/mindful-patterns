@@ -82,6 +82,8 @@ const QuizManager = () => {
 
 
 console.log("componentsRes", componentsRes);
+      console.log("componentsRes data", componentsRes.data);
+    console.log("componentsRes error", componentsRes.error);
 
       
       if (questionsRes.error) throw questionsRes.error;
