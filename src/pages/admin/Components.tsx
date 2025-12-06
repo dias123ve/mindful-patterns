@@ -24,11 +24,13 @@ import { toast } from "sonner";
 
 interface Component {
   id: string;
-  component_key: string;
   name: string;
-  description: string;
-  examples: string;
-  display_order: number;
+  type: string;
+  // display_order removed
+  content: {
+    description: string;
+    examples: string;
+  } | null;
 }
 
 interface PdfDocument {
@@ -73,7 +75,7 @@ const ComponentsManager = () => {
   const fetchData = async () => {
     try {
       const [componentsRes, pdfsRes, componentPdfsRes] = await Promise.all([
-        supabase.from("components").select("*").order("display_order"),
+        supabase.from("components").select("*").order("created_at", { ascending: true }),
         supabase.from("pdf_documents").select("*").order("created_at", { ascending: false }),
         supabase.from("component_pdfs").select("*"),
       ]);
@@ -125,12 +127,14 @@ const ComponentsManager = () => {
   const { error } = await supabase
     .from("components")
     .update({
-      name: formData.name,
-      content: {
-        description: formData.description,
-        examples: formData.examples,
-      },
-    })
+  name: formData.name,
+  type: editingComponent.type, // tambahkan
+  content: {
+    description: formData.description,
+    examples: formData.examples,
+  },
+})
+
     .eq("id", editingComponent.id);
 
         if (error) throw error;
@@ -141,8 +145,6 @@ const ComponentsManager = () => {
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, "_")
           .replace(/^_|_$/g, "");
-
-        const maxOrder = Math.max(...components.map((c) => c.display_order), 0);
 
         const { error } = await supabase.from("components").insert({
   name: formData.name,
@@ -303,15 +305,16 @@ const ComponentsManager = () => {
                   <TableRow key={component.id}>
                     <TableCell className="font-medium">{component.name}</TableCell>
                     <TableCell className="max-w-xs">
-                      <p className="truncate text-sm text-muted-foreground">
-                        {component.description || "—"}
-                      </p>
-                    </TableCell>
-                    <TableCell className="max-w-xs">
-                      <p className="truncate text-sm text-muted-foreground">
-                        {component.examples || "—"}
-                      </p>
-                    </TableCell>
+  <p className="truncate text-sm text-muted-foreground">
+    {component.content?.description || "—"}
+  </p>
+</TableCell>
+<TableCell className="max-w-xs">
+  <p className="truncate text-sm text-muted-foreground">
+    {component.content?.examples || "—"}
+  </p>
+</TableCell>
+
                     <TableCell>
                       {assignedPdfs.length > 0 ? (
                         <div className="space-y-1">
