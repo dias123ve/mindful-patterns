@@ -215,10 +215,18 @@ const QuizManager = () => {
       setDialogOpen(false);
       resetForm();
       fetchData();
-    } catch (error) {
-      console.error("Save error:", error);
-      toast.error("Failed to save question");
-    } finally {
+    } catch (error: any) {
+  console.error("🔴 SAVE ERROR FULL:", error);
+
+  // Print all Supabase error details if available
+  console.log("Message:", error?.message);
+  console.log("Details:", error?.details);
+  console.log("Hint:", error?.hint);
+  console.log("Code:", error?.code);
+
+  toast.error("Failed to save question");
+} finally {
+
       setSaving(false);
     }
   };
