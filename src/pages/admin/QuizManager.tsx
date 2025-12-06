@@ -238,7 +238,7 @@ console.log("componentsRes", componentsRes);
       resetForm();
       fetchData();
     } catch (error) {
-      console.error("Error saving question:", error);
+      console.error("Save error:", error);
       toast.error("Failed to save question");
     } finally {
       setSaving(false);
