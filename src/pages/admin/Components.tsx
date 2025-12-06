@@ -124,18 +124,18 @@ const ComponentsManager = () => {
     setSaving(true);
     try {
       if (editingComponent) {
-  const { error } = await supabase
-    .from("components")
-    .update({
-  name: formData.name,
-  type: editingComponent.type || "component", // tambahkan
-  content: {
-  description: formData.description || "",
-  examples: formData.examples || "",
-},
-})
-
-    .eq("id", editingComponent.id);
+  const { data, error } = await supabase
+  .from("components")
+  .update({
+    name: formData.name,
+    type: editingComponent.type || "component",
+    content: {
+      description: formData.description || "",
+      examples: formData.examples || "",
+    },
+  })
+  .eq("id", editingComponent.id)
+  .select("*");
 
         if (error) throw error;
         toast.success("Component updated successfully");
@@ -146,14 +146,17 @@ const ComponentsManager = () => {
           .replace(/[^a-z0-9]+/g, "_")
           .replace(/^_|_$/g, "");
 
-        const { error } = await supabase.from("components").insert({
-  name: formData.name,
-  type: "component",
-  content: {
-    description: formData.description,
-    examples: formData.examples,
-  },
-});
+        const { data, error } = await supabase
+  .from("components")
+  .insert({
+    name: formData.name,
+    type: "component",
+    content: {
+      description: formData.description || "",
+      examples: formData.examples || "",
+    },
+  })
+  .select("*"); // WAJIB
 
 
         if (error) throw error;
