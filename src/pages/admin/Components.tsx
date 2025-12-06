@@ -129,47 +129,65 @@ const ComponentsManager = () => {
   // -------------------------
   // Save Component
   // -------------------------
-  const handleSave = async () => {
-    if (!formData.name.trim()) {
-      toast.error("Please enter a component name");
-      return;
+  // GANTI FUNGSI INI YANG LAMA
+const handleSave = async () => {
+  if (!formData.name.trim()) {
+    toast.error("Please enter a component name");
+    return;
+  }
+
+  setSaving(true);
+  try {
+    const payload = {
+      name: formData.name.trim(),
+      type: "component", // Pastikan ini sesuai dengan enum/tipe di database
+      content: {
+        description: formData.description.trim() || "",
+        examples: formData.examples.trim() || "",
+      },
+    };
+
+    let result;
+    
+    if (editingComponent) {
+      result = await supabase
+        .from("components")
+        .update(payload)
+        .eq("id", editingComponent.id)
+        .select(); // Tambahkan .select() untuk melihat data yang di-update
+    } else {
+      result = await supabase
+        .from("components")
+        .insert([payload]) // Pastikan dalam array []
+        .select(); // Tambahkan .select()
     }
 
-    setSaving(true);
-    try {
-      const payload = {
-        name: formData.name,
-        type: editingComponent?.type || "component",
-        content: {
-          description: formData.description || "",
-          examples: formData.examples || "",
-        },
-      };
-
-      if (editingComponent) {
-        const { error } = await supabase
-          .from("components")
-          .update(payload)
-          .eq("id", editingComponent.id);
-
-        if (error) throw error;
-        toast.success("Component updated");
-      } else {
-        const { error } = await supabase.from("components").insert(payload);
-        if (error) throw error;
-        toast.success("Component created");
-      }
-
-      setDialogOpen(false);
-      resetForm();
-      fetchData();
-    } catch (err: any) {
-      console.error("Supabase error:", err);
-      toast.error("Failed to save component");
-    } finally {
-      setSaving(false);
+    console.log("Supabase response:", result); // Debug log
+    
+    if (result.error) {
+      console.error("Supabase error details:", result.error);
+      throw result.error;
     }
-  };
+
+    console.log("Saved data:", result.data); // Debug log
+    
+    toast.success(editingComponent ? "Component updated" : "Component created");
+    setDialogOpen(false);
+    resetForm();
+    fetchData(); // Refresh data
+  } catch (err: any) {
+    console.error("Full error:", err);
+    
+    // Tampilkan error yang lebih spesifik
+    if (err.message) {
+      toast.error(`Error: ${err.message}`);
+    } else {
+      toast.error("Failed to save component. Check console for details.");
+    }
+  } finally {
+    setSaving(false);
+  }
+};
 
   // -------------------------
   // Delete Component
