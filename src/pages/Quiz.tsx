@@ -41,6 +41,7 @@ const Quiz = () => {
   }, []);
 
   const fetchQuizData = async () => {
+     console.log("Quiz ID ENV:", import.meta.env.VITE_QUIZ_ID);
     try {
       const { data: qData, error: qErr } = await supabase
         .from("quiz_questions")
