@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,7 +24,6 @@ interface Option {
 
 const Quiz = () => {
   const navigate = useNavigate();
-  const { id: quizId } = useParams();
 
   const [questions, setQuestions] = useState<Question[]>([]);
   const [options, setOptions] = useState<Option[]>([]);
@@ -43,27 +42,24 @@ const Quiz = () => {
 
   const fetchQuizData = async () => {
     try {
-      const [qRes, oRes] = await Promise.all([
-        supabase
-          .from("quiz_questions")
-          .select("*")
-          .eq("quiz_id", quizId)
-          .order("display_order", { ascending: true }),
+      const { data: qData, error: qErr } = await supabase
+        .from("quiz_questions")
+        .select("*")
+        .order("display_order", { ascending: true });
 
-        supabase
-          .from("quiz_question_options")
-          .select("*")
-          .order("question_id", { ascending: true })
-          .order("display_order", { ascending: true }),
-      ]);
+      const { data: oData, error: oErr } = await supabase
+        .from("quiz_question_options")
+        .select("*")
+        .order("question_id", { ascending: true })
+        .order("display_order", { ascending: true });
 
-      if (qRes.error) throw qRes.error;
-      if (oRes.error) throw oRes.error;
+      if (qErr) throw qErr;
+      if (oErr) throw oErr;
 
-      setQuestions(qRes.data || []);
-      setOptions(oRes.data || []);
+      setQuestions(qData || []);
+      setOptions(oData || []);
     } catch (err) {
-      toast.error("Failed to load quiz.");
+      toast.error("Failed to load quiz");
     } finally {
       setLoading(false);
     }
@@ -134,7 +130,6 @@ const Quiz = () => {
       const { data, error } = await supabase
         .from("quiz_submissions")
         .insert({
-          quiz_id: quizId,
           email: email.trim().toLowerCase(),
           answers,
           component_scores: scores,
