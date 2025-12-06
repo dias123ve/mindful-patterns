@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +24,7 @@ interface Option {
 
 const Quiz = () => {
   const navigate = useNavigate();
+  const { id: quizId } = useParams();
 
   const [questions, setQuestions] = useState<Question[]>([]);
   const [options, setOptions] = useState<Option[]>([]);
@@ -46,6 +47,7 @@ const Quiz = () => {
         supabase
           .from("quiz_questions")
           .select("*")
+          .eq("quiz_id", quizId)
           .order("display_order", { ascending: true }),
 
         supabase
@@ -132,6 +134,7 @@ const Quiz = () => {
       const { data, error } = await supabase
         .from("quiz_submissions")
         .insert({
+          quiz_id: quizId,
           email: email.trim().toLowerCase(),
           answers,
           component_scores: scores,
