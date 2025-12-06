@@ -93,12 +93,18 @@ const PDFModules = () => {
     try {
       const fileName = `${Date.now()}-${formData.file.name}`;
 
-      // Upload to Supabase Storage
-      const { error: uploadError } = await supabase.storage
-        .from("pdf-modules")
-        .upload(fileName, formData.file);
+      // Upload to Supabase Storage (patched with debug logs)
+const { data: uploadData, error: uploadError } = await supabase.storage
+  .from("pdf-modules")
+  .upload(fileName, formData.file, {
+    upsert: false, // bisa diganti true kalau mau rewrite file
+  });
 
-      if (uploadError) throw uploadError;
+console.log("=== STORAGE UPLOAD ERROR ===", uploadError);
+console.log("=== STORAGE UPLOAD RESULT ===", uploadData);
+
+if (uploadError) throw uploadError;
+
 
       // Get public URL
       const { data: urlData } = supabase.storage
@@ -106,13 +112,19 @@ const PDFModules = () => {
         .getPublicUrl(fileName);
 
       // Insert metadata into pdf_documents table
-      const { error: insertError } = await supabase.from("pdf_documents").insert({
-        title: formData.title || formData.file.name,
-        file_name: formData.file.name,
-        file_url: urlData.publicUrl,
-      });
+      const { data: insertData, error: insertError } = await supabase
+  .from("pdf_documents")
+  .insert({
+    title: formData.title || formData.file.name,
+    file_name: formData.file.name,
+    file_url: urlData.publicUrl,
+  });
 
-      if (insertError) throw insertError;
+console.log("=== INSERT ERROR ===", insertError);
+console.log("=== INSERT RESULT ===", insertData);
+
+if (insertError) throw insertError;
+
 
       toast.success("PDF uploaded successfully");
       setDialogOpen(false);
