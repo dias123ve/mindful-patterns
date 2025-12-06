@@ -25,7 +25,7 @@ import { toast } from "sonner";
 // -------------------------
 // Types
 // -------------------------
-interface Component {
+interface ComponentItem {
   id: string;
   name: string;
   type: string;
@@ -37,9 +37,9 @@ interface Component {
 
 interface PdfDocument {
   id: string;
-  title: string;
-  file_name: string | null;
-  file_url: string;
+  title?: string;
+  file_name?: string | null;
+  file_url?: string;
 }
 
 interface ComponentPdf {
@@ -52,20 +52,22 @@ interface ComponentPdf {
 // Helper: safe JSON parser
 // -------------------------
 function safeParseContent(content: any) {
-  if (!content) {
-    return { description: "", examples: "" };
-  }
+  if (!content) return { description: "", examples: "" };
   if (typeof content === "string") {
     try {
-      return JSON.parse(content);
+      const parsed = JSON.parse(content);
+      return {
+        description: parsed.description || "",
+        examples: parsed.examples || "",
+      };
     } catch {
       return { description: "", examples: "" };
     }
   }
   if (typeof content === "object") {
     return {
-      description: content.description || "",
-      examples: content.examples || "",
+      description: (content && content.description) || "",
+      examples: (content && content.examples) || "",
     };
   }
   return { description: "", examples: "" };
@@ -75,7 +77,7 @@ function safeParseContent(content: any) {
 // Main Component
 // -------------------------
 const ComponentsManager = () => {
-  const [components, setComponents] = useState<Component[]>([]);
+  const [components, setComponents] = useState<ComponentItem[]>([]);
   const [pdfs, setPdfs] = useState<PdfDocument[]>([]);
   const [componentPdfs, setComponentPdfs] = useState<ComponentPdf[]>([]);
   const [loading, setLoading] = useState(true);
@@ -83,7 +85,7 @@ const ComponentsManager = () => {
 
   // Create/Edit dialog
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingComponent, setEditingComponent] = useState<Component | null>(null);
+  const [editingComponent, setEditingComponent] = useState<ComponentItem | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -92,7 +94,7 @@ const ComponentsManager = () => {
 
   // Manage PDFs dialog
   const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
-  const [selectedComponent, setSelectedComponent] = useState<Component | null>(null);
+  const [selectedComponent, setSelectedComponent] = useState<ComponentItem | null>(null);
   const [selectedPdfIds, setSelectedPdfIds] = useState<string[]>([]);
   const [savingPdfs, setSavingPdfs] = useState(false);
 
@@ -104,29 +106,55 @@ const ComponentsManager = () => {
   }, []);
 
   const fetchData = async () => {
+    setLoading(true);
     try {
-      const [componentsRes, pdfsRes, componentPdfsRes] = await Promise.all([
-        supabase.from("components").select("*").order("created_at"),
-        supabase.from("pdf_documents").select("*").order("created_at", { ascending: false }),
-        supabase.from("component_pdfs").select("*"),
-      ]);
+      // gunakan explicit select untuk menghindari parsing relationship error
+      const componentsRes = await supabase
+        .from("components")
+        .select("id, name, type, content")
+        .order("created_at", { ascending: true });
 
-      if (componentsRes.error) throw componentsRes.error;
-      if (pdfsRes.error) throw pdfsRes.error;
-      if (componentPdfsRes.error) throw componentPdfsRes.error;
+      const pdfsRes = await supabase
+        .from("pdf_documents")
+        .select("id, title, file_name, file_url")
+        .order("created_at", { ascending: false });
 
-      setComponents(
-        (componentsRes.data || []).map((c: any) => ({
-          ...c,
-          content: safeParseContent(c.content),
-        }))
-      );
+      const componentPdfsRes = await supabase
+        .from("component_pdfs")
+        .select("id, component_id, pdf_id");
 
+      // debug if something is wrong
+      if (componentsRes.error) {
+        console.error("componentsRes (error):", componentsRes);
+        throw componentsRes.error;
+      }
+      if (pdfsRes.error) {
+        console.error("pdfsRes (error):", pdfsRes);
+        throw pdfsRes.error;
+      }
+      if (componentPdfsRes.error) {
+        console.error("componentPdfsRes (error):", componentPdfsRes);
+        throw componentPdfsRes.error;
+      }
+
+      const componentsData = (componentsRes.data || []).map((c: any) => ({
+        id: c.id,
+        name: c.name,
+        type: c.type,
+        content: safeParseContent(c.content),
+      }));
+
+      setComponents(componentsData);
       setPdfs(pdfsRes.data || []);
       setComponentPdfs(componentPdfsRes.data || []);
-    } catch (error) {
-      console.error(error);
-      toast.error("Failed to load data");
+    } catch (error: any) {
+      console.error("fetchData error (full):", error);
+      // tampilkan pesan error yang jelas ke user
+      if (error && error.message) {
+        toast.error(`Failed to load data: ${error.message}`);
+      } else {
+        toast.error("Failed to load data (see console)");
+      }
     } finally {
       setLoading(false);
     }
@@ -145,12 +173,12 @@ const ComponentsManager = () => {
     setDialogOpen(true);
   };
 
-  const openEditDialog = (component: Component) => {
+  const openEditDialog = (component: ComponentItem) => {
     setEditingComponent(component);
     setFormData({
-      name: component.name,
-      description: component.content.description,
-      examples: component.content.examples,
+      name: component.name || "",
+      description: component.content?.description || "",
+      examples: component.content?.examples || "",
     });
     setDialogOpen(true);
   };
@@ -175,29 +203,37 @@ const ComponentsManager = () => {
         },
       };
 
-      let result;
       if (editingComponent) {
-        result = await supabase
+        const res = await supabase
           .from("components")
           .update(payload)
           .eq("id", editingComponent.id)
-          .select();
+          .select("id, name, type, content");
+        if (res.error) {
+          console.error("update error:", res);
+          throw res.error;
+        }
+        toast.success("Component updated");
       } else {
-        result = await supabase
+        const res = await supabase
           .from("components")
           .insert([payload])
-          .select();
+          .select("id, name, type, content");
+        if (res.error) {
+          console.error("insert error:", res);
+          throw res.error;
+        }
+        toast.success("Component created");
       }
 
-      if (result.error) throw result.error;
-
-      toast.success(editingComponent ? "Component updated" : "Component created");
       setDialogOpen(false);
       resetForm();
-      fetchData();
+      // reload data (use fetchData)
+      await fetchData();
     } catch (err: any) {
-      console.error(err);
-      toast.error(err.message || "Failed to save component");
+      console.error("handleSave error:", err);
+      const msg = err?.message || (err?.error && err.error.message) || "Failed to save component";
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
@@ -210,25 +246,23 @@ const ComponentsManager = () => {
     if (!confirm("Delete this component?")) return;
 
     try {
-      const { error } = await supabase
-        .from("components")
-        .delete()
-        .eq("id", componentId);
-
-      if (error) throw error;
-
+      const { error } = await supabase.from("components").delete().eq("id", componentId);
+      if (error) {
+        console.error("delete error:", error);
+        throw error;
+      }
       toast.success("Component deleted");
-      fetchData();
+      await fetchData();
     } catch (error) {
-      console.error(error);
-      toast.error("Failed to delete");
+      console.error("handleDelete error:", error);
+      toast.error("Failed to delete component");
     }
   };
 
   // -------------------------
   // Manage PDFs
   // -------------------------
-  const openManagePdfsDialog = (component: Component) => {
+  const openManagePdfsDialog = (component: ComponentItem) => {
     setSelectedComponent(component);
     const assignedPdfIds = componentPdfs
       .filter((cp) => cp.component_id === component.id)
@@ -239,48 +273,42 @@ const ComponentsManager = () => {
 
   const handlePdfToggle = (pdfId: string) => {
     setSelectedPdfIds((prev) =>
-      prev.includes(pdfId)
-        ? prev.filter((id) => id !== pdfId)
-        : [...prev, pdfId]
+      prev.includes(pdfId) ? prev.filter((id) => id !== pdfId) : [...prev, pdfId]
     );
   };
 
   const handleSavePdfs = async () => {
     if (!selectedComponent) return;
-
     setSavingPdfs(true);
     try {
-      await supabase
+      const del = await supabase
         .from("component_pdfs")
         .delete()
         .eq("component_id", selectedComponent.id);
+      if (del.error) throw del.error;
 
       if (selectedPdfIds.length > 0) {
         const rows = selectedPdfIds.map((pdfId) => ({
           component_id: selectedComponent.id,
           pdf_id: pdfId,
         }));
-
-        const { error } = await supabase.from("component_pdfs").insert(rows);
-        if (error) throw error;
+        const ins = await supabase.from("component_pdfs").insert(rows);
+        if (ins.error) throw ins.error;
       }
 
-      toast.success("PDFs updated");
+      toast.success("PDF assignments updated");
       setPdfDialogOpen(false);
-      fetchData();
+      await fetchData();
     } catch (error) {
-      console.error(error);
-      toast.error("Failed to assign PDFs");
+      console.error("handleSavePdfs error:", error);
+      toast.error("Failed to save PDF assignments");
     } finally {
       setSavingPdfs(false);
     }
   };
 
   const getAssignedPdfs = (componentId: string) => {
-    const pdfIds = componentPdfs
-      .filter((cp) => cp.component_id === componentId)
-      .map((cp) => cp.pdf_id);
-
+    const pdfIds = componentPdfs.filter((cp) => cp.component_id === componentId).map((cp) => cp.pdf_id);
     return pdfs.filter((p) => pdfIds.includes(p.id));
   };
 
@@ -301,9 +329,7 @@ const ComponentsManager = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Components</h1>
-          <p className="text-muted-foreground mt-1">
-            Manage your quiz components and PDF attachments
-          </p>
+          <p className="text-muted-foreground mt-1">Manage your quiz components and PDF attachments</p>
         </div>
 
         <Button onClick={openCreateDialog}>
@@ -339,10 +365,10 @@ const ComponentsManager = () => {
                   <TableRow key={c.id}>
                     <TableCell className="font-medium">{c.name}</TableCell>
                     <TableCell className="max-w-xs">
-                      <p className="truncate">{c.content.description}</p>
+                      <p className="truncate">{c.content?.description || "—"}</p>
                     </TableCell>
                     <TableCell className="max-w-xs">
-                      <p className="truncate">{c.content.examples}</p>
+                      <p className="truncate">{c.content?.examples || "—"}</p>
                     </TableCell>
 
                     <TableCell>
@@ -356,9 +382,7 @@ const ComponentsManager = () => {
                               {pdf.title || pdf.file_name}
                             </div>
                           ))}
-                          {assigned.length > 2 && (
-                            <span>+{assigned.length - 2} more</span>
-                          )}
+                          {assigned.length > 2 && <span>+{assigned.length - 2} more</span>}
                         </div>
                       )}
                     </TableCell>
@@ -373,12 +397,7 @@ const ComponentsManager = () => {
                           <FileText className="h-4 w-4" />
                         </Button>
 
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDelete(c.id)}
-                          className="text-red-600"
-                        >
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(c.id)} className="text-red-600">
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -395,51 +414,27 @@ const ComponentsManager = () => {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {editingComponent ? "Edit Component" : "Create Component"}
-            </DialogTitle>
+            <DialogTitle>{editingComponent ? "Edit Component" : "Create Component"}</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">
             <div>
               <Label>Name</Label>
-              <Input
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData((p) => ({ ...p, name: e.target.value }))
-                }
-                className="mt-1"
-              />
+              <Input value={formData.name} onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))} className="mt-1" />
             </div>
 
             <div>
               <Label>Description</Label>
-              <Textarea
-                rows={3}
-                value={formData.description}
-                onChange={(e) =>
-                  setFormData((p) => ({ ...p, description: e.target.value }))
-                }
-                className="mt-1"
-              />
+              <Textarea rows={3} value={formData.description} onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))} className="mt-1" />
             </div>
 
             <div>
               <Label>Example</Label>
-              <Textarea
-                rows={2}
-                value={formData.examples}
-                onChange={(e) =>
-                  setFormData((p) => ({ ...p, examples: e.target.value }))
-                }
-                className="mt-1"
-              />
+              <Textarea rows={2} value={formData.examples} onChange={(e) => setFormData((p) => ({ ...p, examples: e.target.value }))} className="mt-1" />
             </div>
 
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                Cancel
-              </Button>
+              <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
               <Button onClick={handleSave} disabled={saving}>
                 {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 {editingComponent ? "Update" : "Create"}
@@ -453,33 +448,20 @@ const ComponentsManager = () => {
       <Dialog open={pdfDialogOpen} onOpenChange={setPdfDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              Manage PDFs for {selectedComponent?.name}
-            </DialogTitle>
+            <DialogTitle>Manage PDFs for {selectedComponent?.name}</DialogTitle>
           </DialogHeader>
 
           <div className="max-h-64 overflow-y-auto space-y-2">
             {pdfs.map((pdf) => (
-              <div
-                key={pdf.id}
-                className="flex items-center gap-3 px-2 py-1 hover:bg-secondary/50 rounded"
-              >
-                <Checkbox
-                  checked={selectedPdfIds.includes(pdf.id)}
-                  onCheckedChange={() => handlePdfToggle(pdf.id)}
-                />
-                <span className="text-sm">
-                  {pdf.title || pdf.file_name || "Untitled PDF"}
-                </span>
+              <div key={pdf.id} className="flex items-center gap-3 px-2 py-1 hover:bg-secondary/50 rounded">
+                <Checkbox checked={selectedPdfIds.includes(pdf.id)} onCheckedChange={() => handlePdfToggle(pdf.id)} />
+                <span className="text-sm">{pdf.title || pdf.file_name || "Untitled PDF"}</span>
               </div>
             ))}
           </div>
 
           <div className="flex justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={() => setPdfDialogOpen(false)}>
-              Cancel
-            </Button>
-
+            <Button variant="outline" onClick={() => setPdfDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleSavePdfs} disabled={savingPdfs}>
               {savingPdfs && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Save
