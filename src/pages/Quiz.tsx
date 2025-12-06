@@ -115,44 +115,65 @@ console.log("qErr:", qErr);
     return { scores, topComponents };
   };
 
-  const handleSubmit = async () => {
-    if (!email.trim()) {
-      toast.error("Enter your email");
-      return;
-    }
+const handleSubmit = async () => {
+  if (!email.trim()) {
+    toast.error("Enter your email");
+    return;
+  }
 
-    const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-    if (!valid) {
-      toast.error("Email is invalid");
-      return;
-    }
+  const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  if (!valid) {
+    toast.error("Email is invalid");
+    return;
+  }
 
-    setSubmitting(true);
+  setSubmitting(true);
 
-    try {
-      const { scores, topComponents } = calculateScores();
+  try {
+    const { scores, topComponents } = calculateScores();
 
-      const { data, error } = await supabase
-        .from("quiz_submissions")
-        .insert({
-          email: email.trim().toLowerCase(),
-          answers,
-          component_scores: scores,
-          top_components: topComponents,
-        })
-        .select()
-        .single();
+    // 1) Ambil nama komponen dari tabel components
+    const { data: compData, error: compErr } = await supabase
+      .from("components")
+      .select("id, name")
+      .in("id", topComponents);
 
-      if (error) throw error;
+    if (compErr) throw compErr;
 
-      sessionStorage.setItem("quiz_submission_id", data.id);
-      navigate("/results");
-    } catch {
-      toast.error("Failed to submit");
-    } finally {
-      setSubmitting(false);
-    }
-  };
+    // 2) Urutkan nama sesuai urutan topComponents
+    const topComponentNames = topComponents.map(
+      (cid) => compData?.find((c) => c.id === cid)?.name || "Unknown"
+    );
+
+    // 3) Hitung total score (opsional)
+    const totalScore = Object.values(scores).reduce((a, b) => a + b, 0);
+
+    // 4) INSERT sesuai nama kolom di DB
+    const { data, error } = await supabase
+      .from("quiz_submissions")
+      .insert({
+        quiz_id: import.meta.env.VITE_QUIZ_ID,
+        user_email: email.trim().toLowerCase(),
+        answers,
+        score: totalScore,
+        top_components: topComponents,
+        top_component_names: topComponentNames,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    sessionStorage.setItem("quiz_submission_id", data.id);
+    navigate("/results");
+  } catch (err) {
+    console.error(err);
+    toast.error("Failed to submit");
+  } finally {
+    setSubmitting(false);
+  }
+};
+
 
   if (loading) {
     return (
