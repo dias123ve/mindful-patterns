@@ -49,6 +49,29 @@ interface ComponentPdf {
 }
 
 // -------------------------
+// Helper: safe JSON parser
+// -------------------------
+function safeParseContent(content: any) {
+  if (!content) {
+    return { description: "", examples: "" };
+  }
+  if (typeof content === "string") {
+    try {
+      return JSON.parse(content);
+    } catch {
+      return { description: "", examples: "" };
+    }
+  }
+  if (typeof content === "object") {
+    return {
+      description: content.description || "",
+      examples: content.examples || "",
+    };
+  }
+  return { description: "", examples: "" };
+}
+
+// -------------------------
 // Main Component
 // -------------------------
 const ComponentsManager = () => {
@@ -92,7 +115,13 @@ const ComponentsManager = () => {
       if (pdfsRes.error) throw pdfsRes.error;
       if (componentPdfsRes.error) throw componentPdfsRes.error;
 
-      setComponents(componentsRes.data || []);
+      setComponents(
+        (componentsRes.data || []).map((c: any) => ({
+          ...c,
+          content: safeParseContent(c.content),
+        }))
+      );
+
       setPdfs(pdfsRes.data || []);
       setComponentPdfs(componentPdfsRes.data || []);
     } catch (error) {
@@ -120,8 +149,8 @@ const ComponentsManager = () => {
     setEditingComponent(component);
     setFormData({
       name: component.name,
-      description: component.content?.description || "",
-      examples: component.content?.examples || "",
+      description: component.content.description,
+      examples: component.content.examples,
     });
     setDialogOpen(true);
   };
@@ -129,65 +158,50 @@ const ComponentsManager = () => {
   // -------------------------
   // Save Component
   // -------------------------
-  // GANTI FUNGSI INI YANG LAMA
-const handleSave = async () => {
-  if (!formData.name.trim()) {
-    toast.error("Please enter a component name");
-    return;
-  }
-
-  setSaving(true);
-  try {
-    const payload = {
-      name: formData.name.trim(),
-      type: "component", // Pastikan ini sesuai dengan enum/tipe di database
-      content: {
-        description: formData.description.trim() || "",
-        examples: formData.examples.trim() || "",
-      },
-    };
-
-    let result;
-    
-    if (editingComponent) {
-      result = await supabase
-        .from("components")
-        .update(payload)
-        .eq("id", editingComponent.id)
-        .select(); // Tambahkan .select() untuk melihat data yang di-update
-    } else {
-      result = await supabase
-        .from("components")
-        .insert([payload]) // Pastikan dalam array []
-        .select(); // Tambahkan .select()
+  const handleSave = async () => {
+    if (!formData.name.trim()) {
+      toast.error("Please enter a component name");
+      return;
     }
 
-    console.log("Supabase response:", result); // Debug log
-    
-    if (result.error) {
-      console.error("Supabase error details:", result.error);
-      throw result.error;
-    }
+    setSaving(true);
+    try {
+      const payload = {
+        name: formData.name.trim(),
+        type: "component",
+        content: {
+          description: formData.description.trim(),
+          examples: formData.examples.trim(),
+        },
+      };
 
-    console.log("Saved data:", result.data); // Debug log
-    
-    toast.success(editingComponent ? "Component updated" : "Component created");
-    setDialogOpen(false);
-    resetForm();
-    fetchData(); // Refresh data
-  } catch (err: any) {
-    console.error("Full error:", err);
-    
-    // Tampilkan error yang lebih spesifik
-    if (err.message) {
-      toast.error(`Error: ${err.message}`);
-    } else {
-      toast.error("Failed to save component. Check console for details.");
+      let result;
+      if (editingComponent) {
+        result = await supabase
+          .from("components")
+          .update(payload)
+          .eq("id", editingComponent.id)
+          .select();
+      } else {
+        result = await supabase
+          .from("components")
+          .insert([payload])
+          .select();
+      }
+
+      if (result.error) throw result.error;
+
+      toast.success(editingComponent ? "Component updated" : "Component created");
+      setDialogOpen(false);
+      resetForm();
+      fetchData();
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Failed to save component");
+    } finally {
+      setSaving(false);
     }
-  } finally {
-    setSaving(false);
-  }
-};
+  };
 
   // -------------------------
   // Delete Component
@@ -325,10 +339,10 @@ const handleSave = async () => {
                   <TableRow key={c.id}>
                     <TableCell className="font-medium">{c.name}</TableCell>
                     <TableCell className="max-w-xs">
-                      <p className="truncate">{c.content?.description}</p>
+                      <p className="truncate">{c.content.description}</p>
                     </TableCell>
                     <TableCell className="max-w-xs">
-                      <p className="truncate">{c.content?.examples}</p>
+                      <p className="truncate">{c.content.examples}</p>
                     </TableCell>
 
                     <TableCell>
