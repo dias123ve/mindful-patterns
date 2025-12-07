@@ -74,9 +74,18 @@ const QuizManager = () => {
     setLoading(true);
     try {
       const [questionsRes, optionsRes, componentsRes] = await Promise.all([
-        supabase.from("questions").select("*").order("display_order", { ascending: true }),
-        supabase.from("question_options").select("*").order("display_order"),
-        supabase.from("components").select("id, name, component_key").order("name"),
+        supabase
+          .from("quiz_questions")
+          .select("*")
+          .order("display_order", { ascending: true }),
+        supabase
+          .from("question_options")
+          .select("*")
+          .order("display_order", { ascending: true }),
+        supabase
+          .from("components")
+          .select("id, name, component_key")
+          .order("name", { ascending: true }),
       ]);
 
       if (questionsRes.error) throw questionsRes.error;
@@ -151,46 +160,46 @@ const QuizManager = () => {
     setSaving(true);
     try {
       if (editingQuestion) {
+        // Update question
         const { error: questionError } = await supabase
-          .from("questions")
+          .from("quiz_questions")
           .update({
             question_text: formData.question_text,
             category: formData.category || null,
             component_key: formData.component_key || null,
           })
           .eq("id", editingQuestion.id);
-
         if (questionError) throw questionError;
 
+        // Delete existing options
         const { error: deleteError } = await supabase
           .from("question_options")
           .delete()
           .eq("question_id", editingQuestion.id);
-
         if (deleteError) throw deleteError;
 
+        // Insert new options
         const newOptions = formData.options.map((o, index) => ({
           question_id: editingQuestion.id,
           option_text: o.option_text,
           score: o.score,
           display_order: index + 1,
         }));
-
         const { error: optionsError } = await supabase
           .from("question_options")
           .insert(newOptions);
-
         if (optionsError) throw optionsError;
 
         toast.success("Question updated");
       } else {
+        // Insert new question
         const maxOrder =
           questions.length > 0
             ? Math.max(...questions.map((q) => q.display_order ?? 0))
             : 0;
 
         const { data: newQuestion, error: questionError } = await supabase
-          .from("questions")
+          .from("quiz_questions")
           .insert({
             question_text: formData.question_text,
             category: formData.category || null,
@@ -199,7 +208,6 @@ const QuizManager = () => {
           })
           .select()
           .single();
-
         if (questionError) throw questionError;
         if (!newQuestion) throw new Error("Insert returned null");
 
@@ -209,11 +217,9 @@ const QuizManager = () => {
           score: o.score,
           display_order: index + 1,
         }));
-
         const { error: optionsError } = await supabase
           .from("question_options")
           .insert(newOptions);
-
         if (optionsError) throw optionsError;
 
         toast.success("Question added");
@@ -235,8 +241,7 @@ const QuizManager = () => {
 
     try {
       await supabase.from("question_options").delete().eq("question_id", questionId);
-      const { error } = await supabase.from("questions").delete().eq("id", questionId);
-
+      const { error } = await supabase.from("quiz_questions").delete().eq("id", questionId);
       if (error) throw error;
 
       toast.success("Question deleted");
@@ -250,10 +255,9 @@ const QuizManager = () => {
   const handleChangeOrder = async (id: string, newOrder: number) => {
     try {
       const { error } = await supabase
-        .from("questions")
+        .from("quiz_questions")
         .update({ display_order: newOrder })
         .eq("id", id);
-
       if (error) throw error;
 
       setQuestions((prev) =>
@@ -337,7 +341,6 @@ const QuizManager = () => {
                     </TableCell>
                     <TableCell>{q.category || "—"}</TableCell>
                     <TableCell>{findComponentName(q.component_key)}</TableCell>
-
                     <TableCell>
                       <div className="text-xs space-y-0.5">
                         {qOpts.slice(0, 3).map((o) => (
@@ -352,7 +355,6 @@ const QuizManager = () => {
                         )}
                       </div>
                     </TableCell>
-
                     <TableCell className="w-20">
                       <input
                         type="number"
@@ -361,7 +363,6 @@ const QuizManager = () => {
                         className="w-16 border rounded px-2 py-1 text-sm"
                       />
                     </TableCell>
-
                     <TableCell>
                       <div className="flex gap-1">
                         <Button variant="ghost" size="icon" onClick={() => openEditDialog(q)}>
