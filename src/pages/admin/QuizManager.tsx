@@ -18,7 +18,7 @@ import { toast } from "sonner";
 interface Question {
   id: string;
   question_text: string;
-  display_order: number;
+  sort_order: number | null;
   is_active: boolean;
   component_id?: string | null;
 }
@@ -62,11 +62,12 @@ const QuizManager = () => {
     fetchData();
   }, []);
 
+  // ✅ LANGKAH 2 — fetch dengan sort_order
   const fetchData = async () => {
     setLoading(true);
     try {
       const [questionsRes, optionsRes, componentsRes] = await Promise.all([
-        supabase.from("quiz_questions").select("*").order("display_order"),
+        supabase.from("quiz_questions").select("*").order("sort_order", { ascending: true }),
         supabase.from("quiz_question_options").select("*").order("display_order"),
         supabase.from("components").select("id,name,type").order("name"),
       ]);
@@ -177,10 +178,10 @@ const QuizManager = () => {
 
         toast.success("Question updated");
       } else {
-        // CREATE NEW QUESTION
+        // CREATE QUESTION
         const maxOrder =
           questions.length > 0
-            ? Math.max(...questions.map((q) => q.display_order))
+            ? Math.max(...questions.map((q) => q.sort_order ?? 0))
             : 0;
 
         const { data: newQuestion, error: questionError } = await supabase
@@ -188,7 +189,7 @@ const QuizManager = () => {
           .insert({
             question_text: formData.question_text,
             component_id: formData.component_id || null,
-            display_order: maxOrder + 1,
+            sort_order: maxOrder + 1,
             quiz_id: import.meta.env.VITE_QUIZ_ID,
           })
           .select()
@@ -217,18 +218,10 @@ const QuizManager = () => {
       setDialogOpen(false);
       resetForm();
       fetchData();
-    } catch (error: any) {
-  console.error("🔴 SAVE ERROR FULL:", error);
-
-  // Print all Supabase error details if available
-  console.log("Message:", error?.message);
-  console.log("Details:", error?.details);
-  console.log("Hint:", error?.hint);
-  console.log("Code:", error?.code);
-
-  toast.error("Failed to save question");
-} finally {
-
+    } catch (error) {
+      console.error("SAVE ERROR:", error);
+      toast.error("Failed to save question");
+    } finally {
       setSaving(false);
     }
   };
@@ -250,6 +243,29 @@ const QuizManager = () => {
     }
   };
 
+  // ✅ LANGKAH 4 — Update order
+  const handleChangeOrder = async (id: string, newOrder: number) => {
+    try {
+      const { error } = await supabase
+        .from("quiz_questions")
+        .update({ sort_order: newOrder })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      setQuestions((prev) =>
+        prev
+          .map((q) => (q.id === id ? { ...q, sort_order: newOrder } : q))
+          .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+      );
+
+      toast.success("Order updated");
+    } catch (err) {
+      console.error("update order error:", err);
+      toast.error("Failed to update order");
+    }
+  };
+
   const getQuestionOptions = (questionId: string) =>
     options
       .filter((o) => o.question_id === questionId)
@@ -265,6 +281,11 @@ const QuizManager = () => {
       </div>
     );
   }
+
+  // ✅ LANGKAH 5 — Sort sebelum render
+  const sortedQuestions = [...questions].sort(
+    (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)
+  );
 
   return (
     <div className="space-y-6">
@@ -293,24 +314,27 @@ const QuizManager = () => {
               <TableHead>Question</TableHead>
               <TableHead>Component</TableHead>
               <TableHead>Options</TableHead>
+              <TableHead>Order</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
+
           <TableBody>
-            {questions.length === 0 ? (
+            {sortedQuestions.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="py-8 text-center">
+                <TableCell colSpan={6} className="py-8 text-center">
                   No questions yet.
                 </TableCell>
               </TableRow>
             ) : (
-              questions.map((q, i) => {
+              sortedQuestions.map((q, i) => {
                 const qOpts = getQuestionOptions(q.id);
                 return (
                   <TableRow key={q.id}>
                     <TableCell>{i + 1}</TableCell>
                     <TableCell>{q.question_text}</TableCell>
                     <TableCell>{findComponentName(q.component_id)}</TableCell>
+
                     <TableCell>
                       {qOpts.map((o) => (
                         <div key={o.id}>
@@ -318,6 +342,19 @@ const QuizManager = () => {
                         </div>
                       ))}
                     </TableCell>
+
+                    {/* ✅ LANGKAH 3 — Kolom input order */}
+                    <TableCell className="w-20">
+                      <input
+                        type="number"
+                        value={q.sort_order ?? ""}
+                        onChange={(e) =>
+                          handleChangeOrder(q.id, Number(e.target.value))
+                        }
+                        className="w-16 border rounded px-2 py-1"
+                      />
+                    </TableCell>
+
                     <TableCell>
                       <div className="flex gap-1">
                         <Button variant="ghost" size="icon" onClick={() => openEditDialog(q)}>
