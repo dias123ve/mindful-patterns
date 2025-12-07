@@ -9,22 +9,26 @@ import { toast } from "sonner";
 
 interface Question {
   id: string;
+  quiz_id: string;
   question_text: string;
   component_key: string | null;
   display_order: number;
-  is_active: boolean | null;
-  quiz_question_options: {
-    id: string;
-    option_text: string;
-    score: number;
-    display_order: number;
-  }[];
+  is_active: boolean;
+}
+
+interface Option {
+  id: string;
+  question_id: string;
+  option_text: string;
+  score: number | null;
+  display_order: number;
 }
 
 const Quiz = () => {
   const navigate = useNavigate();
 
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [options, setOptions] = useState<Option[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<
     Record<string, { optionId: string; score: number }>
@@ -38,35 +42,42 @@ const Quiz = () => {
     fetchQuizData();
   }, []);
 
-  /** 🧠 SUPER OPTIMIZED QUERY
-   *
-   *  Ambil quiz_questions + nested quiz_question_options
-   *  hanya 1 kali request.
-   */
   const fetchQuizData = async () => {
     try {
-      const { data, error } = await supabase
+      // 1. Ambil quiz aktif
+      const { data: quiz, error: quizErr } = await supabase
+        .from("quizzes")
+        .select("id")
+        .eq("is_active", true)
+        .single();
+
+      if (quizErr) throw quizErr;
+
+      // 2. Ambil pertanyaan sesuai quiz_id
+      const { data: qData, error: qErr } = await supabase
         .from("quiz_questions")
-        .select(
-          `
-          id,
-          question_text,
-          component_key,
-          display_order,
-          is_active,
-          quiz_question_options (
-            id,
-            option_text,
-            score,
-            display_order
-          )
-        `
-        )
+        .select("*")
+        .eq("quiz_id", quiz.id)
+        .eq("is_active", true)
         .order("display_order", { ascending: true });
 
-      if (error) throw error;
+      if (qErr) throw qErr;
 
-      setQuestions(data || []);
+      // 3. Ambil opsi berdasarkan list pertanyaan
+      const { data: oData, error: oErr } = await supabase
+        .from("quiz_question_options")
+        .select("*")
+        .in(
+          "question_id",
+          qData.map((q) => q.id)
+        )
+        .order("question_id", { ascending: true })
+        .order("display_order", { ascending: true });
+
+      if (oErr) throw oErr;
+
+      setQuestions(qData || []);
+      setOptions(oData || []);
     } catch (err) {
       console.error(err);
       toast.error("Failed to load quiz");
@@ -76,7 +87,9 @@ const Quiz = () => {
   };
 
   const currentQuestion = questions[currentQuestionIndex];
-  const currentOptions = currentQuestion?.quiz_question_options || [];
+  const currentOptions = options.filter(
+    (o) => o.question_id === currentQuestion?.id
+  );
 
   const progress = questions.length
     ? ((currentQuestionIndex + 1) / questions.length) * 100
