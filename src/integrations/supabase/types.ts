@@ -55,10 +55,16 @@ export type Database = {
           component_key: Database["public"]["Enums"]["thinking_component"]
           created_at: string
           description: string
+          description_negative: string
+          description_positive: string
           display_order: number
+          example_negative: string
+          example_positive: string
           examples: string
           id: string
           name: string
+          pdf_negative_url: string | null
+          pdf_positive_url: string | null
           pdf_url: string | null
           updated_at: string
         }
@@ -66,10 +72,16 @@ export type Database = {
           component_key: Database["public"]["Enums"]["thinking_component"]
           created_at?: string
           description?: string
+          description_negative?: string
+          description_positive?: string
           display_order?: number
+          example_negative?: string
+          example_positive?: string
           examples?: string
           id?: string
           name: string
+          pdf_negative_url?: string | null
+          pdf_positive_url?: string | null
           pdf_url?: string | null
           updated_at?: string
         }
@@ -77,10 +89,16 @@ export type Database = {
           component_key?: Database["public"]["Enums"]["thinking_component"]
           created_at?: string
           description?: string
+          description_negative?: string
+          description_positive?: string
           display_order?: number
+          example_negative?: string
+          example_positive?: string
           examples?: string
           id?: string
           name?: string
+          pdf_negative_url?: string | null
+          pdf_positive_url?: string | null
           pdf_url?: string | null
           updated_at?: string
         }

@@ -1,4 +1,3 @@
-// src/components/QuizManager.tsx
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -6,11 +5,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Table, TableBody, TableCell, TableHead,
-  TableHeader, TableRow,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -18,9 +24,10 @@ import { toast } from "sonner";
 interface Question {
   id: string;
   question_text: string;
-  sort_order: number | null;
+  category: string | null;
+  component_key: string | null;
+  display_order: number;
   is_active: boolean;
-  component_id?: string | null;
 }
 
 interface QuestionOption {
@@ -34,7 +41,7 @@ interface QuestionOption {
 interface ComponentRow {
   id: string;
   name: string;
-  type: string;
+  component_key: string;
 }
 
 const QuizManager = () => {
@@ -48,7 +55,8 @@ const QuizManager = () => {
 
   const [formData, setFormData] = useState({
     question_text: "",
-    component_id: "",
+    category: "",
+    component_key: "",
     options: [
       { option_text: "", score: 1 },
       { option_text: "", score: 2 },
@@ -62,14 +70,13 @@ const QuizManager = () => {
     fetchData();
   }, []);
 
-  // ✅ LANGKAH 2 — fetch dengan sort_order
   const fetchData = async () => {
     setLoading(true);
     try {
       const [questionsRes, optionsRes, componentsRes] = await Promise.all([
-        supabase.from("quiz_questions").select("*").order("sort_order", { ascending: true }),
-        supabase.from("quiz_question_options").select("*").order("display_order"),
-        supabase.from("components").select("id,name,type").order("name"),
+        supabase.from("questions").select("*").order("display_order", { ascending: true }),
+        supabase.from("question_options").select("*").order("display_order"),
+        supabase.from("components").select("id, name, component_key").order("name"),
       ]);
 
       if (questionsRes.error) throw questionsRes.error;
@@ -90,7 +97,8 @@ const QuizManager = () => {
   const resetForm = () => {
     setFormData({
       question_text: "",
-      component_id: "",
+      category: "",
+      component_key: "",
       options: [
         { option_text: "", score: 1 },
         { option_text: "", score: 2 },
@@ -115,7 +123,8 @@ const QuizManager = () => {
     setEditingQuestion(question);
     setFormData({
       question_text: question.question_text,
-      component_id: question.component_id || "",
+      category: question.category || "",
+      component_key: question.component_key || "",
       options:
         questionOptions.length > 0
           ? questionOptions.map((o) => ({
@@ -142,27 +151,24 @@ const QuizManager = () => {
     setSaving(true);
     try {
       if (editingQuestion) {
-        // UPDATE QUESTION
         const { error: questionError } = await supabase
-          .from("quiz_questions")
+          .from("questions")
           .update({
             question_text: formData.question_text,
-            component_id: formData.component_id || null,
-            quiz_id: import.meta.env.VITE_QUIZ_ID,
+            category: formData.category || null,
+            component_key: formData.component_key || null,
           })
           .eq("id", editingQuestion.id);
 
         if (questionError) throw questionError;
 
-        // DELETE OLD OPTIONS
         const { error: deleteError } = await supabase
-          .from("quiz_question_options")
+          .from("question_options")
           .delete()
           .eq("question_id", editingQuestion.id);
 
         if (deleteError) throw deleteError;
 
-        // INSERT NEW OPTIONS
         const newOptions = formData.options.map((o, index) => ({
           question_id: editingQuestion.id,
           option_text: o.option_text,
@@ -171,26 +177,25 @@ const QuizManager = () => {
         }));
 
         const { error: optionsError } = await supabase
-          .from("quiz_question_options")
+          .from("question_options")
           .insert(newOptions);
 
         if (optionsError) throw optionsError;
 
         toast.success("Question updated");
       } else {
-        // CREATE QUESTION
         const maxOrder =
           questions.length > 0
-            ? Math.max(...questions.map((q) => q.sort_order ?? 0))
+            ? Math.max(...questions.map((q) => q.display_order ?? 0))
             : 0;
 
         const { data: newQuestion, error: questionError } = await supabase
-          .from("quiz_questions")
+          .from("questions")
           .insert({
             question_text: formData.question_text,
-            component_id: formData.component_id || null,
-            sort_order: maxOrder + 1,
-            quiz_id: import.meta.env.VITE_QUIZ_ID,
+            category: formData.category || null,
+            component_key: formData.component_key || null,
+            display_order: maxOrder + 1,
           })
           .select()
           .single();
@@ -198,7 +203,6 @@ const QuizManager = () => {
         if (questionError) throw questionError;
         if (!newQuestion) throw new Error("Insert returned null");
 
-        // INSERT OPTIONS
         const newOptions = formData.options.map((o, index) => ({
           question_id: newQuestion.id,
           option_text: o.option_text,
@@ -207,7 +211,7 @@ const QuizManager = () => {
         }));
 
         const { error: optionsError } = await supabase
-          .from("quiz_question_options")
+          .from("question_options")
           .insert(newOptions);
 
         if (optionsError) throw optionsError;
@@ -230,8 +234,8 @@ const QuizManager = () => {
     if (!confirm("Delete this question?")) return;
 
     try {
-      await supabase.from("quiz_question_options").delete().eq("question_id", questionId);
-      const { error } = await supabase.from("quiz_questions").delete().eq("id", questionId);
+      await supabase.from("question_options").delete().eq("question_id", questionId);
+      const { error } = await supabase.from("questions").delete().eq("id", questionId);
 
       if (error) throw error;
 
@@ -243,20 +247,19 @@ const QuizManager = () => {
     }
   };
 
-  // ✅ LANGKAH 4 — Update order
   const handleChangeOrder = async (id: string, newOrder: number) => {
     try {
       const { error } = await supabase
-        .from("quiz_questions")
-        .update({ sort_order: newOrder })
+        .from("questions")
+        .update({ display_order: newOrder })
         .eq("id", id);
 
       if (error) throw error;
 
       setQuestions((prev) =>
         prev
-          .map((q) => (q.id === id ? { ...q, sort_order: newOrder } : q))
-          .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+          .map((q) => (q.id === id ? { ...q, display_order: newOrder } : q))
+          .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
       );
 
       toast.success("Order updated");
@@ -271,8 +274,8 @@ const QuizManager = () => {
       .filter((o) => o.question_id === questionId)
       .sort((a, b) => a.display_order - b.display_order);
 
-  const findComponentName = (component_id?: string | null) =>
-    components.find((c) => c.id === component_id)?.name || "—";
+  const findComponentName = (componentKey?: string | null) =>
+    components.find((c) => c.component_key === componentKey)?.name || "—";
 
   if (loading) {
     return (
@@ -282,9 +285,8 @@ const QuizManager = () => {
     );
   }
 
-  // ✅ LANGKAH 5 — Sort sebelum render
   const sortedQuestions = [...questions].sort(
-    (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)
+    (a, b) => (a.display_order ?? 0) - (b.display_order ?? 0)
   );
 
   return (
@@ -294,9 +296,7 @@ const QuizManager = () => {
           <h1 className="text-2xl font-display font-bold text-foreground">
             Quiz Manager
           </h1>
-          <p className="text-muted-foreground mt-1">
-            Manage questions and options
-          </p>
+          <p className="text-muted-foreground mt-1">Manage questions and options</p>
         </div>
 
         <Button onClick={openCreateDialog}>
@@ -305,13 +305,13 @@ const QuizManager = () => {
         </Button>
       </div>
 
-      {/* TABLE */}
       <div className="border rounded-lg">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>#</TableHead>
               <TableHead>Question</TableHead>
+              <TableHead>Category</TableHead>
               <TableHead>Component</TableHead>
               <TableHead>Options</TableHead>
               <TableHead>Order</TableHead>
@@ -322,7 +322,7 @@ const QuizManager = () => {
           <TableBody>
             {sortedQuestions.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="py-8 text-center">
+                <TableCell colSpan={7} className="py-8 text-center">
                   No questions yet.
                 </TableCell>
               </TableRow>
@@ -332,26 +332,33 @@ const QuizManager = () => {
                 return (
                   <TableRow key={q.id}>
                     <TableCell>{i + 1}</TableCell>
-                    <TableCell>{q.question_text}</TableCell>
-                    <TableCell>{findComponentName(q.component_id)}</TableCell>
+                    <TableCell className="max-w-xs">
+                      <p className="truncate">{q.question_text}</p>
+                    </TableCell>
+                    <TableCell>{q.category || "—"}</TableCell>
+                    <TableCell>{findComponentName(q.component_key)}</TableCell>
 
                     <TableCell>
-                      {qOpts.map((o) => (
-                        <div key={o.id}>
-                          • {o.option_text} ({o.score})
-                        </div>
-                      ))}
+                      <div className="text-xs space-y-0.5">
+                        {qOpts.slice(0, 3).map((o) => (
+                          <div key={o.id} className="truncate">
+                            • {o.option_text} ({o.score})
+                          </div>
+                        ))}
+                        {qOpts.length > 3 && (
+                          <div className="text-muted-foreground">
+                            +{qOpts.length - 3} more
+                          </div>
+                        )}
+                      </div>
                     </TableCell>
 
-                    {/* ✅ LANGKAH 3 — Kolom input order */}
                     <TableCell className="w-20">
                       <input
                         type="number"
-                        value={q.sort_order ?? ""}
-                        onChange={(e) =>
-                          handleChangeOrder(q.id, Number(e.target.value))
-                        }
-                        className="w-16 border rounded px-2 py-1"
+                        value={q.display_order ?? ""}
+                        onChange={(e) => handleChangeOrder(q.id, Number(e.target.value))}
+                        className="w-16 border rounded px-2 py-1 text-sm"
                       />
                     </TableCell>
 
@@ -378,7 +385,6 @@ const QuizManager = () => {
         </Table>
       </div>
 
-      {/* DIALOG */}
       <Dialog
         open={dialogOpen}
         onOpenChange={(open) => {
@@ -405,27 +411,40 @@ const QuizManager = () => {
               />
             </div>
 
-            <div>
-              <Label>Related Component (optional)</Label>
-              <select
-                value={formData.component_id}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, component_id: e.target.value }))
-                }
-                className="border rounded p-2 w-full"
-              >
-                <option value="">Select…</option>
-                {components.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name} ({c.type})
-                  </option>
-                ))}
-              </select>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Category (optional)</Label>
+                <Input
+                  value={formData.category}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, category: e.target.value }))
+                  }
+                  placeholder="e.g., Thinking Patterns"
+                />
+              </div>
+
+              <div>
+                <Label>Related Component</Label>
+                <select
+                  value={formData.component_key}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, component_key: e.target.value }))
+                  }
+                  className="border rounded p-2 w-full"
+                >
+                  <option value="">Select…</option>
+                  {components.map((c) => (
+                    <option key={c.id} value={c.component_key}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <div>
               <Label>Answer Options (5)</Label>
-              <div className="space-y-3">
+              <div className="space-y-3 mt-2">
                 {formData.options.map((opt, idx) => (
                   <div key={idx} className="flex gap-2">
                     <Input

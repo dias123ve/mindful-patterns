@@ -10,15 +10,16 @@ import { toast } from "sonner";
 interface Question {
   id: string;
   question_text: string;
-  component_id: string | null;
-  sort_order: number | null;
+  component_key: string | null;
+  display_order: number;
+  is_active: boolean;
 }
 
 interface Option {
   id: string;
   question_id: string;
   option_text: string;
-  score: number;
+  score: number | null;
   display_order: number;
 }
 
@@ -36,9 +37,6 @@ const Quiz = () => {
   const [submitting, setSubmitting] = useState(false);
   const [showEmailCapture, setShowEmailCapture] = useState(false);
 
-  // ------------------------------------------------------------
-  // FETCH QUIZ DATA
-  // ------------------------------------------------------------
   useEffect(() => {
     fetchQuizData();
   }, []);
@@ -46,13 +44,13 @@ const Quiz = () => {
   const fetchQuizData = async () => {
     try {
       const { data: qData, error: qErr } = await supabase
-        .from("quiz_questions")
+        .from("questions")
         .select("*")
-        .eq("quiz_id", import.meta.env.VITE_QUIZ_ID)
-        .order("sort_order", { ascending: true });
+        .eq("is_active", true)
+        .order("display_order", { ascending: true });
 
       const { data: oData, error: oErr } = await supabase
-        .from("quiz_question_options")
+        .from("question_options")
         .select("*")
         .order("question_id", { ascending: true })
         .order("display_order", { ascending: true });
@@ -70,9 +68,6 @@ const Quiz = () => {
     }
   };
 
-  // ------------------------------------------------------------
-  // QUIZ PROGRESS
-  // ------------------------------------------------------------
   const currentQuestion = questions[currentQuestionIndex];
   const currentOptions = options.filter(
     (o) => o.question_id === currentQuestion?.id
@@ -82,9 +77,6 @@ const Quiz = () => {
     ? ((currentQuestionIndex + 1) / questions.length) * 100
     : 0;
 
-  // ------------------------------------------------------------
-  // ANSWER SELECT
-  // ------------------------------------------------------------
   const handleSelectOption = (optionId: string, score: number) => {
     if (!currentQuestion) return;
 
@@ -102,31 +94,24 @@ const Quiz = () => {
     }, 250);
   };
 
-  // ------------------------------------------------------------
-  // SCORE CALCULATION
-  // ------------------------------------------------------------
   const calculateScores = () => {
     const scores: Record<string, number> = {};
 
     questions.forEach((q) => {
       const ans = answers[q.id];
-      if (ans && q.component_id) {
-        scores[q.component_id] =
-          (scores[q.component_id] || 0) + ans.score;
+      if (ans && q.component_key) {
+        scores[q.component_key] = (scores[q.component_key] || 0) + ans.score;
       }
     });
 
-    const topComponents = Object.entries(scores)
+    // Sort by score descending and get component keys
+    const sortedComponents = Object.entries(scores)
       .sort(([, a], [, b]) => b - a)
-      .slice(0, 3)
       .map(([key]) => key);
 
-    return { scores, topComponents };
+    return { scores, sortedComponents };
   };
 
-  // ------------------------------------------------------------
-  // SUBMIT QUIZ
-  // ------------------------------------------------------------
   const handleSubmit = async () => {
     if (!email.trim()) {
       toast.error("Enter your email");
@@ -142,31 +127,18 @@ const Quiz = () => {
     setSubmitting(true);
 
     try {
-      const { scores, topComponents } = calculateScores();
+      const { scores, sortedComponents } = calculateScores();
 
-      // Fetch component names
-      const { data: compData, error: compErr } = await supabase
-        .from("components")
-        .select("id, name")
-        .in("id", topComponents);
-
-      if (compErr) throw compErr;
-
-      const topComponentNames = topComponents.map(
-        (cid) => compData?.find((c) => c.id === cid)?.name || "Unknown"
-      );
-
-      const totalScore = Object.values(scores).reduce((a, b) => a + b, 0);
+      // Get top 3 components for the submission
+      const topComponents = sortedComponents.slice(0, 3);
 
       const { data, error } = await supabase
         .from("quiz_submissions")
         .insert({
-          quiz_id: import.meta.env.VITE_QUIZ_ID,
-          user_email: email.trim().toLowerCase(),
+          email: email.trim().toLowerCase(),
           answers,
-          score: totalScore,
-          top_components: topComponents,
-          top_component_names: topComponentNames,
+          component_scores: scores,
+          top_components: topComponents as any,
         })
         .select()
         .single();
@@ -174,6 +146,7 @@ const Quiz = () => {
       if (error) throw error;
 
       sessionStorage.setItem("quiz_submission_id", data.id);
+      sessionStorage.setItem("component_scores", JSON.stringify(scores));
       navigate("/results");
     } catch (err) {
       console.error(err);
@@ -183,9 +156,6 @@ const Quiz = () => {
     }
   };
 
-  // ------------------------------------------------------------
-  // UI
-  // ------------------------------------------------------------
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-hero flex items-center justify-center">
@@ -241,7 +211,7 @@ const Quiz = () => {
                 {currentOptions.map((opt, i) => (
                   <button
                     key={opt.id}
-                    onClick={() => handleSelectOption(opt.id, opt.score)}
+                    onClick={() => handleSelectOption(opt.id, opt.score || 0)}
                     className={`w-full text-left p-5 rounded-xl border-2 transition-all ${
                       answers[currentQuestion.id]?.optionId === opt.id
                         ? "border-primary bg-primary/10 shadow-soft"
