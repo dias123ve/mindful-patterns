@@ -11,7 +11,7 @@ interface Question {
   id: string;
   question_text: string;
   component_id: string | null;
-  display_order: number;
+  sort_order: number | null;
 }
 
 interface Option {
@@ -49,7 +49,7 @@ const Quiz = () => {
         .from("quiz_questions")
         .select("*")
         .eq("quiz_id", import.meta.env.VITE_QUIZ_ID)
-        .order("display_order", { ascending: true });
+        .order("sort_order", { ascending: true });
 
       const { data: oData, error: oErr } = await supabase
         .from("quiz_question_options")
@@ -63,6 +63,7 @@ const Quiz = () => {
       setQuestions(qData || []);
       setOptions(oData || []);
     } catch (err) {
+      console.error(err);
       toast.error("Failed to load quiz");
     } finally {
       setLoading(false);
