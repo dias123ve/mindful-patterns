@@ -1,290 +1,528 @@
-"use client";
-
 import { useState, useEffect } from "react";
-import { supabase } from "@/utils/supabaseClient";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { toast } from "react-hot-toast";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
-type Question = {
+interface Question {
   id: string;
-  quiz_id: string | null;
   question_text: string;
-};
+  category: string | null;
+  component_key: string | null;
+  display_order: number;
+  is_active: boolean;
+}
 
-type QuestionOption = {
+interface QuestionOption {
   id: string;
   question_id: string;
   option_text: string;
-  is_correct: boolean;
+  score: number | null;
   display_order: number;
-};
+}
 
-export default function QuestionManager({ quizId }: { quizId: string }) {
+interface ComponentRow {
+  id: string;
+  name: string;
+  component_key: string;
+}
+
+const QuizManager = () => {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [options, setOptions] = useState<QuestionOption[]>([]);
+  const [components, setComponents] = useState<ComponentRow[]>([]);
   const [loading, setLoading] = useState(true);
-
+  const [saving, setSaving] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
-  const [questionText, setQuestionText] = useState("");
-  const [optionInputs, setOptionInputs] = useState<
-    { id?: string; option_text: string; is_correct: boolean }[]
-  >([]);
+
+  const [formData, setFormData] = useState({
+    question_text: "",
+    category: "",
+    component_key: "",
+    options: [
+      { option_text: "", score: 1 },
+      { option_text: "", score: 2 },
+      { option_text: "", score: 3 },
+      { option_text: "", score: 4 },
+      { option_text: "", score: 5 },
+    ],
+  });
 
   useEffect(() => {
-    fetchQuestions();
-  }, [quizId]);
+    fetchData();
+  }, []);
 
-  async function fetchQuestions() {
+  const fetchData = async () => {
     setLoading(true);
+    try {
+      const [questionsRes, optionsRes, componentsRes] = await Promise.all([
+        supabase
+          .from("quiz_questions")
+          .select("*")
+          .order("display_order", { ascending: true }),
 
-    const { data: qData, error } = await supabase
-      .from("quiz_questions")
-      .select("*")
-      .eq("quiz_id", quizId)
-      .order("id", { ascending: true });
+        supabase
+          .from("quiz_question_options")
+          .select("*")
+          .order("display_order", { ascending: true }),
 
-    if (error) {
-      toast.error("Load questions failed: " + error.message);
+        supabase
+          .from("components")
+          .select("id, name, component_key")
+          .order("name", { ascending: true }),
+      ]);
+
+      if (questionsRes.error) throw questionsRes.error;
+      if (optionsRes.error) throw optionsRes.error;
+      if (componentsRes.error) throw componentsRes.error;
+
+      setQuestions(questionsRes.data || []);
+      setOptions(optionsRes.data || []);
+      setComponents(componentsRes.data || []);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      toast.error("Failed to load quiz data");
+    } finally {
       setLoading(false);
-      return;
     }
+  };
 
-    setQuestions(qData || []);
-
-    // Fetch options
-    const { data: oData, error: oError } = await supabase
-      .from("quiz_question_options")
-      .select("*")
-      .order("display_order", { ascending: true });
-
-    if (oError) {
-      toast.error("Load options failed: " + oError.message);
-      setLoading(false);
-      return;
-    }
-
-    setOptions(oData || []);
-    setLoading(false);
-  }
-
-  function startEdit(question: Question) {
-    setEditingQuestion(question);
-    setQuestionText(question.question_text);
-
-    const related = options.filter((o) => o.question_id === question.id);
-
-    setOptionInputs(
-      related.map((o) => ({
-        id: o.id,
-        option_text: o.option_text,
-        is_correct: o.is_correct,
-      }))
-    );
-  }
-
-  function newQuestionForm() {
+  const resetForm = () => {
+    setFormData({
+      question_text: "",
+      category: "",
+      component_key: "",
+      options: [
+        { option_text: "", score: 1 },
+        { option_text: "", score: 2 },
+        { option_text: "", score: 3 },
+        { option_text: "", score: 4 },
+        { option_text: "", score: 5 },
+      ],
+    });
     setEditingQuestion(null);
-    setQuestionText("");
-    setOptionInputs([
-      { option_text: "", is_correct: false },
-      { option_text: "", is_correct: false },
-    ]);
-  }
+  };
 
-  function updateOptionInput(index: number, key: string, value: any) {
-    const copy = [...optionInputs];
-    (copy as any)[index][key] = value;
-    setOptionInputs(copy);
-  }
+  const openCreateDialog = () => {
+    resetForm();
+    setDialogOpen(true);
+  };
 
-  function addOption() {
-    setOptionInputs([
-      ...optionInputs,
-      { option_text: "", is_correct: false },
-    ]);
-  }
+  const openEditDialog = (question: Question) => {
+    const questionOptions = options
+      .filter((o) => o.question_id === question.id)
+      .sort((a, b) => a.display_order - b.display_order);
 
-  function removeOption(index: number) {
-    setOptionInputs(optionInputs.filter((_, i) => i !== index));
-  }
+    setEditingQuestion(question);
+    setFormData({
+      question_text: question.question_text,
+      category: question.category || "",
+      component_key: question.component_key || "",
+      options:
+        questionOptions.length > 0
+          ? questionOptions.map((o) => ({
+              option_text: o.option_text,
+              score: o.score || 1,
+            }))
+          : formData.options,
+    });
 
-  async function saveQuestion() {
-    if (!questionText.trim()) {
-      toast.error("Question cannot be empty");
+    setDialogOpen(true);
+  };
+
+  const handleSave = async () => {
+    if (!formData.question_text.trim()) {
+      toast.error("Please enter a question");
       return;
     }
 
-    if (optionInputs.length === 0) {
-      toast.error("At least one option required");
+    if (formData.options.some((o) => !o.option_text.trim())) {
+      toast.error("Please fill in all answer options");
       return;
     }
 
-    let questionId = editingQuestion?.id;
+    setSaving(true);
+    try {
+      if (editingQuestion) {
+        // Update question
+        const { error: questionError } = await supabase
+          .from("quiz_questions")
+          .update({
+            question_text: formData.question_text,
+            category: formData.category || null,
+            component_key: formData.component_key || null,
+          })
+          .eq("id", editingQuestion.id);
+        if (questionError) throw questionError;
 
-    // -----------------------------
-    // INSERT OR UPDATE QUESTION
-    // -----------------------------
-    if (editingQuestion) {
-      const { error } = await supabase
-        .from("quiz_questions")
-        .update({ question_text: questionText })
-        .eq("id", questionId);
+        // Delete existing options
+        const { error: deleteError } = await supabase
+          .from("quiz_question_options")
+          .delete()
+          .eq("question_id", editingQuestion.id);
+        if (deleteError) throw deleteError;
 
-      if (error) {
-        toast.error("Update question failed: " + error.message);
-        return;
+        // Insert new options
+        const newOptions = formData.options.map((o, index) => ({
+          question_id: editingQuestion.id,
+          option_text: o.option_text,
+          score: o.score,
+          display_order: index + 1,
+        }));
+        const { error: optionsError } = await supabase
+          .from("quiz_question_options")
+          .insert(newOptions);
+        if (optionsError) throw optionsError;
+
+        toast.success("Question updated");
+      } else {
+        // Insert new question
+        const maxOrder =
+          questions.length > 0
+            ? Math.max(...questions.map((q) => q.display_order ?? 0))
+            : 0;
+
+        const { data: newQuestion, error: questionError } = await supabase
+          .from("quiz_questions")
+          .insert({
+            question_text: formData.question_text,
+            category: formData.category || null,
+            component_key: formData.component_key || null,
+            display_order: maxOrder + 1,
+          })
+          .select()
+          .single();
+        if (questionError) throw questionError;
+        if (!newQuestion) throw new Error("Insert returned null");
+
+        const newOptions = formData.options.map((o, index) => ({
+          question_id: newQuestion.id,
+          option_text: o.option_text,
+          score: o.score,
+          display_order: index + 1,
+        }));
+        const { error: optionsError } = await supabase
+          .from("quiz_question_options")
+          .insert(newOptions);
+        if (optionsError) throw optionsError;
+
+        toast.success("Question added");
       }
-    } else {
-      const { data, error } = await supabase
-        .from("quiz_questions")
-        .insert([{ quiz_id: quizId, question_text: questionText }])
-        .select("*")
-        .single();
 
-      if (error) {
-        toast.error("Insert question failed: " + error.message);
-        return;
-      }
-
-      questionId = data.id;
+      setDialogOpen(false);
+      resetForm();
+      fetchData();
+    } catch (error) {
+      console.error("SAVE ERROR:", error);
+      toast.error("Failed to save question");
+    } finally {
+      setSaving(false);
     }
+  };
 
-    // ------------------------------------
-    // DELETE OLD OPTIONS (ONLY WHEN EDIT)
-    // ------------------------------------
-    if (editingQuestion) {
-      const { error } = await supabase
+  const handleDelete = async (questionId: string) => {
+    if (!confirm("Delete this question?")) return;
+
+    try {
+      await supabase
         .from("quiz_question_options")
         .delete()
         .eq("question_id", questionId);
 
-      if (error) {
-        toast.error("Delete old options failed: " + error.message);
-        return;
-      }
+      const { error } = await supabase
+        .from("quiz_questions")
+        .delete()
+        .eq("id", questionId);
+      if (error) throw error;
+
+      toast.success("Question deleted");
+      fetchData();
+    } catch (error) {
+      console.error("Delete error:", error);
+      toast.error("Failed to delete question");
     }
+  };
 
-    // -----------------------------
-    // INSERT NEW OPTIONS
-    // -----------------------------
-    const optionsToInsert = optionInputs.map((op, i) => ({
-      question_id: questionId!,
-      option_text: op.option_text,
-      is_correct: op.is_correct,
-      display_order: i + 1,
-    }));
+  const handleChangeOrder = async (id: string, newOrder: number) => {
+    try {
+      const { error } = await supabase
+        .from("quiz_questions")
+        .update({ display_order: newOrder })
+        .eq("id", id);
+      if (error) throw error;
 
-    const { error: optErr } = await supabase
-      .from("quiz_question_options")
-      .insert(optionsToInsert);
+      setQuestions((prev) =>
+        prev
+          .map((q) => (q.id === id ? { ...q, display_order: newOrder } : q))
+          .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
+      );
 
-    if (optErr) {
-      toast.error("Insert options failed: " + optErr.message);
-      return;
+      toast.success("Order updated");
+    } catch (err) {
+      console.error("update order error:", err);
+      toast.error("Failed to update order");
     }
+  };
 
-    toast.success("Saved!");
+  const getQuestionOptions = (questionId: string) =>
+    options
+      .filter((o) => o.question_id === questionId)
+      .sort((a, b) => a.display_order - b.display_order);
 
-    // reload everything
-    fetchQuestions();
-    newQuestionForm();
+  const findComponentName = (componentKey?: string | null) =>
+    components.find((c) => c.component_key === componentKey)?.name || "—";
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
   }
 
-  // -----------------------------------
-  // DELETE QUESTION
-  // -----------------------------------
-  async function deleteQuestion(questionId: string) {
-    // delete options first
-    const { error: optErr } = await supabase
-      .from("quiz_question_options")
-      .delete()
-      .eq("question_id", questionId);
-
-    if (optErr) {
-      toast.error("Delete options failed: " + optErr.message);
-      return;
-    }
-
-    // delete question
-    const { error: qErr } = await supabase
-      .from("quiz_questions")
-      .delete()
-      .eq("id", questionId);
-
-    if (qErr) {
-      toast.error("Delete question failed: " + qErr.message);
-      return;
-    }
-
-    toast.success("Deleted");
-    fetchQuestions();
-  }
+  const sortedQuestions = [...questions].sort(
+    (a, b) => (a.display_order ?? 0) - (b.display_order ?? 0)
+  );
 
   return (
-    <div className="p-4">
-      <Button onClick={newQuestionForm}>New Question</Button>
-
-      <div className="mt-4">
-        <Textarea
-          value={questionText}
-          onChange={(e) => setQuestionText(e.target.value)}
-          placeholder="Question text"
-        />
-
-        <div className="mt-4 space-y-2">
-          {optionInputs.map((op, i) => (
-            <div key={i} className="flex gap-2 items-center">
-              <Input
-                value={op.option_text}
-                onChange={(e) =>
-                  updateOptionInput(i, "option_text", e.target.value)
-                }
-                placeholder={`Option ${i + 1}`}
-              />
-              <input
-                type="checkbox"
-                checked={op.is_correct}
-                onChange={(e) =>
-                  updateOptionInput(i, "is_correct", e.target.checked)
-                }
-              />
-              <Button
-                variant="destructive"
-                onClick={() => removeOption(i)}
-              >
-                X
-              </Button>
-            </div>
-          ))}
+    <div className="space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <h1 className="text-2xl font-display font-bold text-foreground">
+            Quiz Manager
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Manage questions and options
+          </p>
         </div>
 
-        <Button className="mt-2" onClick={addOption}>
-          Add Option
-        </Button>
-
-        <Button className="mt-4 w-full" onClick={saveQuestion}>
-          Save Question
+        <Button onClick={openCreateDialog}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Question
         </Button>
       </div>
 
-      <hr className="my-6" />
+      <div className="border rounded-lg">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>#</TableHead>
+              <TableHead>Question</TableHead>
+              <TableHead>Category</TableHead>
+              <TableHead>Component</TableHead>
+              <TableHead>Options</TableHead>
+              <TableHead>Order</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
 
-      <h2 className="text-xl font-bold mb-2">Questions</h2>
+          <TableBody>
+            {sortedQuestions.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="py-8 text-center">
+                  No questions yet.
+                </TableCell>
+              </TableRow>
+            ) : (
+              sortedQuestions.map((q, i) => {
+                const qOpts = getQuestionOptions(q.id);
+                return (
+                  <TableRow key={q.id}>
+                    <TableCell>{i + 1}</TableCell>
+                    <TableCell className="max-w-xs">
+                      <p className="truncate">{q.question_text}</p>
+                    </TableCell>
+                    <TableCell>{q.category || "—"}</TableCell>
+                    <TableCell>{findComponentName(q.component_key)}</TableCell>
+                    <TableCell>
+                      <div className="text-xs space-y-0.5">
+                        {qOpts.slice(0, 3).map((o) => (
+                          <div key={o.id} className="truncate">
+                            • {o.option_text} ({o.score})
+                          </div>
+                        ))}
+                        {qOpts.length > 3 && (
+                          <div className="text-muted-foreground">
+                            +{qOpts.length - 3} more
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="w-20">
+                      <input
+                        type="number"
+                        value={q.display_order ?? ""}
+                        onChange={(e) =>
+                          handleChangeOrder(q.id, Number(e.target.value))
+                        }
+                        className="w-16 border rounded px-2 py-1 text-sm"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => openEditDialog(q)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive"
+                          onClick={() => handleDelete(q.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
-      {questions.map((q) => (
-        <div key={q.id} className="border p-3 mb-2">
-          <p>{q.question_text}</p>
+      <Dialog
+        open={dialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) resetForm();
+        }}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {editingQuestion ? "Edit Question" : "Add New Question"}
+            </DialogTitle>
+          </DialogHeader>
 
-          <div className="mt-2 flex gap-2">
-            <Button onClick={() => startEdit(q)}>Edit</Button>
-            <Button variant="destructive" onClick={() => deleteQuestion(q.id)}>
-              Delete
-            </Button>
+          <div className="space-y-6 py-4">
+            <div>
+              <Label>Question Text</Label>
+              <Textarea
+                rows={3}
+                value={formData.question_text}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    question_text: e.target.value,
+                  }))
+                }
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Category (optional)</Label>
+                <Input
+                  value={formData.category}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      category: e.target.value,
+                    }))
+                  }
+                  placeholder="e.g., Thinking Patterns"
+                />
+              </div>
+
+              <div>
+                <Label>Related Component</Label>
+                <select
+                  value={formData.component_key}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      component_key: e.target.value,
+                    }))
+                  }
+                  className="border rounded p-2 w-full"
+                >
+                  <option value="">Select…</option>
+                  {components.map((c) => (
+                    <option key={c.id} value={c.component_key}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <Label>Answer Options (5)</Label>
+              <div className="space-y-3 mt-2">
+                {formData.options.map((opt, idx) => (
+                  <div key={idx} className="flex gap-2">
+                    <Input
+                      className="flex-1"
+                      placeholder={`Option ${idx + 1}`}
+                      value={opt.option_text}
+                      onChange={(e) => {
+                        const clone = [...formData.options];
+                        clone[idx].option_text = e.target.value;
+                        setFormData((prev) => ({
+                          ...prev,
+                          options: clone,
+                        }));
+                      }}
+                    />
+                    <Input
+                      type="number"
+                      min={1}
+                      max={5}
+                      value={opt.score}
+                      className="w-20"
+                      onChange={(e) => {
+                        const clone = [...formData.options];
+                        clone[idx].score = Number(e.target.value);
+                        setFormData((prev) => ({
+                          ...prev,
+                          options: clone,
+                        }));
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4 border-t">
+              <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button disabled={saving} onClick={handleSave}>
+                {saving && (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                )}
+                {editingQuestion ? "Update" : "Add"}
+              </Button>
+            </div>
           </div>
-        </div>
-      ))}
+        </DialogContent>
+      </Dialog>
     </div>
   );
-}
+};
+
+export default QuizManager;
