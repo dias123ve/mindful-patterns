@@ -41,16 +41,17 @@ const Quiz = () => {
     fetchQuizData();
   }, []);
 
+  // ✅ FIXED: TABLE NAMES UPDATED
   const fetchQuizData = async () => {
     try {
       const { data: qData, error: qErr } = await supabase
-        .from("questions")
+        .from("quiz_questions")
         .select("*")
         .eq("is_active", true)
         .order("display_order", { ascending: true });
 
       const { data: oData, error: oErr } = await supabase
-        .from("question_options")
+        .from("quiz_question_options")
         .select("*")
         .order("question_id", { ascending: true })
         .order("display_order", { ascending: true });
@@ -104,7 +105,6 @@ const Quiz = () => {
       }
     });
 
-    // Sort by score descending and get component keys
     const sortedComponents = Object.entries(scores)
       .sort(([, a], [, b]) => b - a)
       .map(([key]) => key);
@@ -129,7 +129,6 @@ const Quiz = () => {
     try {
       const { scores, sortedComponents } = calculateScores();
 
-      // Get top 3 components for the submission
       const topComponents = sortedComponents.slice(0, 3);
 
       const { data, error } = await supabase
