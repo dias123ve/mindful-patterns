@@ -44,7 +44,7 @@ const Quiz = () => {
 
   const fetchQuizData = async () => {
     try {
-      // 1. Ambil quiz aktif
+      // 1. Get active quiz
       const { data: quiz, error: quizErr } = await supabase
         .from("quizzes")
         .select("id")
@@ -52,8 +52,13 @@ const Quiz = () => {
         .single();
 
       if (quizErr) throw quizErr;
+      if (!quiz) {
+        console.warn("No active quiz found");
+        setLoading(false);
+        return;
+      }
 
-      // 2. Ambil pertanyaan sesuai quiz_id
+      // 2. Get questions
       const { data: qData, error: qErr } = await supabase
         .from("quiz_questions")
         .select("*")
@@ -63,23 +68,31 @@ const Quiz = () => {
 
       if (qErr) throw qErr;
 
-      // 3. Ambil opsi berdasarkan list pertanyaan
+      // If no questions → avoid IN([]) error
+      if (!qData || qData.length === 0) {
+        console.warn("Quiz exists but has ZERO QUESTIONS");
+        setQuestions([]);
+        setOptions([]);
+        setLoading(false);
+        return;
+      }
+
+      // 3. Get options safely
+      const questionIds = qData.map((q) => q.id);
+
       const { data: oData, error: oErr } = await supabase
         .from("quiz_question_options")
         .select("*")
-        .in(
-          "question_id",
-          qData.map((q) => q.id)
-        )
+        .in("question_id", questionIds)
         .order("question_id", { ascending: true })
         .order("display_order", { ascending: true });
 
       if (oErr) throw oErr;
 
-      setQuestions(qData || []);
+      setQuestions(qData);
       setOptions(oData || []);
     } catch (err) {
-      console.error(err);
+      console.error("Fetch error:", err);
       toast.error("Failed to load quiz");
     } finally {
       setLoading(false);
@@ -203,7 +216,9 @@ const Quiz = () => {
           <span className="text-sm text-muted-foreground">
             {showEmailCapture
               ? "Almost done!"
-              : `Question ${currentQuestionIndex + 1} of ${questions.length}`}
+              : `Question ${currentQuestionIndex + 1} of ${
+                  questions.length
+                }`}
           </span>
         </div>
       </header>
@@ -226,7 +241,9 @@ const Quiz = () => {
                 {currentOptions.map((opt, i) => (
                   <button
                     key={opt.id}
-                    onClick={() => handleSelectOption(opt.id, opt.score || 0)}
+                    onClick={() =>
+                      handleSelectOption(opt.id, opt.score || 0)
+                    }
                     className={`w-full text-left p-5 rounded-xl border-2 transition-all ${
                       answers[currentQuestion.id]?.optionId === opt.id
                         ? "border-primary bg-primary/10 shadow-soft"
@@ -282,7 +299,9 @@ const Quiz = () => {
                   )}
                 </Button>
 
-                <p className="text-xs text-muted-foreground">No spam. Ever.</p>
+                <p className="text-xs text-muted-foreground">
+                  No spam. Ever.
+                </p>
               </div>
             </div>
           )}
