@@ -2,31 +2,26 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Brain, BookOpen, Loader2, CheckCircle2, Sparkles } from "lucide-react";
+import { Brain, BookOpen, Loader2, CheckCircle2, Sparkles, AlertTriangle, Download } from "lucide-react";
 import { toast } from "sonner";
 
-interface Component {
+interface ComponentData {
   id: string;
   name: string;
-  content: {
-    description?: string;
-    examples?: string;
-  };
-}
-
-interface Submission {
-  id: string;
-  user_email: string;
-  top_components: string[];        // array of component IDs
-  top_component_names: string[];
+  component_key: string;
+  description_positive: string;
+  example_positive: string;
+  pdf_positive_url: string | null;
+  description_negative: string;
+  example_negative: string;
+  pdf_negative_url: string | null;
 }
 
 const Results = () => {
   const navigate = useNavigate();
-  const [submission, setSubmission] = useState<Submission | null>(null);
-  const [components, setComponents] = useState<Component[]>([]);
-  const [topComponents, setTopComponents] = useState<Component[]>([]);
   const [loading, setLoading] = useState(true);
+  const [positiveComponents, setPositiveComponents] = useState<ComponentData[]>([]);
+  const [negativeComponent, setNegativeComponent] = useState<ComponentData | null>(null);
 
   useEffect(() => {
     fetchResults();
@@ -34,6 +29,7 @@ const Results = () => {
 
   const fetchResults = async () => {
     const submissionId = sessionStorage.getItem("quiz_submission_id");
+    const componentScoresStr = sessionStorage.getItem("component_scores");
 
     if (!submissionId) {
       toast.error("No quiz results found. Please take the quiz first.");
@@ -42,34 +38,50 @@ const Results = () => {
     }
 
     try {
-      // Fetch submission
-      const submissionRes = await supabase
-        .from("quiz_submissions")
-        .select("*")
-        .eq("id", submissionId)
-        .single();
+      // Get component scores from session or fetch submission
+      let componentScores: Record<string, number> = {};
+      
+      if (componentScoresStr) {
+        componentScores = JSON.parse(componentScoresStr);
+      } else {
+        const { data: submission, error: subError } = await supabase
+          .from("quiz_submissions")
+          .select("component_scores")
+          .eq("id", submissionId)
+          .single();
 
-      if (submissionRes.error) throw submissionRes.error;
-      const sub = submissionRes.data;
+        if (subError) throw subError;
+        componentScores = (submission?.component_scores as Record<string, number>) || {};
+      }
 
-      // Fetch components
-      const componentsRes = await supabase
+      // Fetch all components
+      const { data: componentsData, error: compError } = await supabase
         .from("components")
-        .select("*");
+        .select("id, name, component_key, description_positive, example_positive, pdf_positive_url, description_negative, example_negative, pdf_negative_url");
 
-      if (componentsRes.error) throw componentsRes.error;
-      const comps = componentsRes.data || [];
+      if (compError) throw compError;
 
-      setSubmission(sub);
-      setComponents(comps);
+      // Sort components by score
+      const sortedKeys = Object.entries(componentScores)
+        .sort(([, a], [, b]) => b - a)
+        .map(([key]) => key);
 
-      // Map top components by ID
-      const topComps =
-        (sub.top_components || [])
-          .map((id: string) => comps.find((c: Component) => c.id === id))
-          .filter(Boolean);
+      // Map component keys to component data
+      const sortedComponents = sortedKeys
+        .map(key => componentsData?.find(c => c.component_key === key))
+        .filter(Boolean) as ComponentData[];
 
-      setTopComponents(topComps as Component[]);
+      // Top 2 are positive (strengths), bottom 1 is negative (weak spot)
+      if (sortedComponents.length >= 3) {
+        setPositiveComponents(sortedComponents.slice(0, 2));
+        setNegativeComponent(sortedComponents[sortedComponents.length - 1]);
+      } else if (sortedComponents.length === 2) {
+        setPositiveComponents([sortedComponents[0]]);
+        setNegativeComponent(sortedComponents[1]);
+      } else if (sortedComponents.length === 1) {
+        setPositiveComponents([sortedComponents[0]]);
+        setNegativeComponent(null);
+      }
     } catch (error) {
       console.error("Error fetching results:", error);
       toast.error("Failed to load results.");
@@ -108,46 +120,128 @@ const Results = () => {
               Your Thinking Profile
             </h1>
             <p className="text-muted-foreground max-w-md mx-auto">
-              Based on your responses, here are your top patterns.
+              Based on your responses, here are your key thinking patterns.
             </p>
           </div>
 
-          {/* TOP 3 COMPONENTS */}
-          <div className="space-y-6 mb-16">
-            {topComponents.map((component, index) => (
+          {/* YOUR STRENGTHS - Top 2 Positive */}
+          {positiveComponents.length > 0 && (
+            <section className="mb-12">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center">
+                  <CheckCircle2 className="h-5 w-5 text-green-600" />
+                </div>
+                <h2 className="text-2xl font-display font-bold text-foreground">
+                  Your Strengths
+                </h2>
+              </div>
+
+              <div className="space-y-6">
+                {positiveComponents.map((component, index) => (
+                  <div
+                    key={component.id}
+                    className="bg-card rounded-2xl p-6 md:p-8 shadow-soft animate-fade-in-up border-l-4 border-green-500"
+                    style={{ animationDelay: `${index * 0.1}s` }}
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="flex-shrink-0 w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center text-green-600 font-display font-bold">
+                        {index + 1}
+                      </div>
+
+                      <div className="flex-1">
+                        <h3 className="text-xl font-display font-semibold text-foreground mb-3">
+                          {component.name}
+                        </h3>
+
+                        <p className="text-muted-foreground mb-4 leading-relaxed">
+                          {component.description_positive || "No description provided."}
+                        </p>
+
+                        <div className="bg-green-50 dark:bg-green-950/30 rounded-xl p-4 mb-4">
+                          <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
+                            <BookOpen className="h-4 w-4 text-green-600" />
+                            Examples in Daily Life
+                          </h4>
+                          <p className="text-sm text-muted-foreground">
+                            {component.example_positive || "No examples provided."}
+                          </p>
+                        </div>
+
+                        {component.pdf_positive_url && (
+                          <a
+                            href={component.pdf_positive_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 text-sm text-green-600 hover:text-green-700 font-medium"
+                          >
+                            <Download className="h-4 w-4" />
+                            Download Strength Guide
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* YOUR WEAK SPOT - Bottom 1 Negative */}
+          {negativeComponent && (
+            <section className="mb-16">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center">
+                  <AlertTriangle className="h-5 w-5 text-amber-600" />
+                </div>
+                <h2 className="text-2xl font-display font-bold text-foreground">
+                  Your Growth Area
+                </h2>
+              </div>
+
               <div
-                key={component.id}
-                className="bg-card rounded-2xl p-6 md:p-8 shadow-soft animate-fade-in-up"
-                style={{ animationDelay: `${index * 0.1}s` }}
+                className="bg-card rounded-2xl p-6 md:p-8 shadow-soft animate-fade-in-up border-l-4 border-amber-500"
+                style={{ animationDelay: "0.2s" }}
               >
                 <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-display font-bold">
-                    {index + 1}
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-600">
+                    <AlertTriangle className="h-5 w-5" />
                   </div>
 
                   <div className="flex-1">
                     <h3 className="text-xl font-display font-semibold text-foreground mb-3">
-                      {component.name}
+                      {negativeComponent.name}
                     </h3>
 
                     <p className="text-muted-foreground mb-4 leading-relaxed">
-                      {component.content?.description || "No description provided."}
+                      {negativeComponent.description_negative || "No description provided."}
                     </p>
 
-                    <div className="bg-secondary/50 rounded-xl p-4">
+                    <div className="bg-amber-50 dark:bg-amber-950/30 rounded-xl p-4 mb-4">
                       <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
-                        <BookOpen className="h-4 w-4 text-primary" />
-                        Examples in Daily Life
+                        <BookOpen className="h-4 w-4 text-amber-600" />
+                        How This Shows Up
                       </h4>
                       <p className="text-sm text-muted-foreground">
-                        {component.content?.examples || "No examples provided."}
+                        {negativeComponent.example_negative || "No examples provided."}
                       </p>
                     </div>
+
+                    {negativeComponent.pdf_negative_url && (
+                      <a
+                        href={negativeComponent.pdf_negative_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 text-sm text-amber-600 hover:text-amber-700 font-medium"
+                      >
+                        <Download className="h-4 w-4" />
+                        Download Improvement Guide
+                      </a>
+                    )}
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
+            </section>
+          )}
 
           {/* CTA SECTION */}
           <div className="bg-card rounded-3xl p-8 md:p-12 shadow-medium text-center animate-fade-in-up">

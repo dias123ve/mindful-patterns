@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -19,88 +18,45 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, Pencil, Trash2, Loader2, FileText } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, Upload, FileText } from "lucide-react";
 import { toast } from "sonner";
 
-// -------------------------
-// Types
-// -------------------------
 interface ComponentItem {
   id: string;
   name: string;
-  type: string;
-  content: {
-    description: string;
-    examples: string;
-  };
+  component_key: string;
+  description_positive: string;
+  example_positive: string;
+  pdf_positive_url: string | null;
+  description_negative: string;
+  example_negative: string;
+  pdf_negative_url: string | null;
 }
 
-interface PdfDocument {
-  id: string;
-  title?: string;
-  file_name?: string | null;
-  file_url?: string;
-}
-
-interface ComponentPdf {
-  id: string;
-  component_id: string;
-  pdf_id: string;
-}
-
-// -------------------------
-// Helper: safe JSON parser
-// -------------------------
-function safeParseContent(content: any) {
-  if (!content) return { description: "", examples: "" };
-  if (typeof content === "string") {
-    try {
-      const parsed = JSON.parse(content);
-      return {
-        description: parsed.description || "",
-        examples: parsed.examples || "",
-      };
-    } catch {
-      return { description: "", examples: "" };
-    }
-  }
-  if (typeof content === "object") {
-    return {
-      description: (content && content.description) || "",
-      examples: (content && content.examples) || "",
-    };
-  }
-  return { description: "", examples: "" };
-}
-
-// -------------------------
-// Main Component
-// -------------------------
 const ComponentsManager = () => {
   const [components, setComponents] = useState<ComponentItem[]>([]);
-  const [pdfs, setPdfs] = useState<PdfDocument[]>([]);
-  const [componentPdfs, setComponentPdfs] = useState<ComponentPdf[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // Create/Edit dialog
+  // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingComponent, setEditingComponent] = useState<ComponentItem | null>(null);
+
+  // Form data
   const [formData, setFormData] = useState({
     name: "",
-    description: "",
-    examples: "",
+    description_positive: "",
+    example_positive: "",
+    description_negative: "",
+    example_negative: "",
   });
 
-  // Manage PDFs dialog
-  const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
-  const [selectedComponent, setSelectedComponent] = useState<ComponentItem | null>(null);
-  const [selectedPdfIds, setSelectedPdfIds] = useState<string[]>([]);
-  const [savingPdfs, setSavingPdfs] = useState(false);
+  // File uploads
+  const [pdfPositiveFile, setPdfPositiveFile] = useState<File | null>(null);
+  const [pdfNegativeFile, setPdfNegativeFile] = useState<File | null>(null);
+  const [uploadingPositive, setUploadingPositive] = useState(false);
+  const [uploadingNegative, setUploadingNegative] = useState(false);
 
-  // -------------------------
-  // Fetch Data
-  // -------------------------
   useEffect(() => {
     fetchData();
   }, []);
@@ -108,63 +64,31 @@ const ComponentsManager = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // gunakan explicit select untuk menghindari parsing relationship error
-      const componentsRes = await supabase
+      const { data, error } = await supabase
         .from("components")
-        .select("id, name, type, content")
-        .order("created_at", { ascending: true });
+        .select("id, name, component_key, description_positive, example_positive, pdf_positive_url, description_negative, example_negative, pdf_negative_url")
+        .order("display_order", { ascending: true });
 
-      const pdfsRes = await supabase
-        .from("pdf_documents")
-        .select("id, title, file_name, file_url")
-        .order("created_at", { ascending: false });
-
-      const componentPdfsRes = await supabase
-        .from("component_pdfs")
-        .select("id, component_id, pdf_id");
-
-      // debug if something is wrong
-      if (componentsRes.error) {
-        console.error("componentsRes (error):", componentsRes);
-        throw componentsRes.error;
-      }
-      if (pdfsRes.error) {
-        console.error("pdfsRes (error):", pdfsRes);
-        throw pdfsRes.error;
-      }
-      if (componentPdfsRes.error) {
-        console.error("componentPdfsRes (error):", componentPdfsRes);
-        throw componentPdfsRes.error;
-      }
-
-      const componentsData = (componentsRes.data || []).map((c: any) => ({
-        id: c.id,
-        name: c.name,
-        type: c.type,
-        content: safeParseContent(c.content),
-      }));
-
-      setComponents(componentsData);
-      setPdfs(pdfsRes.data || []);
-      setComponentPdfs(componentPdfsRes.data || []);
+      if (error) throw error;
+      setComponents(data || []);
     } catch (error: any) {
-      console.error("fetchData error (full):", error);
-      // tampilkan pesan error yang jelas ke user
-      if (error && error.message) {
-        toast.error(`Failed to load data: ${error.message}`);
-      } else {
-        toast.error("Failed to load data (see console)");
-      }
+      console.error("fetchData error:", error);
+      toast.error(`Failed to load components: ${error.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  // -------------------------
-  // Helpers
-  // -------------------------
   const resetForm = () => {
-    setFormData({ name: "", description: "", examples: "" });
+    setFormData({
+      name: "",
+      description_positive: "",
+      example_positive: "",
+      description_negative: "",
+      example_negative: "",
+    });
+    setPdfPositiveFile(null);
+    setPdfNegativeFile(null);
     setEditingComponent(null);
   };
 
@@ -177,15 +101,31 @@ const ComponentsManager = () => {
     setEditingComponent(component);
     setFormData({
       name: component.name || "",
-      description: component.content?.description || "",
-      examples: component.content?.examples || "",
+      description_positive: component.description_positive || "",
+      example_positive: component.example_positive || "",
+      description_negative: component.description_negative || "",
+      example_negative: component.example_negative || "",
     });
+    setPdfPositiveFile(null);
+    setPdfNegativeFile(null);
     setDialogOpen(true);
   };
 
-  // -------------------------
-  // Save Component
-  // -------------------------
+  const uploadPdf = async (file: File, bucket: string): Promise<string | null> => {
+    const fileName = `${Date.now()}-${file.name}`;
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .upload(fileName, file);
+
+    if (error) throw error;
+
+    const { data: urlData } = supabase.storage
+      .from(bucket)
+      .getPublicUrl(data.path);
+
+    return urlData.publicUrl;
+  };
+
   const handleSave = async () => {
     if (!formData.name.trim()) {
       toast.error("Please enter a component name");
@@ -194,63 +134,72 @@ const ComponentsManager = () => {
 
     setSaving(true);
     try {
+      let pdfPositiveUrl = editingComponent?.pdf_positive_url || null;
+      let pdfNegativeUrl = editingComponent?.pdf_negative_url || null;
+
+      // Upload positive PDF if provided
+      if (pdfPositiveFile) {
+        setUploadingPositive(true);
+        pdfPositiveUrl = await uploadPdf(pdfPositiveFile, "components-positive");
+        setUploadingPositive(false);
+      }
+
+      // Upload negative PDF if provided
+      if (pdfNegativeFile) {
+        setUploadingNegative(true);
+        pdfNegativeUrl = await uploadPdf(pdfNegativeFile, "components-negative");
+        setUploadingNegative(false);
+      }
+
       const payload = {
         name: formData.name.trim(),
-        type: "component",
-        content: {
-          description: formData.description.trim(),
-          examples: formData.examples.trim(),
-        },
+        description_positive: formData.description_positive.trim(),
+        example_positive: formData.example_positive.trim(),
+        pdf_positive_url: pdfPositiveUrl,
+        description_negative: formData.description_negative.trim(),
+        example_negative: formData.example_negative.trim(),
+        pdf_negative_url: pdfNegativeUrl,
       };
 
       if (editingComponent) {
-        const res = await supabase
+        const { error } = await supabase
           .from("components")
           .update(payload)
-          .eq("id", editingComponent.id)
-          .select("id, name, type, content");
-        if (res.error) {
-          console.error("update error:", res);
-          throw res.error;
-        }
+          .eq("id", editingComponent.id);
+
+        if (error) throw error;
         toast.success("Component updated");
       } else {
-        const res = await supabase
+        // Generate a component_key from name
+        const componentKey = formData.name.trim().toLowerCase().replace(/\s+/g, "_");
+        
+        const { error } = await supabase
           .from("components")
-          .insert([payload])
-          .select("id, name, type, content");
-        if (res.error) {
-          console.error("insert error:", res);
-          throw res.error;
-        }
+          .insert([{ ...payload, component_key: componentKey as any }]);
+
+        if (error) throw error;
         toast.success("Component created");
       }
 
       setDialogOpen(false);
       resetForm();
-      // reload data (use fetchData)
       await fetchData();
     } catch (err: any) {
       console.error("handleSave error:", err);
-      const msg = err?.message || (err?.error && err.error.message) || "Failed to save component";
-      toast.error(msg);
+      toast.error(err?.message || "Failed to save component");
     } finally {
       setSaving(false);
+      setUploadingPositive(false);
+      setUploadingNegative(false);
     }
   };
 
-  // -------------------------
-  // Delete Component
-  // -------------------------
   const handleDelete = async (componentId: string) => {
     if (!confirm("Delete this component?")) return;
 
     try {
       const { error } = await supabase.from("components").delete().eq("id", componentId);
-      if (error) {
-        console.error("delete error:", error);
-        throw error;
-      }
+      if (error) throw error;
       toast.success("Component deleted");
       await fetchData();
     } catch (error) {
@@ -259,62 +208,6 @@ const ComponentsManager = () => {
     }
   };
 
-  // -------------------------
-  // Manage PDFs
-  // -------------------------
-  const openManagePdfsDialog = (component: ComponentItem) => {
-    setSelectedComponent(component);
-    const assignedPdfIds = componentPdfs
-      .filter((cp) => cp.component_id === component.id)
-      .map((cp) => cp.pdf_id);
-    setSelectedPdfIds(assignedPdfIds);
-    setPdfDialogOpen(true);
-  };
-
-  const handlePdfToggle = (pdfId: string) => {
-    setSelectedPdfIds((prev) =>
-      prev.includes(pdfId) ? prev.filter((id) => id !== pdfId) : [...prev, pdfId]
-    );
-  };
-
-  const handleSavePdfs = async () => {
-    if (!selectedComponent) return;
-    setSavingPdfs(true);
-    try {
-      const del = await supabase
-        .from("component_pdfs")
-        .delete()
-        .eq("component_id", selectedComponent.id);
-      if (del.error) throw del.error;
-
-      if (selectedPdfIds.length > 0) {
-        const rows = selectedPdfIds.map((pdfId) => ({
-          component_id: selectedComponent.id,
-          pdf_id: pdfId,
-        }));
-        const ins = await supabase.from("component_pdfs").insert(rows);
-        if (ins.error) throw ins.error;
-      }
-
-      toast.success("PDF assignments updated");
-      setPdfDialogOpen(false);
-      await fetchData();
-    } catch (error) {
-      console.error("handleSavePdfs error:", error);
-      toast.error("Failed to save PDF assignments");
-    } finally {
-      setSavingPdfs(false);
-    }
-  };
-
-  const getAssignedPdfs = (componentId: string) => {
-    const pdfIds = componentPdfs.filter((cp) => cp.component_id === componentId).map((cp) => cp.pdf_id);
-    return pdfs.filter((p) => pdfIds.includes(p.id));
-  };
-
-  // -------------------------
-  // Render
-  // -------------------------
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -329,7 +222,9 @@ const ComponentsManager = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Components</h1>
-          <p className="text-muted-foreground mt-1">Manage your quiz components and PDF attachments</p>
+          <p className="text-muted-foreground mt-1">
+            Manage quiz result components with positive and negative versions
+          </p>
         </div>
 
         <Button onClick={openCreateDialog}>
@@ -339,13 +234,13 @@ const ComponentsManager = () => {
       </div>
 
       {/* Table */}
-      <div className="border rounded-lg">
+      <div className="border rounded-lg overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
-              <TableHead>Description</TableHead>
-              <TableHead>Example</TableHead>
+              <TableHead>Positive Description</TableHead>
+              <TableHead>Negative Description</TableHead>
               <TableHead>PDFs</TableHead>
               <TableHead></TableHead>
             </TableRow>
@@ -359,52 +254,66 @@ const ComponentsManager = () => {
                 </TableCell>
               </TableRow>
             ) : (
-              components.map((c) => {
-                const assigned = getAssignedPdfs(c.id);
-                return (
-                  <TableRow key={c.id}>
-                    <TableCell className="font-medium">{c.name}</TableCell>
-                    <TableCell className="max-w-xs">
-                      <p className="truncate">{c.content?.description || "—"}</p>
-                    </TableCell>
-                    <TableCell className="max-w-xs">
-                      <p className="truncate">{c.content?.examples || "—"}</p>
-                    </TableCell>
-
-                    <TableCell>
-                      {assigned.length === 0 ? (
-                        <span className="text-muted-foreground text-sm">None</span>
-                      ) : (
-                        <div className="text-xs space-y-1">
-                          {assigned.slice(0, 2).map((pdf) => (
-                            <div key={pdf.id} className="flex items-center gap-1">
-                              <FileText className="h-3 w-3" />
-                              {pdf.title || pdf.file_name}
-                            </div>
-                          ))}
-                          {assigned.length > 2 && <span>+{assigned.length - 2} more</span>}
-                        </div>
+              components.map((c) => (
+                <TableRow key={c.id}>
+                  <TableCell className="font-medium">{c.name}</TableCell>
+                  <TableCell className="max-w-xs">
+                    <p className="truncate text-sm text-muted-foreground">
+                      {c.description_positive || "—"}
+                    </p>
+                  </TableCell>
+                  <TableCell className="max-w-xs">
+                    <p className="truncate text-sm text-muted-foreground">
+                      {c.description_negative || "—"}
+                    </p>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-col gap-1 text-xs">
+                      {c.pdf_positive_url && (
+                        <a
+                          href={c.pdf_positive_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-green-600 hover:underline flex items-center gap-1"
+                        >
+                          <FileText className="h-3 w-3" />
+                          Positive PDF
+                        </a>
                       )}
-                    </TableCell>
+                      {c.pdf_negative_url && (
+                        <a
+                          href={c.pdf_negative_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-amber-600 hover:underline flex items-center gap-1"
+                        >
+                          <FileText className="h-3 w-3" />
+                          Negative PDF
+                        </a>
+                      )}
+                      {!c.pdf_positive_url && !c.pdf_negative_url && (
+                        <span className="text-muted-foreground">None</span>
+                      )}
+                    </div>
+                  </TableCell>
 
-                    <TableCell>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => openEditDialog(c)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-
-                        <Button variant="ghost" size="icon" onClick={() => openManagePdfsDialog(c)}>
-                          <FileText className="h-4 w-4" />
-                        </Button>
-
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(c.id)} className="text-red-600">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
+                  <TableCell>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="icon" onClick={() => openEditDialog(c)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete(c.id)}
+                        className="text-red-600"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
             )}
           </TableBody>
         </Table>
@@ -412,60 +321,165 @@ const ComponentsManager = () => {
 
       {/* Create / Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingComponent ? "Edit Component" : "Create Component"}</DialogTitle>
+            <DialogTitle>
+              {editingComponent ? "Edit Component" : "Create Component"}
+            </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <div className="space-y-6">
+            {/* Name */}
             <div>
-              <Label>Name</Label>
-              <Input value={formData.name} onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))} className="mt-1" />
+              <Label>Component Name</Label>
+              <Input
+                value={formData.name}
+                onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
+                className="mt-1"
+                placeholder="e.g., All-or-Nothing Thinking"
+              />
             </div>
 
-            <div>
-              <Label>Description</Label>
-              <Textarea rows={3} value={formData.description} onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))} className="mt-1" />
+            {/* Positive Section */}
+            <div className="p-4 border border-green-200 rounded-lg bg-green-50/50 dark:bg-green-950/20 dark:border-green-900">
+              <h3 className="font-semibold text-green-700 dark:text-green-400 mb-4 flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                Positive Version (Strengths)
+              </h3>
+
+              <div className="space-y-4">
+                <div>
+                  <Label>Description (Positive)</Label>
+                  <Textarea
+                    rows={3}
+                    value={formData.description_positive}
+                    onChange={(e) =>
+                      setFormData((p) => ({ ...p, description_positive: e.target.value }))
+                    }
+                    className="mt-1"
+                    placeholder="Describe this as a strength..."
+                  />
+                </div>
+
+                <div>
+                  <Label>Example (Positive)</Label>
+                  <Textarea
+                    rows={2}
+                    value={formData.example_positive}
+                    onChange={(e) =>
+                      setFormData((p) => ({ ...p, example_positive: e.target.value }))
+                    }
+                    className="mt-1"
+                    placeholder="Give an example of this strength in daily life..."
+                  />
+                </div>
+
+                <div>
+                  <Label>PDF (Positive)</Label>
+                  <div className="mt-1 flex items-center gap-3">
+                    <label className="flex items-center gap-2 px-4 py-2 border rounded-lg cursor-pointer hover:bg-secondary/50 transition-colors">
+                      <Upload className="h-4 w-4" />
+                      <span className="text-sm">
+                        {pdfPositiveFile ? pdfPositiveFile.name : "Choose PDF"}
+                      </span>
+                      <input
+                        type="file"
+                        accept=".pdf"
+                        className="hidden"
+                        onChange={(e) => setPdfPositiveFile(e.target.files?.[0] || null)}
+                      />
+                    </label>
+                    {editingComponent?.pdf_positive_url && !pdfPositiveFile && (
+                      <a
+                        href={editingComponent.pdf_positive_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-green-600 hover:underline"
+                      >
+                        Current PDF
+                      </a>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div>
-              <Label>Example</Label>
-              <Textarea rows={2} value={formData.examples} onChange={(e) => setFormData((p) => ({ ...p, examples: e.target.value }))} className="mt-1" />
+            {/* Negative Section */}
+            <div className="p-4 border border-amber-200 rounded-lg bg-amber-50/50 dark:bg-amber-950/20 dark:border-amber-900">
+              <h3 className="font-semibold text-amber-700 dark:text-amber-400 mb-4 flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-amber-500"></div>
+                Negative Version (Growth Areas)
+              </h3>
+
+              <div className="space-y-4">
+                <div>
+                  <Label>Description (Negative)</Label>
+                  <Textarea
+                    rows={3}
+                    value={formData.description_negative}
+                    onChange={(e) =>
+                      setFormData((p) => ({ ...p, description_negative: e.target.value }))
+                    }
+                    className="mt-1"
+                    placeholder="Describe this as an area for improvement..."
+                  />
+                </div>
+
+                <div>
+                  <Label>Example (Negative)</Label>
+                  <Textarea
+                    rows={2}
+                    value={formData.example_negative}
+                    onChange={(e) =>
+                      setFormData((p) => ({ ...p, example_negative: e.target.value }))
+                    }
+                    className="mt-1"
+                    placeholder="Give an example of how this shows up as a challenge..."
+                  />
+                </div>
+
+                <div>
+                  <Label>PDF (Negative)</Label>
+                  <div className="mt-1 flex items-center gap-3">
+                    <label className="flex items-center gap-2 px-4 py-2 border rounded-lg cursor-pointer hover:bg-secondary/50 transition-colors">
+                      <Upload className="h-4 w-4" />
+                      <span className="text-sm">
+                        {pdfNegativeFile ? pdfNegativeFile.name : "Choose PDF"}
+                      </span>
+                      <input
+                        type="file"
+                        accept=".pdf"
+                        className="hidden"
+                        onChange={(e) => setPdfNegativeFile(e.target.files?.[0] || null)}
+                      />
+                    </label>
+                    {editingComponent?.pdf_negative_url && !pdfNegativeFile && (
+                      <a
+                        href={editingComponent.pdf_negative_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-amber-600 hover:underline"
+                      >
+                        Current PDF
+                      </a>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleSave} disabled={saving}>
-                {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            {/* Actions */}
+            <div className="flex justify-end gap-2 pt-2 border-t">
+              <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSave} disabled={saving || uploadingPositive || uploadingNegative}>
+                {(saving || uploadingPositive || uploadingNegative) && (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                )}
                 {editingComponent ? "Update" : "Create"}
               </Button>
             </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Manage PDFs Dialog */}
-      <Dialog open={pdfDialogOpen} onOpenChange={setPdfDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Manage PDFs for {selectedComponent?.name}</DialogTitle>
-          </DialogHeader>
-
-          <div className="max-h-64 overflow-y-auto space-y-2">
-            {pdfs.map((pdf) => (
-              <div key={pdf.id} className="flex items-center gap-3 px-2 py-1 hover:bg-secondary/50 rounded">
-                <Checkbox checked={selectedPdfIds.includes(pdf.id)} onCheckedChange={() => handlePdfToggle(pdf.id)} />
-                <span className="text-sm">{pdf.title || pdf.file_name || "Untitled PDF"}</span>
-              </div>
-            ))}
-          </div>
-
-          <div className="flex justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={() => setPdfDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSavePdfs} disabled={savingPdfs}>
-              {savingPdfs && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Save
-            </Button>
           </div>
         </DialogContent>
       </Dialog>
