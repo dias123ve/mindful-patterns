@@ -61,8 +61,6 @@ const QuizManager = () => {
       { option_text: "", score: 1 },
       { option_text: "", score: 2 },
       { option_text: "", score: 3 },
-      { option_text: "", score: 4 },
-      { option_text: "", score: 5 },
     ],
   });
 
@@ -469,9 +467,69 @@ const QuizManager = () => {
               </div>
             </div>
 
-            <div>
-              <Label>Answer Options (5)</Label>
-              <div className="space-y-3 mt-2">
+           <div>
+  <Label>Answer Options</Label>
+
+  <div className="space-y-3 mt-2">
+    {formData.options.map((opt, idx) => (
+      <div key={idx} className="flex gap-2 items-center">
+        <Input
+          className="flex-1"
+          placeholder={`Option ${idx + 1}`}
+          value={opt.option_text}
+          onChange={(e) => {
+            const clone = [...formData.options];
+            clone[idx].option_text = e.target.value;
+            setFormData({ ...formData, options: clone });
+          }}
+        />
+
+        <Input
+          type="number"
+          min={0}
+          max={5}
+          value={opt.score}
+          className="w-20"
+          onChange={(e) => {
+            const clone = [...formData.options];
+            clone[idx].score = Number(e.target.value);
+            setFormData({ ...formData, options: clone });
+          }}
+        />
+
+        {formData.options.length > 2 && (
+          <Button
+            variant="destructive"
+            size="icon"
+            onClick={() => {
+              const clone = formData.options.filter((_, i) => i !== idx);
+              setFormData({ ...formData, options: clone });
+            }}
+          >
+            ✕
+          </Button>
+        )}
+      </div>
+    ))}
+  </div>
+
+  <Button
+    variant="secondary"
+    className="mt-3"
+    onClick={() =>
+      setFormData({
+        ...formData,
+        options: [
+          ...formData.options,
+          { option_text: "", score: formData.options.length + 1 },
+        ],
+      })
+    }
+  >
+    + Add Option
+  </Button>
+</div>
+
                 {formData.options.map((opt, idx) => (
                   <div key={idx} className="flex gap-2">
                     <Input
