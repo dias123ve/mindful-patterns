@@ -470,53 +470,66 @@ useEffect(() => {
 
       {/* OPTIONS */}
       <div>
-        <Label>Options</Label>
+        <div>
+  <Label>Options</Label>
 
-        {formData.options.map((opt, index) => (
-          <div key={index} className="flex items-center gap-2 mt-2">
+  {formData.options.map((opt, index) => (
+    <div key={index} className="flex items-center gap-2 mt-2">
 
-            {/* OPTION TEXT */}
-            <Input
-              value={opt.option_text}
-              onChange={(e) => {
-                const newOpts = [...formData.options];
-                newOpts[index].option_text = e.target.value;
-                setFormData({ ...formData, options: newOpts });
-              }}
-              placeholder={`Option ${index + 1}`}
-            />
+      {/* OPTION TEXT */}
+      <Input
+        value={opt.option_text}
+        onChange={(e) => {
+          const newOpts = [...formData.options];
+          newOpts[index].option_text = e.target.value;
+          setFormData({ ...formData, options: newOpts });
+        }}
+        placeholder={`Option ${index + 1}`}
+      />
 
-            {/* SCORE */}
-            <Input
-              type="number"
-              className="w-20"
-              value={opt.score}
-              onChange={(e) => {
-                const newOpts = [...formData.options];
-                newOpts[index].score = Number(e.target.value);
-                setFormData({ ...formData, options: newOpts });
-              }}
-            />
+      {/* SCORE */}
+      <Input
+        type="number"
+        className="w-20"
+        value={opt.score}
+        onChange={(e) => {
+          const newOpts = [...formData.options];
+          newOpts[index].score = Number(e.target.value);
+          setFormData({ ...formData, options: newOpts });
+        }}
+      />
 
-          </div>
-        ))}
+      {/* 🔥 DELETE BUTTON */}
+      <Button
+        variant="destructive"
+        size="icon"
+        onClick={() => {
+          const filtered = formData.options.filter((_, i) => i !== index);
+          setFormData({ ...formData, options: filtered });
+        }}
+      >
+        <Trash2 className="h-4 w-4" />
+      </Button>
 
-        <Button
-          className="mt-2"
-          onClick={() =>
-            setFormData({
-              ...formData,
-              options: [
-                ...formData.options,
-                { option_text: "", score: formData.options.length + 1 },
-              ],
-            })
-          }
-        >
-          + Tambah opsi
-        </Button>
-      </div>
     </div>
+  ))}
+
+  {/* ADD OPTION */}
+  <Button
+    className="mt-2"
+    onClick={() =>
+      setFormData({
+        ...formData,
+        options: [
+          ...formData.options,
+          { option_text: "", score: formData.options.length + 1 },
+        ],
+      })
+    }
+  >
+    + Add Option
+  </Button>
+</div>
 
     {/* SAVE BUTTON */}
     <DialogFooter>
