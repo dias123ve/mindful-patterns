@@ -16,10 +16,11 @@ const Transition = () => {
 
       <main className="container mx-auto px-4 py-8 pb-16">
         <div className="max-w-2xl mx-auto">
-          {/* Centered Text Block */}
+          
+          {/* MAIN TEXT */}
           <div className="text-center mb-12 animate-fade-in-up">
             <h1 className="text-2xl md:text-3xl font-display font-bold text-foreground mb-6 leading-relaxed">
-              A personalized path based on your strengths and your key challenge.
+              A personalized path built around your strengths and key challenge.
             </h1>
             <p className="text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed">
               Your profile shows clear potential to elevate your personal performance 
@@ -27,26 +28,30 @@ const Transition = () => {
             </p>
           </div>
 
-          {/* Animation Placeholder */}
-          <div 
-            className="animation-box mb-12 animate-fade-in-up"
+          {/* ANIMATION BOX */}
+          <div
+            className="flex flex-col items-center justify-center gap-4 mb-12 animate-fade-in-up"
             style={{ animationDelay: "0.2s" }}
           >
-            <div className="flex flex-col items-center gap-4 text-muted-foreground">
-              <Sparkles className="h-12 w-12 text-primary/40" />
-              <span className="text-sm">Lottie Animation Placeholder</span>
-            </div>
+            <Sparkles className="h-12 w-12 text-primary/40" />
+            <span className="text-sm text-muted-foreground">
+              Lottie Animation Placeholder
+            </span>
           </div>
 
-          {/* Continue Button */}
-          <div className="text-center animate-fade-in-up" style={{ animationDelay: "0.4s" }}>
+          {/* CONTINUE BUTTON */}
+          <div
+            className="text-center animate-fade-in-up"
+            style={{ animationDelay: "0.4s" }}
+          >
             <Link to="/offer">
-              <Button variant="hero" size="xl" className="min-w-[200px]">
+              <Button variant="hero" size="xl" className="min-w-[220px]">
                 Continue
                 <ArrowRight className="h-5 w-5 ml-2" />
               </Button>
             </Link>
           </div>
+
         </div>
       </main>
 
