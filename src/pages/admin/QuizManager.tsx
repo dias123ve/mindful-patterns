@@ -52,6 +52,7 @@ const QuizManager = () => {
   const [saving, setSaving] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
+   const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     question_text: "",
