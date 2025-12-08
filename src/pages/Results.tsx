@@ -38,7 +38,6 @@ const Results = () => {
     }
 
     try {
-      // Get component scores from session or fetch submission
       let componentScores: Record<string, number> = {};
       
       if (componentScoresStr) {
@@ -54,24 +53,20 @@ const Results = () => {
         componentScores = (submission?.component_scores as Record<string, number>) || {};
       }
 
-      // Fetch all components
       const { data: componentsData, error: compError } = await supabase
         .from("components")
         .select("id, name, component_key, description_positive, example_positive, pdf_positive_url, description_negative, example_negative, pdf_negative_url");
 
       if (compError) throw compError;
 
-      // Sort components by score
       const sortedKeys = Object.entries(componentScores)
         .sort(([, a], [, b]) => b - a)
         .map(([key]) => key);
 
-      // Map component keys to component data
       const sortedComponents = sortedKeys
         .map(key => componentsData?.find(c => c.component_key === key))
         .filter(Boolean) as ComponentData[];
 
-      // Top 2 are positive (strengths), bottom 1 is negative (weak spot)
       if (sortedComponents.length >= 3) {
         setPositiveComponents(sortedComponents.slice(0, 2));
         setNegativeComponent(sortedComponents[sortedComponents.length - 1]);
@@ -124,7 +119,7 @@ const Results = () => {
             </p>
           </div>
 
-          {/* YOUR STRENGTHS - Top 2 Positive */}
+          {/* YOUR STRENGTHS */}
           {positiveComponents.length > 0 && (
             <section className="mb-12">
               <div className="flex items-center gap-3 mb-6">
@@ -186,7 +181,7 @@ const Results = () => {
             </section>
           )}
 
-          {/* YOUR WEAK SPOT - Bottom 1 Negative */}
+          {/* WEAK SPOT */}
           {negativeComponent && (
             <section className="mb-16">
               <div className="flex items-center gap-3 mb-6">
@@ -243,31 +238,15 @@ const Results = () => {
             </section>
           )}
 
-          {/* CTA SECTION */}
-          <div className="bg-card rounded-3xl p-8 md:p-12 shadow-medium text-center animate-fade-in-up">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/10 text-accent text-sm font-medium mb-6">
-              <Sparkles className="h-4 w-4" />
-              <span>Limited Time Offer</span>
-            </div>
-
-            <h2 className="text-2xl md:text-3xl font-display font-bold text-foreground mb-4">
-              Get Your Personalized Ebook
-            </h2>
-
-            <p className="text-muted-foreground max-w-md mx-auto mb-6">
-              Receive a custom guide with strategies based on your results.
-            </p>
-
-            <Link to="/checkout">
-              <Button variant="hero" size="xl">
-                Get My Ebook
-                <Sparkles className="h-5 w-5" />
-              </Button>
-            </Link>
-
-            <p className="text-xs text-muted-foreground mt-6">
-              Instant delivery • Secure payment • 30-day guarantee
-            </p>
+          {/* NEW CTA — CONTINUE BUTTON */}
+          <div className="text-center animate-fade-in-up mt-12">
+            <Button
+              size="lg"
+              className="px-8 py-6 text-lg font-semibold"
+              onClick={() => navigate("/transition")}
+            >
+              Continue
+            </Button>
           </div>
         </div>
       </main>
