@@ -53,61 +53,57 @@ const QuizManager = () => {
   const [saving, setSaving] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
-   const [editDialogOpen, setEditDialogOpen] = useState(false);
 
-const [formData, setFormData] = useState({
-  question_text: "",
-  category: "",
-  component_key: "",
-  options: [
-    { option_text: "", score: 1 },
-    { option_text: "", score: 2 },
-    { option_text: "", score: 3 },
-  ],
-});
+  const [formData, setFormData] = useState({
+    question_text: "",
+    category: "",
+    component_key: "",
+    options: [
+      { option_text: "", score: 1 },
+      { option_text: "", score: 2 },
+      { option_text: "", score: 3 },
+    ],
+  });
 
-const fetchData = async () => {
-  setLoading(true);
+  const fetchData = async () => {
+    setLoading(true);
 
-  try {
-    const [questionsRes, optionsRes, componentsRes] = await Promise.all([
-      supabase
-        .from("quiz_questions")
-        .select("*")
-        .order("display_order", { ascending: true }),
+    try {
+      const [questionsRes, optionsRes, componentsRes] = await Promise.all([
+        supabase
+          .from("questions")
+          .select("*")
+          .order("display_order", { ascending: true }),
 
-      supabase
-        .from("quiz_question_options")
-        .select("*")
-        .order("display_order", { ascending: true }),
+        supabase
+          .from("question_options")
+          .select("*")
+          .order("display_order", { ascending: true }),
 
-      supabase
-        .from("components")
-        .select("id, name, component_key")
-        .order("name", { ascending: true }),
-    ]);
+        supabase
+          .from("components")
+          .select("id, name, component_key")
+          .order("name", { ascending: true }),
+      ]);
 
-    if (questionsRes.error) throw questionsRes.error;
-    if (optionsRes.error) throw optionsRes.error;
-    if (componentsRes.error) throw componentsRes.error;
+      if (questionsRes.error) throw questionsRes.error;
+      if (optionsRes.error) throw optionsRes.error;
+      if (componentsRes.error) throw componentsRes.error;
 
-    setQuestions(questionsRes.data || []);
-    setOptions(optionsRes.data || []);
-    setComponents(componentsRes.data || []);
-  } catch (error) {
-    console.error("Error fetching data:", error);
-    toast.error("Failed to load quiz data");
-  } finally {
-    setLoading(false);
-  }
-};
+      setQuestions(questionsRes.data || []);
+      setOptions(optionsRes.data || []);
+      setComponents(componentsRes.data || []);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      toast.error("Failed to load quiz data");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  
-useEffect(() => {
-  fetchData();
-}, []);
-
-
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const resetForm = () => {
     setFormData({
@@ -168,7 +164,7 @@ useEffect(() => {
       if (editingQuestion) {
         // Update question
         const { error: questionError } = await supabase
-          .from("quiz_questions")
+          .from("questions")
           .update({
             question_text: formData.question_text,
             category: formData.category || null,
@@ -179,7 +175,7 @@ useEffect(() => {
 
         // Delete existing options
         const { error: deleteError } = await supabase
-          .from("quiz_question_options")
+          .from("question_options")
           .delete()
           .eq("question_id", editingQuestion.id);
         if (deleteError) throw deleteError;
@@ -192,7 +188,7 @@ useEffect(() => {
           display_order: index + 1,
         }));
         const { error: optionsError } = await supabase
-          .from("quiz_question_options")
+          .from("question_options")
           .insert(newOptions);
         if (optionsError) throw optionsError;
 
@@ -205,7 +201,7 @@ useEffect(() => {
             : 0;
 
         const { data: newQuestion, error: questionError } = await supabase
-          .from("quiz_questions")
+          .from("questions")
           .insert({
             question_text: formData.question_text,
             category: formData.category || null,
@@ -224,7 +220,7 @@ useEffect(() => {
           display_order: index + 1,
         }));
         const { error: optionsError } = await supabase
-          .from("quiz_question_options")
+          .from("question_options")
           .insert(newOptions);
         if (optionsError) throw optionsError;
 
@@ -247,12 +243,12 @@ useEffect(() => {
 
     try {
       await supabase
-        .from("quiz_question_options")
+        .from("question_options")
         .delete()
         .eq("question_id", questionId);
 
       const { error } = await supabase
-        .from("quiz_questions")
+        .from("questions")
         .delete()
         .eq("id", questionId);
       if (error) throw error;
@@ -268,7 +264,7 @@ useEffect(() => {
   const handleChangeOrder = async (id: string, newOrder: number) => {
     try {
       const { error } = await supabase
-        .from("quiz_questions")
+        .from("questions")
         .update({ display_order: newOrder })
         .eq("id", id);
       if (error) throw error;
@@ -407,142 +403,108 @@ useEffect(() => {
         </Table>
       </div>
 
-  {/* ==================== FORM QUESTION ===================== */}
+      {/* Form Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {editingQuestion ? "Edit Question" : "Add Question"}
+            </DialogTitle>
+          </DialogHeader>
 
-<Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-  <DialogContent>
-    <DialogHeader>
-      <DialogTitle>
-        {editingQuestion ? "Edit Question" : "Add Question"}
-      </DialogTitle>
-    </DialogHeader>
+          <div className="grid gap-4 py-4">
+            {/* Category + Component Dropdown */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Category</Label>
+                <Input
+                  value={formData.category}
+                  onChange={(e) =>
+                    setFormData({ ...formData, category: e.target.value })
+                  }
+                  placeholder="e.g. mindset, behavior, growth"
+                />
+              </div>
 
-    <div className="grid gap-4 py-4">
+              <div>
+                <Label>Key (Component)</Label>
+                <select
+                  value={formData.component_key || ""}
+                  onChange={(e) =>
+                    setFormData({ ...formData, component_key: e.target.value })
+                  }
+                  className="block w-full border rounded-md px-3 py-2"
+                >
+                  <option value="">-- select component --</option>
+                  {components.map((c) => (
+                    <option key={c.id} value={c.component_key}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
 
-      {/* CATEGORY + COMPONENTS DROPDOWN */}
-      <div className="grid grid-cols-2 gap-4">
+            {/* Question Text */}
+            <div>
+              <Label>Question</Label>
+              <Textarea
+                value={formData.question_text}
+                onChange={(e) =>
+                  setFormData({ ...formData, question_text: e.target.value })
+                }
+                placeholder="Enter question..."
+              />
+            </div>
 
-        {/* CATEGORY */}
-        <div>
-          <Label>Category</Label>
-          <Input
-            value={formData.category}
-            onChange={(e) =>
-              setFormData({ ...formData, category: e.target.value })
-            }
-            placeholder="e.g. mindset, behavior, growth"
-          />
-        </div>
-
-        {/* COMPONENT DROPDOWN */}
-        <div>
-          <Label>Key (Component)</Label>
-          <select
-            value={formData.component_key || ""}
-            onChange={(e) =>
-              setFormData({ ...formData, component_key: e.target.value })
-            }
-            className="block w-full border rounded-md px-3 py-2"
-          >
-            <option value="">-- pilih komponen --</option>
-
-            {components.map((c) => (
-              <option key={c.id} value={c.component_key}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-      </div>
-
-      {/* QUESTION TEXT */}
-      <div>
-        <Label>Question</Label>
-        <Textarea
-          value={formData.question_text}
-          onChange={(e) =>
-            setFormData({ ...formData, question_text: e.target.value })
-          }
-          placeholder="Tuliskan pertanyaan..."
-        />
-      </div>
-
-      {/* OPTIONS */}
-      <div>
-        <Label>Options</Label>
-
-        {formData.options.map((opt, index) => (
-          <div key={index} className="flex items-center gap-2 mt-2">
-
-            {/* OPTION TEXT */}
-            <Input
-              value={opt.option_text}
-              onChange={(e) => {
-                const newOpts = [...formData.options];
-                newOpts[index].option_text = e.target.value;
-                setFormData({ ...formData, options: newOpts });
-              }}
-              placeholder={`Option ${index + 1}`}
-            />
-
-            {/* SCORE */}
-            <Input
-              type="number"
-              className="w-20"
-              value={opt.score}
-              onChange={(e) => {
-                const newOpts = [...formData.options];
-                newOpts[index].score = Number(e.target.value);
-                setFormData({ ...formData, options: newOpts });
-              }}
-            />
-
-            {/* DELETE BUTTON */}
-            <Button
-              variant="destructive"
-              size="icon"
-              onClick={() => {
-                const filtered = formData.options.filter((_, i) => i !== index);
-                setFormData({ ...formData, options: filtered });
-              }}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-
+            {/* Options */}
+            <div>
+              <Label>Options</Label>
+              {formData.options.map((opt, index) => (
+                <div key={index} className="flex items-center gap-2 mt-2">
+                  <Input
+                    value={opt.option_text}
+                    onChange={(e) => {
+                      const newOpts = [...formData.options];
+                      newOpts[index].option_text = e.target.value;
+                      setFormData({ ...formData, options: newOpts });
+                    }}
+                    placeholder={`Option ${index + 1}`}
+                  />
+                  <Input
+                    type="number"
+                    className="w-20"
+                    value={opt.score}
+                    onChange={(e) => {
+                      const newOpts = [...formData.options];
+                      newOpts[index].score = Number(e.target.value);
+                      setFormData({ ...formData, options: newOpts });
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
           </div>
-        ))}
 
-        {/* ADD OPTION */}
-        <Button
-          className="mt-2"
-          onClick={() =>
-            setFormData({
-              ...formData,
-              options: [
-                ...formData.options,
-                { option_text: "", score: formData.options.length + 1 },
-              ],
-            })
-          }
-        >
-          + Add Option
-        </Button>
-      </div>
-
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Saving...
+                </>
+              ) : (
+                "Save"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
-
-  {/* SAVE BUTTON */}
-<DialogFooter>
-  <Button onClick={handleSave}>
-    {editingQuestion ? "Save Changes" : "Add Question"}
-  </Button>
-</DialogFooter>
-
-</DialogContent>
-</Dialog>
-</div>
-);
+  );
 };
 
 export default QuizManager;
