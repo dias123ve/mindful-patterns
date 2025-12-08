@@ -4,16 +4,18 @@ import { Brain, ArrowRight } from "lucide-react";
 import { useRef, useEffect } from "react";
 
 /**
- * Gentle S-Curve Growth Chart
- * - No marker dots
- * - Moving dot with animation
- * - Enlarged Goal marker + "Goal" label
- * - Area under curve
- * - Milestone labels only (0 / 15 / 30 / 45 / 60)
- * - Footnote
- * - Fully self-contained
+ * GrowthCurve V2
+ * 
+ * Improvements:
+ * - Higher goal point (meaningful upward growth)
+ * - Lower starting point for better contrast
+ * - S-curve adjusted for realistic development journey
+ * - Goal label clearer & repositioned
+ * - Glow reduced so label is readable
+ * - No marker dots except moving dot
+ * - Milestones remain as text only
  */
-const GrowthCurve = ({ width = 520, height = 200 }: { width?: number; height?: number }) => {
+const GrowthCurve = ({ width = 520, height = 220 }: { width?: number; height?: number }) => {
   const pathRef = useRef<SVGPathElement | null>(null);
   const dotRef = useRef<SVGCircleElement | null>(null);
 
@@ -30,16 +32,16 @@ const GrowthCurve = ({ width = 520, height = 200 }: { width?: number; height?: n
       path.style.strokeDasharray = String(pathLength);
       path.style.strokeDashoffset = String(pathLength);
 
-      const drawDuration = 900;
-      const drawStart = performance.now();
+      const duration = 950;
+      const start = performance.now();
       const ease = (t: number) => 1 - Math.pow(1 - t, 3);
 
-      const animatePath = (now: number) => {
-        const t = Math.min(1, Math.max(0, (now - drawStart) / drawDuration));
+      const animate = (now: number) => {
+        const t = Math.min(1, (now - start) / duration);
         path.style.strokeDashoffset = String(pathLength * (1 - ease(t)));
-        if (t < 1) requestAnimationFrame(animatePath);
+        if (t < 1) requestAnimationFrame(animate);
       };
-      requestAnimationFrame(animatePath);
+      requestAnimationFrame(animate);
     } else {
       path.style.strokeDasharray = "none";
       path.style.strokeDashoffset = "0";
@@ -47,153 +49,160 @@ const GrowthCurve = ({ width = 520, height = 200 }: { width?: number; height?: n
 
     /** Dot movement */
     if (!reduce) {
-      const dotDuration = 1200;
-      const dotStart = performance.now() + 200;
+      const duration = 1300;
+      const delay = 180;
+      const start = performance.now() + delay;
       const ease = (t: number) => 1 - Math.pow(1 - t, 3);
 
       const animateDot = (now: number) => {
-        const t = Math.min(1, Math.max(0, (now - dotStart) / dotDuration));
+        const t = Math.min(1, (now - start) / duration);
         const eased = ease(t);
-        const point = path.getPointAtLength(eased * pathLength);
+        const pt = path.getPointAtLength(eased * pathLength);
 
-        dot.setAttribute("cx", String(point.x));
-        dot.setAttribute("cy", String(point.y));
+        dot.setAttribute("cx", String(pt.x));
+        dot.setAttribute("cy", String(pt.y));
 
-        // glow near end
-        const glow = Math.max(0, (eased - 0.8) / 0.2);
-        dot.style.filter = `drop-shadow(0 6px ${10 * glow}px rgba(16,124,116,${0.16 * glow}))`;
+        // subtle glow near goal
+        const glow = Math.max(0, (eased - 0.75) / 0.25);
+        dot.style.filter = `drop-shadow(0 6px ${12 * glow}px rgba(16,124,116,${0.15 * glow}))`;
 
         if (t < 1) requestAnimationFrame(animateDot);
       };
       requestAnimationFrame(animateDot);
     } else {
-      const final = path.getPointAtLength(pathLength);
-      dot.setAttribute("cx", String(final.x));
-      dot.setAttribute("cy", String(final.y));
+      const pt = path.getPointAtLength(pathLength);
+      dot.setAttribute("cx", String(pt.x));
+      dot.setAttribute("cy", String(pt.y));
     }
   }, []);
 
-  /** Gentle S-curve — smooth, upward, no dips */
+  /**
+   * NEW GENTLE S-CURVE (60 days)
+   * Medium contrast version (recommended)
+   * 
+   * Start low → rise → flatten → micro dip → rise strongly to goal
+   */
   const pathD =
-    "M20 130 C110 55, 230 65, 310 95 C360 115, 440 75, 500 55";
+    "M20 150 C120 65, 240 60, 310 100 C360 130, 440 75, 500 40";
 
   return (
     <div className="w-full flex flex-col items-center justify-center">
       <svg
-        viewBox="0 0 520 200"
+        viewBox="0 0 520 220"
         width={width}
         height={height}
         xmlns="http://www.w3.org/2000/svg"
-        aria-hidden
       >
         <defs>
-          <linearGradient id="growthGradient" x1="0%" x2="100%">
+          <linearGradient id="growthStroke" x1="0%" x2="100%">
             <stop offset="0%" stopColor="hsl(12 76% 61%)" />
             <stop offset="50%" stopColor="hsl(174 62% 35%)" />
             <stop offset="100%" stopColor="hsl(158 64% 40%)" />
           </linearGradient>
 
-          <linearGradient id="areaGradient" x1="0%" x2="100%">
-            <stop offset="0%" stopColor="hsl(12 76% 61% / 0.10)" />
-            <stop offset="50%" stopColor="hsl(174 62% 35% / 0.08)" />
-            <stop offset="100%" stopColor="hsl(158 64% 40% / 0.06)" />
+          <linearGradient id="growthFill" x1="0%" x2="100%">
+            <stop offset="0%" stopColor="hsl(12 76% 61% / 0.12)" />
+            <stop offset="50%" stopColor="hsl(174 62% 35% / 0.10)" />
+            <stop offset="100%" stopColor="hsl(158 64% 40% / 0.08)" />
           </linearGradient>
         </defs>
 
-        {/* Area fill */}
+        {/* Area under curve */}
         <path
-          d={`${pathD} L 520 180 L 0 180 Z`}
-          fill="url(#areaGradient)"
-          opacity="0.9"
+          d={`${pathD} L 520 220 L 0 220 Z`}
+          fill="url(#growthFill)"
         />
 
-        {/* Background faint path */}
+        {/* faint guide line */}
         <path
           d={pathD}
+          stroke="rgba(0,0,0,0.05)"
+          strokeWidth={7}
           fill="none"
-          stroke="rgba(0,0,0,0.04)"
-          strokeWidth={6}
         />
 
-        {/* Main animated path */}
+        {/* animated main curve */}
         <path
           ref={pathRef}
           d={pathD}
+          stroke="url(#growthStroke)"
+          strokeWidth={7}
           fill="none"
-          stroke="url(#growthGradient)"
-          strokeWidth={6}
           strokeLinecap="round"
           strokeLinejoin="round"
-          style={{ transition: "stroke-dashoffset 0.9s ease-out" }}
         />
 
-        {/* Milestone labels */}
+        {/* day labels */}
         <g
           fontSize="12"
           textAnchor="middle"
-          fill="rgba(0,0,0,0.45)"
+          fill="rgba(0,0,0,0.48)"
           fontFamily="DM Sans, sans-serif"
         >
-          <text x="20" y="195">0</text>
-          <text x="140" y="195">15</text>
-          <text x="260" y="195">30</text>
-          <text x="380" y="195">45</text>
-          <text x="500" y="195">60</text>
+          <text x="20" y="210">0</text>
+          <text x="140" y="210">15</text>
+          <text x="260" y="210">30</text>
+          <text x="380" y="210">45</text>
+          <text x="500" y="210">60</text>
         </g>
 
-        {/* Moving dot */}
+        {/* moving dot */}
         <circle
           ref={dotRef}
           cx="20"
-          cy="130"
-          r="8"
+          cy="150"
+          r="9"
           fill="white"
           stroke="hsl(174 62% 35%)"
-          strokeWidth={2.5}
+          strokeWidth="2.5"
         />
-        <circle cx="20" cy="130" r="4.5" fill="url(#growthGradient)" />
+        <circle cx="20" cy="150" r="5" fill="url(#growthStroke)" />
 
-        {/* Goal marker */}
-        <g transform="translate(500,55)">
+        {/* GOAL marker */}
+        <g transform="translate(500,40)">
+          {/* big outer ring */}
           <circle
-            r="12"
+            r="14"
             fill="white"
             stroke="hsl(158 64% 40%)"
             strokeWidth="3"
-            filter="drop-shadow(0 4px 12px rgba(16,124,116,0.22))"
+            filter="drop-shadow(0 6px 16px rgba(16,124,116,0.22))"
           />
-          {/* inner pulse ring */}
-          <circle r="6" fill="hsl(158 64% 40%)" opacity="0.15">
+
+          {/* subtle pulsing ring */}
+          <circle r="7" fill="hsl(158 64% 40%)" opacity="0.18">
             <animate
               attributeName="r"
-              values="6;12;6"
+              values="7;14;7"
               dur="1.8s"
               repeatCount="indefinite"
             />
             <animate
               attributeName="opacity"
-              values="0.3;0;0.3"
+              values="0.25;0;0.25"
               dur="1.8s"
               repeatCount="indefinite"
             />
           </circle>
 
-          {/* star */}
-          <text
-            x="18"
-            y="4"
-            fontSize="12"
+          {/* star icon */}
+          <path
+            d="M0 -2.6 L1 -1 L3 -1 L1 1 L1.5 3 L0 2 L-1.5 3 L-1 1 L-3 -1 L-1 -1 Z"
             fill="hsl(158 64% 40%)"
+            transform="scale(2.3)"
+          />
+
+          {/* Goal label */}
+          <text
+            x="22"
+            y="5"
+            fontSize="13"
+            fill="hsl(158 64% 30%)"
             fontFamily="DM Sans, sans-serif"
+            style={{ fontWeight: 600 }}
           >
             Goal
           </text>
-
-          <path
-            d="M0 -3 L1 -1 L3 -1 L1 1 L1.5 3 L0 2 L-1.5 3 L-1 1 L-3 -1 L-1 -1 Z"
-            fill="hsl(158 64% 40%)"
-            transform="scale(2)"
-          />
         </g>
       </svg>
 
@@ -201,7 +210,7 @@ const GrowthCurve = ({ width = 520, height = 200 }: { width?: number; height?: n
         Projected trajectory • 60 days • goal in sight
       </p>
 
-      <p className="mt-2 text-xs text-muted-foreground text-center opacity-70">
+      <p className="mt-1 text-xs text-muted-foreground text-center opacity-70">
         The chart is a non-customized illustration and results may vary
       </p>
     </div>
