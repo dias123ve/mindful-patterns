@@ -532,17 +532,17 @@ useEffect(() => {
 
     </div>
 
-    {/* SAVE BUTTON */}
-    <DialogFooter>
-      <Button onClick={handleSave}>
-        {editingQuestion ? "Save Changes" : "Add Question"}
-      </Button>
-    </DialogFooter>
+  {/* SAVE BUTTON */}
+<DialogFooter>
+  <Button onClick={handleSave}>
+    {editingQuestion ? "Save Changes" : "Add Question"}
+  </Button>
+</DialogFooter>
 
-  </DialogContent>
+</DialogContent>
 </Dialog>
-
-  );
+</div>
+);
 };
 
 export default QuizManager;
