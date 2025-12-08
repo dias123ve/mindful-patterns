@@ -402,7 +402,7 @@ const QuizManager = () => {
         </Table>
       </div>
 
-    <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+    <Dialog open={dialogOpen} onOpenChange={setEditDialogOpen}>
   <DialogContent className="max-w-2xl">
     <DialogHeader>
       <DialogTitle>
@@ -515,10 +515,10 @@ const QuizManager = () => {
 
       {/* FOOTER BUTTONS */}
       <div className="flex justify-end gap-3 pt-4 border-t">
-        <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+        <Button variant="outline" onClick={() => setDialogOpen(false)}>
           Cancel
         </Button>
-        <Button onClick={handleSaveQuestion}>
+        <Button onClick={handleSave}>
           {editingQuestion ? "Save Changes" : "Create Question"}
         </Button>
       </div>
