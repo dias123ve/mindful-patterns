@@ -193,7 +193,7 @@ const GrowthCurve = ({ width = 520, height = 220 }: { width?: number; height?: n
           />
 
           {/* Goal label */}
-         {/* GOAL marker */}
+       {/* GOAL marker (only one group, clean) */}
 <g transform="translate(500,40)">
   <circle
     r="14"
@@ -202,7 +202,7 @@ const GrowthCurve = ({ width = 520, height = 220 }: { width?: number; height?: n
     strokeWidth="3"
     filter="drop-shadow(0 6px 16px rgba(16,124,116,0.22))"
   />
-  
+
   <circle r="7" fill="hsl(158 64% 40%)" opacity="0.18">
     <animate attributeName="r" values="7;14;7" dur="1.8s" repeatCount="indefinite" />
     <animate attributeName="opacity" values="0.25;0;0.25" dur="1.8s" repeatCount="indefinite" />
@@ -215,7 +215,7 @@ const GrowthCurve = ({ width = 520, height = 220 }: { width?: number; height?: n
   />
 </g>
 
-{/* Goal label (placed outside group so it always shows) */}
+{/* Goal label positioned OUTSIDE the SVG group */}
 <text
   x="545"
   y="45"
@@ -226,6 +226,7 @@ const GrowthCurve = ({ width = 520, height = 220 }: { width?: number; height?: n
 >
   Goal
 </text>
+
 
         </g>
       </svg>
