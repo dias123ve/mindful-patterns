@@ -3,11 +3,18 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+
 import Index from "./pages/Index";
 import Quiz from "./pages/Quiz";
 import Results from "./pages/Results";
 import Checkout from "./pages/Checkout";
 import ThankYou from "./pages/ThankYou";
+import EnterEmail from "./pages/EnterEmail";
+
+// NEW imports
+import Transition from "./pages/Transition";
+import Offer from "./pages/Offer";
+
 import AdminLogin from "./pages/admin/Login";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminOverview from "./pages/admin/Overview";
@@ -16,8 +23,8 @@ import ComponentsManager from "./pages/admin/Components";
 import PDFModules from "./pages/admin/PDFModules";
 import EmailSettings from "./pages/admin/EmailSettings";
 import Submissions from "./pages/admin/Submissions";
+
 import NotFound from "./pages/NotFound";
-import EnterEmail from "./pages/EnterEmail";
 
 const queryClient = new QueryClient();
 
@@ -33,6 +40,11 @@ const App = () => (
           <Route path="/enter-email" element={<EnterEmail />} />
 
           <Route path="/results" element={<Results />} />
+
+          {/* NEW ROUTES */}
+          <Route path="/transition" element={<Transition />} />
+          <Route path="/offer" element={<Offer />} />
+
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/thank-you" element={<ThankYou />} />
 
