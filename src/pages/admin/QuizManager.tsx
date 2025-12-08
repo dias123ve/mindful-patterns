@@ -54,56 +54,51 @@ const QuizManager = () => {
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
    const [editDialogOpen, setEditDialogOpen] = useState(false);
 
-  const [formData, setFormData] = useState({
-    question_text: "",
-    category: "",
-    component_key: "",
-    options: [
-      { option_text: "", score: 1 },
-      { option_text: "", score: 2 },
-      { option_text: "", score: 3 },
-    ],
-  });
+const [formData, setFormData] = useState({
+  question_text: "",
+  category: "",
+  component_key: "",
+  options: [
+    { option_text: "", score: 1 },
+    { option_text: "", score: 2 },
+    { option_text: "", score: 3 },
+  ],
+});
 
-   // ✅⬇⬇⬇ TAMBAHKAN INI DI SINI
-  useEffect(() => {
-    const loadComponents = async () => {
-      const { data, error } = await supabase
-        .from("components")
+useEffect(() => {
+  fetchData();
+}, []);
+
+const fetchData = async () => {
+  setLoading(true);
+  try {
+    const [questionsRes, optionsRes, componentsRes] = await Promise.all([
+      supabase
+        .from("quiz_questions")
         .select("*")
-        .order("name");
+        .order("display_order", { ascending: true }),
 
-      if (error) {
-        console.error("Error fetching components:", error);
-        return;
-      }
+      supabase
+        .from("quiz_question_options")
+        .select("*")
+        .order("display_order", { ascending: true }),
 
-      setComponents(data || []);
-    };
+      supabase
+        .from("components")
+        .select("id, name, component_key")
+        .order("name", { ascending: true }),
+    ]);
 
-    loadComponents();
-  }, []);
-
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const [questionsRes, optionsRes, componentsRes] = await Promise.all([
-        supabase
-          .from("quiz_questions")
-          .select("*")
-          .order("display_order", { ascending: true }),
-
-        supabase
-          .from("quiz_question_options")
-          .select("*")
-          .order("display_order", { ascending: true }),
-
-        supabase
-          .from("components")
-          .select("id, name, component_key")
-          .order("name", { ascending: true }),
-      ]);
-
+    setQuestions(questionsRes.data || []);
+    setOptions(optionsRes.data || []);
+    setComponents(componentsRes.data || []);
+  } catch (error) {
+    console.error("Error fetching data:", error);
+    toast.error("Failed to load quiz data");
+  } finally {
+    setLoading(false);
+  }
+};
       if (questionsRes.error) throw questionsRes.error;
       if (optionsRes.error) throw optionsRes.error;
       if (componentsRes.error) throw componentsRes.error;
