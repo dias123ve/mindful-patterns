@@ -401,184 +401,130 @@ const QuizManager = () => {
         </Table>
       </div>
 
-      <Dialog
-        open={dialogOpen}
-        onOpenChange={(open) => {
-          setDialogOpen(open);
-          if (!open) resetForm();
-        }}
-      >
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>
-              {editingQuestion ? "Edit Question" : "Add New Question"}
-            </DialogTitle>
-          </DialogHeader>
+    <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+  <DialogContent className="max-w-2xl">
+    <DialogHeader>
+      <DialogTitle>
+        {editingQuestion ? "Edit Question" : "Create New Question"}
+      </DialogTitle>
+    </DialogHeader>
 
-          <div className="space-y-6 py-4">
-            <div>
-              <Label>Question Text</Label>
-              <Textarea
-                rows={3}
-                value={formData.question_text}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    question_text: e.target.value,
-                  }))
-                }
-              />
-            </div>
+    <div className="space-y-4 mt-4">
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Category (optional)</Label>
-                <Input
-                  value={formData.category}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      category: e.target.value,
-                    }))
-                  }
-                  placeholder="e.g., Thinking Patterns"
-                />
-              </div>
-
-              <div>
-                <Label>Related Component</Label>
-                <select
-                  value={formData.component_key}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      component_key: e.target.value,
-                    }))
-                  }
-                  className="border rounded p-2 w-full"
-                >
-                  <option value="">Select…</option>
-                  {components.map((c) => (
-                    <option key={c.id} value={c.component_key}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-           <div>
-  <Label>Answer Options</Label>
-
-  <div className="space-y-3 mt-2">
-    {formData.options.map((opt, idx) => (
-      <div key={idx} className="flex gap-2 items-center">
-        <Input
-          className="flex-1"
-          placeholder={`Option ${idx + 1}`}
-          value={opt.option_text}
-          onChange={(e) => {
-            const clone = [...formData.options];
-            clone[idx].option_text = e.target.value;
-            setFormData({ ...formData, options: clone });
-          }}
+      {/* Question Text */}
+      <div>
+        <Label>Question Text</Label>
+        <Textarea
+          placeholder="Type your question..."
+          value={formData.question_text}
+          onChange={(e) =>
+            setFormData({ ...formData, question_text: e.target.value })
+          }
         />
-
-        <Input
-          type="number"
-          min={0}
-          max={5}
-          value={opt.score}
-          className="w-20"
-          onChange={(e) => {
-            const clone = [...formData.options];
-            clone[idx].score = Number(e.target.value);
-            setFormData({ ...formData, options: clone });
-          }}
-        />
-
-        {formData.options.length > 2 && (
-          <Button
-            variant="destructive"
-            size="icon"
-            onClick={() => {
-              const clone = formData.options.filter((_, i) => i !== idx);
-              setFormData({ ...formData, options: clone });
-            }}
-          >
-            ✕
-          </Button>
-        )}
       </div>
-    ))}
-  </div>
 
-  <Button
-    variant="secondary"
-    className="mt-3"
-    onClick={() =>
-      setFormData({
-        ...formData,
-        options: [
-          ...formData.options,
-          { option_text: "", score: formData.options.length + 1 },
-        ],
-      })
-    }
-  >
-    + Add Option
-  </Button>
-</div>
+      {/* Category */}
+      <div>
+        <Label>Category</Label>
+        <Input
+          placeholder="Category"
+          value={formData.category}
+          onChange={(e) =>
+            setFormData({ ...formData, category: e.target.value })
+          }
+        />
+      </div>
 
-                {formData.options.map((opt, idx) => (
-                  <div key={idx} className="flex gap-2">
-                    <Input
-                      className="flex-1"
-                      placeholder={`Option ${idx + 1}`}
-                      value={opt.option_text}
-                      onChange={(e) => {
-                        const clone = [...formData.options];
-                        clone[idx].option_text = e.target.value;
-                        setFormData((prev) => ({
-                          ...prev,
-                          options: clone,
-                        }));
-                      }}
-                    />
-                    <Input
-                      type="number"
-                      min={0}
-                      max={5}
-                      value={opt.score}
-                      className="w-20"
-                      onChange={(e) => {
-                        const clone = [...formData.options];
-                        clone[idx].score = Number(e.target.value);
-                        setFormData((prev) => ({
-                          ...prev,
-                          options: clone,
-                        }));
-                      }}
-                    />
-                  </div>
-                ))}
-              </div>
+      {/* Component Key */}
+      <div>
+        <Label>Component Key</Label>
+        <Input
+          placeholder="Component key"
+          value={formData.component_key}
+          onChange={(e) =>
+            setFormData({ ...formData, component_key: e.target.value })
+          }
+        />
+      </div>
+
+      {/* ANSWER OPTIONS */}
+      <div>
+        <Label>Answer Options</Label>
+
+        <div className="space-y-3 mt-2">
+          {formData.options.map((opt, idx) => (
+            <div key={idx} className="flex gap-2 items-center">
+              <Input
+                className="flex-1"
+                placeholder={`Option ${idx + 1}`}
+                value={opt.option_text}
+                onChange={(e) => {
+                  const clone = [...formData.options];
+                  clone[idx].option_text = e.target.value;
+                  setFormData({ ...formData, options: clone });
+                }}
+              />
+
+              <Input
+                type="number"
+                min={0}
+                max={5}
+                value={opt.score}
+                className="w-20"
+                onChange={(e) => {
+                  const clone = [...formData.options];
+                  const val = Number(e.target.value);
+                  clone[idx].score = isNaN(val) ? 0 : val;
+                  setFormData({ ...formData, options: clone });
+                }}
+              />
+
+              {formData.options.length > 2 && (
+                <Button
+                  variant="destructive"
+                  size="icon"
+                  onClick={() => {
+                    const clone = formData.options.filter((_, i) => i !== idx);
+                    setFormData({ ...formData, options: clone });
+                  }}
+                >
+                  ✕
+                </Button>
+              )}
             </div>
+          ))}
+        </div>
 
-            <div className="flex justify-end gap-3 pt-4 border-t">
-              <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button disabled={saving} onClick={handleSave}>
-                {saving && (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                )}
-                {editingQuestion ? "Update" : "Add"}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+        <Button
+          variant="secondary"
+          className="mt-3"
+          onClick={() => {
+            setFormData({
+              ...formData,
+              options: [
+                ...formData.options,
+                { option_text: "", score: formData.options.length + 1 },
+              ],
+            });
+          }}
+        >
+          + Add Option
+        </Button>
+      </div>
+
+      {/* FOOTER BUTTONS */}
+      <div className="flex justify-end gap-3 pt-4 border-t">
+        <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+          Cancel
+        </Button>
+        <Button onClick={handleSaveQuestion}>
+          {editingQuestion ? "Save Changes" : "Create Question"}
+        </Button>
+      </div>
+    </div>
+  </DialogContent>
+</Dialog>
+
     </div>
   );
 };
