@@ -65,10 +65,6 @@ const [formData, setFormData] = useState({
   ],
 });
 
-useEffect(() => {
-  fetchData();
-}, []);
-
 const fetchData = async () => {
   setLoading(true);
 
@@ -104,6 +100,12 @@ const fetchData = async () => {
     setLoading(false);
   }
 };
+
+  
+useEffect(() => {
+  fetchData();
+}, []);
+
 
 
   const resetForm = () => {
