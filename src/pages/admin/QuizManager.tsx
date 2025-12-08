@@ -140,7 +140,7 @@ const QuizManager = () => {
         questionOptions.length > 0
           ? questionOptions.map((o) => ({
               option_text: o.option_text,
-              score: o.score || 1,
+              score: o.score !== null && o.score !== undefined ? o.score : 0,
             }))
           : formData.options,
     });
@@ -489,7 +489,7 @@ const QuizManager = () => {
                     />
                     <Input
                       type="number"
-                      min={1}
+                      min={0}
                       max={5}
                       value={opt.score}
                       className="w-20"
