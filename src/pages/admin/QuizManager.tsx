@@ -411,7 +411,9 @@ useEffect(() => {
 <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
   <DialogContent>
     <DialogHeader>
-      <DialogTitle>{editingQuestion ? "Edit Question" : "Add Question"}</DialogTitle>
+      <DialogTitle>
+        {editingQuestion ? "Edit Question" : "Add Question"}
+      </DialogTitle>
     </DialogHeader>
 
     <div className="grid gap-4 py-4">
@@ -423,8 +425,10 @@ useEffect(() => {
         <div>
           <Label>Category</Label>
           <Input
-            value={questionCategory}
-            onChange={(e) => setQuestionCategory(e.target.value)}
+            value={formData.category}
+            onChange={(e) =>
+              setFormData({ ...formData, category: e.target.value })
+            }
             placeholder="e.g. mindset, behavior, growth"
           />
         </div>
@@ -433,14 +437,16 @@ useEffect(() => {
         <div>
           <Label>Key (Component)</Label>
           <select
-            value={questionKey}
-            onChange={(e) => setQuestionKey(e.target.value)}
+            value={formData.component_key || ""}
+            onChange={(e) =>
+              setFormData({ ...formData, component_key: e.target.value })
+            }
             className="block w-full border rounded-md px-3 py-2"
           >
             <option value="">-- pilih komponen --</option>
 
             {components.map((c) => (
-              <option key={c.id} value={c.id}>
+              <option key={c.id} value={c.component_key}>
                 {c.name}
               </option>
             ))}
@@ -453,8 +459,10 @@ useEffect(() => {
       <div>
         <Label>Question</Label>
         <Textarea
-          value={questionText}
-          onChange={(e) => setQuestionText(e.target.value)}
+          value={formData.question_text}
+          onChange={(e) =>
+            setFormData({ ...formData, question_text: e.target.value })
+          }
           placeholder="Tuliskan pertanyaan..."
         />
       </div>
@@ -463,24 +471,47 @@ useEffect(() => {
       <div>
         <Label>Options</Label>
 
-        {options.map((opt, index) => (
+        {formData.options.map((opt, index) => (
           <div key={index} className="flex items-center gap-2 mt-2">
+
+            {/* OPTION TEXT */}
             <Input
-              value={opt}
-              onChange={(e) => updateOption(index, e.target.value)}
+              value={opt.option_text}
+              onChange={(e) => {
+                const newOpts = [...formData.options];
+                newOpts[index].option_text = e.target.value;
+                setFormData({ ...formData, options: newOpts });
+              }}
               placeholder={`Option ${index + 1}`}
             />
-            <Button
-              variant="outline"
-              onClick={() => removeOption(index)}
-              disabled={options.length <= 2}
-            >
-              Hapus
-            </Button>
+
+            {/* SCORE */}
+            <Input
+              type="number"
+              className="w-20"
+              value={opt.score}
+              onChange={(e) => {
+                const newOpts = [...formData.options];
+                newOpts[index].score = Number(e.target.value);
+                setFormData({ ...formData, options: newOpts });
+              }}
+            />
+
           </div>
         ))}
 
-        <Button className="mt-2" onClick={addOption}>
+        <Button
+          className="mt-2"
+          onClick={() =>
+            setFormData({
+              ...formData,
+              options: [
+                ...formData.options,
+                { option_text: "", score: formData.options.length + 1 },
+              ],
+            })
+          }
+        >
           + Tambah opsi
         </Button>
       </div>
@@ -494,7 +525,6 @@ useEffect(() => {
     </DialogFooter>
   </DialogContent>
 </Dialog>
-
 
     </div>
   );
