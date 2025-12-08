@@ -65,8 +65,23 @@ const QuizManager = () => {
     ],
   });
 
+   // ✅⬇⬇⬇ TAMBAHKAN INI DI SINI
   useEffect(() => {
-    fetchData();
+    const loadComponents = async () => {
+      const { data, error } = await supabase
+        .from("components")
+        .select("*")
+        .order("name");
+
+      if (error) {
+        console.error("Error fetching components:", error);
+        return;
+      }
+
+      setComponents(data || []);
+    };
+
+    loadComponents();
   }, []);
 
   const fetchData = async () => {
@@ -402,129 +417,95 @@ const QuizManager = () => {
         </Table>
       </div>
 
-    <Dialog open={dialogOpen} onOpenChange={setEditDialogOpen}>
-  <DialogContent className="max-w-2xl">
+  {/* ==================== FORM QUESTION ===================== */}
+
+<Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+  <DialogContent>
     <DialogHeader>
-      <DialogTitle>
-        {editingQuestion ? "Edit Question" : "Create New Question"}
-      </DialogTitle>
+      <DialogTitle>{editingQuestion ? "Edit Question" : "Add Question"}</DialogTitle>
     </DialogHeader>
 
-    <div className="space-y-4 mt-4">
+    <div className="grid gap-4 py-4">
 
-      {/* Question Text */}
-      <div>
-        <Label>Question Text</Label>
-        <Textarea
-          placeholder="Type your question..."
-          value={formData.question_text}
-          onChange={(e) =>
-            setFormData({ ...formData, question_text: e.target.value })
-          }
-        />
-      </div>
+      {/* CATEGORY + COMPONENTS DROPDOWN */}
+      <div className="grid grid-cols-2 gap-4">
 
-      {/* Category */}
-      <div>
-        <Label>Category</Label>
-        <Input
-          placeholder="Category"
-          value={formData.category}
-          onChange={(e) =>
-            setFormData({ ...formData, category: e.target.value })
-          }
-        />
-      </div>
-
-      {/* Component Key */}
-      <div>
-        <Label>Component Key</Label>
-        <Input
-          placeholder="Component key"
-          value={formData.component_key}
-          onChange={(e) =>
-            setFormData({ ...formData, component_key: e.target.value })
-          }
-        />
-      </div>
-
-      {/* ANSWER OPTIONS */}
-      <div>
-        <Label>Answer Options</Label>
-
-        <div className="space-y-3 mt-2">
-          {formData.options.map((opt, idx) => (
-            <div key={idx} className="flex gap-2 items-center">
-              <Input
-                className="flex-1"
-                placeholder={`Option ${idx + 1}`}
-                value={opt.option_text}
-                onChange={(e) => {
-                  const clone = [...formData.options];
-                  clone[idx].option_text = e.target.value;
-                  setFormData({ ...formData, options: clone });
-                }}
-              />
-
-              <Input
-                type="number"
-                min={0}
-                max={5}
-                value={opt.score}
-                className="w-20"
-                onChange={(e) => {
-                  const clone = [...formData.options];
-                  const val = Number(e.target.value);
-                  clone[idx].score = isNaN(val) ? 0 : val;
-                  setFormData({ ...formData, options: clone });
-                }}
-              />
-
-              {formData.options.length > 2 && (
-                <Button
-                  variant="destructive"
-                  size="icon"
-                  onClick={() => {
-                    const clone = formData.options.filter((_, i) => i !== idx);
-                    setFormData({ ...formData, options: clone });
-                  }}
-                >
-                  ✕
-                </Button>
-              )}
-            </div>
-          ))}
+        {/* CATEGORY */}
+        <div>
+          <Label>Category</Label>
+          <Input
+            value={questionCategory}
+            onChange={(e) => setQuestionCategory(e.target.value)}
+            placeholder="e.g. mindset, behavior, growth"
+          />
         </div>
 
-        <Button
-          variant="secondary"
-          className="mt-3"
-          onClick={() => {
-            setFormData({
-              ...formData,
-              options: [
-                ...formData.options,
-                { option_text: "", score: formData.options.length + 1 },
-              ],
-            });
-          }}
-        >
-          + Add Option
-        </Button>
+        {/* COMPONENT DROPDOWN */}
+        <div>
+          <Label>Key (Component)</Label>
+          <select
+            value={questionKey}
+            onChange={(e) => setQuestionKey(e.target.value)}
+            className="block w-full border rounded-md px-3 py-2"
+          >
+            <option value="">-- pilih komponen --</option>
+
+            {components.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
       </div>
 
-      {/* FOOTER BUTTONS */}
-      <div className="flex justify-end gap-3 pt-4 border-t">
-        <Button variant="outline" onClick={() => setDialogOpen(false)}>
-          Cancel
-        </Button>
-        <Button onClick={handleSave}>
-          {editingQuestion ? "Save Changes" : "Create Question"}
+      {/* QUESTION TEXT */}
+      <div>
+        <Label>Question</Label>
+        <Textarea
+          value={questionText}
+          onChange={(e) => setQuestionText(e.target.value)}
+          placeholder="Tuliskan pertanyaan..."
+        />
+      </div>
+
+      {/* OPTIONS */}
+      <div>
+        <Label>Options</Label>
+
+        {options.map((opt, index) => (
+          <div key={index} className="flex items-center gap-2 mt-2">
+            <Input
+              value={opt}
+              onChange={(e) => updateOption(index, e.target.value)}
+              placeholder={`Option ${index + 1}`}
+            />
+            <Button
+              variant="outline"
+              onClick={() => removeOption(index)}
+              disabled={options.length <= 2}
+            >
+              Hapus
+            </Button>
+          </div>
+        ))}
+
+        <Button className="mt-2" onClick={addOption}>
+          + Tambah opsi
         </Button>
       </div>
     </div>
+
+    {/* SAVE BUTTON */}
+    <DialogFooter>
+      <Button onClick={handleSave}>
+        {editingQuestion ? "Save Changes" : "Add Question"}
+      </Button>
+    </DialogFooter>
   </DialogContent>
 </Dialog>
+
 
     </div>
   );
