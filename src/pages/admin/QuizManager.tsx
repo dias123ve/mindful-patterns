@@ -71,6 +71,7 @@ useEffect(() => {
 
 const fetchData = async () => {
   setLoading(true);
+
   try {
     const [questionsRes, optionsRes, componentsRes] = await Promise.all([
       supabase
@@ -89,6 +90,10 @@ const fetchData = async () => {
         .order("name", { ascending: true }),
     ]);
 
+    if (questionsRes.error) throw questionsRes.error;
+    if (optionsRes.error) throw optionsRes.error;
+    if (componentsRes.error) throw componentsRes.error;
+
     setQuestions(questionsRes.data || []);
     setOptions(optionsRes.data || []);
     setComponents(componentsRes.data || []);
@@ -99,20 +104,7 @@ const fetchData = async () => {
     setLoading(false);
   }
 };
-      if (questionsRes.error) throw questionsRes.error;
-      if (optionsRes.error) throw optionsRes.error;
-      if (componentsRes.error) throw componentsRes.error;
 
-      setQuestions(questionsRes.data || []);
-      setOptions(optionsRes.data || []);
-      setComponents(componentsRes.data || []);
-    } catch (error) {
-      console.error("Error fetching data:", error);
-      toast.error("Failed to load quiz data");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const resetForm = () => {
     setFormData({
