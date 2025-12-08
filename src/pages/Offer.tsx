@@ -111,8 +111,9 @@ const Offer = () => {
 
       <main className="container mx-auto px-4 py-8 pb-16">
         <div className="max-w-4xl mx-auto">
+
           {/* Header */}
-          <div className="text-center mb-12 animate-fade-in-up">
+          <div className="text-center mb-12 fade-up">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6">
               <Sparkles className="h-4 w-4" />
               <span>Personalized For You</span>
@@ -128,8 +129,9 @@ const Offer = () => {
 
           {/* Offer Cards */}
           <div className="grid md:grid-cols-2 gap-6 mb-12">
+            
             {/* Single Ebook Offer */}
-            <div className="bg-card rounded-2xl p-6 md:p-8 shadow-soft border border-border animate-fade-in-up">
+            <div className="bg-card rounded-2xl p-6 md:p-8 shadow-soft border border-border fade-up">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-12 h-12 rounded-full bg-amber-500/10 flex items-center justify-center">
                   <BookOpen className="h-6 w-6 text-amber-600" />
@@ -169,7 +171,10 @@ const Offer = () => {
             </div>
 
             {/* Bundle Offer */}
-            <div className="relative bg-card rounded-2xl p-6 md:p-8 shadow-medium border-2 border-primary animate-fade-in-up" style={{ animationDelay: "0.1s" }}>
+            <div 
+              className="relative bg-card rounded-2xl p-6 md:p-8 shadow-medium border-2 border-primary fade-up"
+              style={{ animationDelay: "0.12s" }}
+            >
               {/* Best Value Badge */}
               <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                 <span className="inline-flex items-center gap-1 px-4 py-1 rounded-full bg-primary text-primary-foreground text-sm font-semibold">
@@ -201,7 +206,7 @@ const Offer = () => {
                   A set of three ebooks tailored to your quiz profile:
                 </p>
                 <ul className="space-y-2 text-sm">
-                  {positiveComponents.map((comp, i) => (
+                  {positiveComponents.map((comp) => (
                     <li key={comp.id} className="flex items-center gap-2 text-green-600">
                       <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
                       <span>Strength Guide: {comp.name}</span>
@@ -229,12 +234,16 @@ const Offer = () => {
           </div>
 
           {/* Footer Note */}
-          <div className="text-center animate-fade-in-up" style={{ animationDelay: "0.2s" }}>
+          <div 
+            className="text-center fade-up"
+            style={{ animationDelay: "0.24s" }}
+          >
             <p className="text-sm text-muted-foreground max-w-md mx-auto">
               Your recommendations are dynamically tailored based on your 
               behavioral pattern profile.
             </p>
           </div>
+
         </div>
       </main>
 
