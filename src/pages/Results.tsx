@@ -2,9 +2,8 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Brain, Loader2, CheckCircle2, TrendingUp, ArrowRight } from "lucide-react";
+import { Brain, BookOpen, Loader2, CheckCircle2, Sparkles, AlertTriangle, Download } from "lucide-react";
 import { toast } from "sonner";
-import RisingPathAnimation from "@/components/animations/RisingPathAnimation";
 
 interface ComponentData {
   id: string;
@@ -39,6 +38,7 @@ const Results = () => {
     }
 
     try {
+      // Get component scores from session or fetch submission
       let componentScores: Record<string, number> = {};
       
       if (componentScoresStr) {
@@ -54,20 +54,24 @@ const Results = () => {
         componentScores = (submission?.component_scores as Record<string, number>) || {};
       }
 
+      // Fetch all components
       const { data: componentsData, error: compError } = await supabase
         .from("components")
         .select("id, name, component_key, description_positive, example_positive, pdf_positive_url, description_negative, example_negative, pdf_negative_url");
 
       if (compError) throw compError;
 
+      // Sort components by score
       const sortedKeys = Object.entries(componentScores)
         .sort(([, a], [, b]) => b - a)
         .map(([key]) => key);
 
+      // Map component keys to component data
       const sortedComponents = sortedKeys
         .map(key => componentsData?.find(c => c.component_key === key))
         .filter(Boolean) as ComponentData[];
 
+      // Top 2 are positive (strengths), bottom 1 is negative (weak spot)
       if (sortedComponents.length >= 3) {
         setPositiveComponents(sortedComponents.slice(0, 2));
         setNegativeComponent(sortedComponents[sortedComponents.length - 1]);
@@ -108,49 +112,72 @@ const Results = () => {
 
       <main className="container mx-auto px-4 py-8 pb-16">
         <div className="max-w-3xl mx-auto">
-          {/* Header */}
           <div className="text-center mb-12 animate-fade-in-up">
+            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6">
+              <CheckCircle2 className="h-8 w-8 text-primary" />
+            </div>
             <h1 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-4">
-              Your Personal Result
+              Your Thinking Profile
             </h1>
-            <p className="text-muted-foreground max-w-lg mx-auto leading-relaxed">
-              A personalized path based on your strengths and your key challenge.
-              Your results show clear potential to elevate your personal performance 
-              and break past your usual limits within the next 60 days.
+            <p className="text-muted-foreground max-w-md mx-auto">
+              Based on your responses, here are your key thinking patterns.
             </p>
           </div>
 
-          {/* Top Strengths */}
+          {/* YOUR STRENGTHS - Top 2 Positive */}
           {positiveComponents.length > 0 && (
-            <section className="mb-10">
+            <section className="mb-12">
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center">
                   <CheckCircle2 className="h-5 w-5 text-green-600" />
                 </div>
                 <h2 className="text-2xl font-display font-bold text-foreground">
-                  Top Strengths
+                  Your Strengths
                 </h2>
               </div>
 
-              <div className="space-y-5">
+              <div className="space-y-6">
                 {positiveComponents.map((component, index) => (
                   <div
                     key={component.id}
-                    className="bg-card rounded-2xl p-6 shadow-soft animate-fade-in-up border-l-4 border-green-500"
+                    className="bg-card rounded-2xl p-6 md:p-8 shadow-soft animate-fade-in-up border-l-4 border-green-500"
                     style={{ animationDelay: `${index * 0.1}s` }}
                   >
                     <div className="flex items-start gap-4">
                       <div className="flex-shrink-0 w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center text-green-600 font-display font-bold">
                         {index + 1}
                       </div>
+
                       <div className="flex-1">
-                        <h3 className="text-xl font-display font-semibold text-foreground mb-2">
+                        <h3 className="text-xl font-display font-semibold text-foreground mb-3">
                           {component.name}
                         </h3>
-                        <p className="text-muted-foreground leading-relaxed">
-                          {component.description_positive || 
-                            "This strength helps you maintain focus and make progress toward your goals consistently."}
+
+                        <p className="text-muted-foreground mb-4 leading-relaxed">
+                          {component.description_positive || "No description provided."}
                         </p>
+
+                        <div className="bg-green-50 dark:bg-green-950/30 rounded-xl p-4 mb-4">
+                          <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
+                            <BookOpen className="h-4 w-4 text-green-600" />
+                            Examples in Daily Life
+                          </h4>
+                          <p className="text-sm text-muted-foreground">
+                            {component.example_positive || "No examples provided."}
+                          </p>
+                        </div>
+
+                        {component.pdf_positive_url && (
+                          <a
+                            href={component.pdf_positive_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 text-sm text-green-600 hover:text-green-700 font-medium"
+                          >
+                            <Download className="h-4 w-4" />
+                            Download Strength Guide
+                          </a>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -159,62 +186,88 @@ const Results = () => {
             </section>
           )}
 
-          {/* Key Challenge */}
+          {/* YOUR WEAK SPOT - Bottom 1 Negative */}
           {negativeComponent && (
-            <section className="mb-12">
+            <section className="mb-16">
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center">
-                  <TrendingUp className="h-5 w-5 text-amber-600" />
+                  <AlertTriangle className="h-5 w-5 text-amber-600" />
                 </div>
                 <h2 className="text-2xl font-display font-bold text-foreground">
-                  Key Challenge
+                  Your Growth Area
                 </h2>
               </div>
 
               <div
-                className="bg-card rounded-2xl p-6 shadow-soft animate-fade-in-up border-l-4 border-amber-500"
+                className="bg-card rounded-2xl p-6 md:p-8 shadow-soft animate-fade-in-up border-l-4 border-amber-500"
                 style={{ animationDelay: "0.2s" }}
               >
                 <div className="flex items-start gap-4">
                   <div className="flex-shrink-0 w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-600">
-                    <TrendingUp className="h-5 w-5" />
+                    <AlertTriangle className="h-5 w-5" />
                   </div>
+
                   <div className="flex-1">
-                    <h3 className="text-xl font-display font-semibold text-foreground mb-2">
+                    <h3 className="text-xl font-display font-semibold text-foreground mb-3">
                       {negativeComponent.name}
                     </h3>
-                    <p className="text-muted-foreground leading-relaxed">
-                      {negativeComponent.description_negative || 
-                        "This pattern may create friction in certain situations, but with awareness it can be transformed into a growth opportunity."}
+
+                    <p className="text-muted-foreground mb-4 leading-relaxed">
+                      {negativeComponent.description_negative || "No description provided."}
                     </p>
+
+                    <div className="bg-amber-50 dark:bg-amber-950/30 rounded-xl p-4 mb-4">
+                      <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
+                        <BookOpen className="h-4 w-4 text-amber-600" />
+                        How This Shows Up
+                      </h4>
+                      <p className="text-sm text-muted-foreground">
+                        {negativeComponent.example_negative || "No examples provided."}
+                      </p>
+                    </div>
+
+                    {negativeComponent.pdf_negative_url && (
+                      <a
+                        href={negativeComponent.pdf_negative_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 text-sm text-amber-600 hover:text-amber-700 font-medium"
+                      >
+                        <Download className="h-4 w-4" />
+                        Download Improvement Guide
+                      </a>
+                    )}
                   </div>
                 </div>
               </div>
             </section>
           )}
 
-          {/* Animation Section */}
-          <section className="mb-12 animate-fade-in-up" style={{ animationDelay: "0.3s" }}>
-            <div className="text-center mb-6">
-              <h2 className="text-xl font-display font-semibold text-foreground mb-2">
-                Visualizing Your Growth Path
-              </h2>
-              <p className="text-muted-foreground text-sm max-w-md mx-auto">
-                This animation represents how your current patterns can become more 
-                aligned and focused over time.
-              </p>
+          {/* CTA SECTION */}
+          <div className="bg-card rounded-3xl p-8 md:p-12 shadow-medium text-center animate-fade-in-up">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/10 text-accent text-sm font-medium mb-6">
+              <Sparkles className="h-4 w-4" />
+              <span>Limited Time Offer</span>
             </div>
-            <RisingPathAnimation />
-          </section>
 
-          {/* Continue Button */}
-          <div className="text-center animate-fade-in-up" style={{ animationDelay: "0.4s" }}>
-            <Link to="/offer">
-              <Button variant="hero" size="xl" className="min-w-[200px]">
-                Continue
-                <ArrowRight className="h-5 w-5 ml-2" />
+            <h2 className="text-2xl md:text-3xl font-display font-bold text-foreground mb-4">
+              Get Your Personalized Ebook
+            </h2>
+
+            <p className="text-muted-foreground max-w-md mx-auto mb-6">
+              Receive a custom guide with strategies based on your results.
+            </p>
+
+            <Link to="/checkout">
+              <Button variant="hero" size="xl">
+                Get My Ebook
+                <Sparkles className="h-5 w-5" />
               </Button>
             </Link>
+
+            <p className="text-xs text-muted-foreground mt-6">
+              Instant delivery • Secure payment • 30-day guarantee
+            </p>
           </div>
         </div>
       </main>

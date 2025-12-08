@@ -9,6 +9,7 @@ import { toast } from "sonner";
 
 interface Question {
   id: string;
+  quiz_id: string;
   question_text: string;
   component_key: string | null;
   display_order: number;
@@ -43,28 +44,44 @@ const Quiz = () => {
 
   const fetchQuizData = async () => {
     try {
-      // Get active questions
+      // 1. Get active quiz
+      const { data: quiz, error: quizErr } = await supabase
+        .from("quizzes")
+        .select("id")
+        .eq("is_active", true)
+        .single();
+
+      if (quizErr) throw quizErr;
+      if (!quiz) {
+        console.warn("No active quiz found");
+        setLoading(false);
+        return;
+      }
+
+      // 2. Get questions
       const { data: qData, error: qErr } = await supabase
-        .from("questions")
+        .from("quiz_questions")
         .select("*")
+        .eq("quiz_id", quiz.id)
         .eq("is_active", true)
         .order("display_order", { ascending: true });
 
       if (qErr) throw qErr;
 
+      // If no questions → avoid IN([]) error
       if (!qData || qData.length === 0) {
-        console.warn("No active questions found");
+        console.warn("Quiz exists but has ZERO QUESTIONS");
         setQuestions([]);
         setOptions([]);
         setLoading(false);
         return;
       }
 
-      // Get options for all questions
+      // 3. Get options safely
       const questionIds = qData.map((q) => q.id);
 
       const { data: oData, error: oErr } = await supabase
-        .from("question_options")
+        .from("quiz_question_options")
         .select("*")
         .in("question_id", questionIds)
         .order("question_id", { ascending: true })
