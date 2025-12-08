@@ -193,16 +193,40 @@ const GrowthCurve = ({ width = 520, height = 220 }: { width?: number; height?: n
           />
 
           {/* Goal label */}
-          <text
-            x="22"
-            y="5"
-            fontSize="13"
-            fill="hsl(158 64% 30%)"
-            fontFamily="DM Sans, sans-serif"
-            style={{ fontWeight: 600 }}
-          >
-            Goal
-          </text>
+         {/* GOAL marker */}
+<g transform="translate(500,40)">
+  <circle
+    r="14"
+    fill="white"
+    stroke="hsl(158 64% 40%)"
+    strokeWidth="3"
+    filter="drop-shadow(0 6px 16px rgba(16,124,116,0.22))"
+  />
+  
+  <circle r="7" fill="hsl(158 64% 40%)" opacity="0.18">
+    <animate attributeName="r" values="7;14;7" dur="1.8s" repeatCount="indefinite" />
+    <animate attributeName="opacity" values="0.25;0;0.25" dur="1.8s" repeatCount="indefinite" />
+  </circle>
+
+  <path
+    d="M0 -2.6 L1 -1 L3 -1 L1 1 L1.5 3 L0 2 L-1.5 3 L-1 1 L-3 -1 L-1 -1 Z"
+    fill="hsl(158 64% 40%)"
+    transform="scale(2.3)"
+  />
+</g>
+
+{/* Goal label (placed outside group so it always shows) */}
+<text
+  x="545"
+  y="45"
+  fontSize="14"
+  fill="hsl(158 64% 30%)"
+  fontFamily="DM Sans, sans-serif"
+  style={{ fontWeight: 600 }}
+>
+  Goal
+</text>
+
         </g>
       </svg>
 
