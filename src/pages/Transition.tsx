@@ -16,9 +16,9 @@ const Transition = () => {
 
       <main className="container mx-auto px-4 py-8 pb-16">
         <div className="max-w-2xl mx-auto">
-          
+
           {/* MAIN TEXT */}
-          <div className="text-center mb-12 animate-fade-in-up">
+          <div className="text-center mb-12 fade-up">
             <h1 className="text-2xl md:text-3xl font-display font-bold text-foreground mb-6 leading-relaxed">
               A personalized path built around your strengths and key challenge.
             </h1>
@@ -30,8 +30,8 @@ const Transition = () => {
 
           {/* ANIMATION BOX */}
           <div
-            className="flex flex-col items-center justify-center gap-4 mb-12 animate-fade-in-up"
-            style={{ animationDelay: "0.2s" }}
+            className="flex flex-col items-center justify-center gap-4 mb-12 fade-up"
+            style={{ animationDelay: "0.15s" }}
           >
             <Sparkles className="h-12 w-12 text-primary/40" />
             <span className="text-sm text-muted-foreground">
@@ -41,8 +41,8 @@ const Transition = () => {
 
           {/* CONTINUE BUTTON */}
           <div
-            className="text-center animate-fade-in-up"
-            style={{ animationDelay: "0.4s" }}
+            className="text-center fade-up"
+            style={{ animationDelay: "0.30s" }}
           >
             <Link to="/offer">
               <Button variant="hero" size="xl" className="min-w-[220px]">
