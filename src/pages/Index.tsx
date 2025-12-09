@@ -23,89 +23,85 @@ const Index = () => {
 
       {/* Hero Section */}
       <main className="container mx-auto px-4 pt-14 pb-24">
-  <div className="max-w-2xl mx-auto text-center fade-up">
+        <div className="max-w-2xl mx-auto text-center fade-up">
 
-    {/* Badge */}
-    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6">
-      Science-backed performance insights
-    </div>
+          {/* Main Heading */}
+          <h1 className="text-3xl md:text-4xl font-bold text-foreground leading-tight mb-4">
+            A Personalized <span className="text-gradient-primary">Performance Plan</span>
+          </h1>
 
-    {/* Main Heading */}
-    <h1 className="text-4xl md:text-5xl font-bold text-foreground leading-tight mb-4">
-      A Personalized <span className="text-gradient-primary">Performance Plan</span>
-    </h1>
+          {/* Subheadline */}
+          <p className="text-lg md:text-xl text-slate-600 max-w-lg mx-auto mb-8">
+            Elevate your daily performance with a personalized plan tailored to your unique patterns.
+          </p>
 
-    {/* Subheadline */}
-    <p className="text-lg md:text-xl text-muted-foreground max-w-lg mx-auto mb-8">
-      Elevate your daily performance with a personalized plan tailored to your unique patterns.
-    </p>
+          {/* Gender Selection Title */}
+          <p className="text-base font-semibold text-foreground mb-4">
+            Select your profile to begin
+          </p>
 
-    {/* Gender Selection Title */}
-    <p className="text-base font-semibold text-foreground mb-4">
-      Select your profile to begin
-    </p>
+          {/* Gender Selection Cards */}
+          <div className="flex justify-center gap-7 mt-2">
 
-    {/* Gender Selection Cards */}
-    <div className="flex justify-center gap-6 mt-2">
+            {/* Male */}
+            <button
+              onClick={() => (window.location.href = "/quiz?gender=male")}
+              className="w-48 h-60 bg-white rounded-2xl border border-slate-200/60 
+                         shadow-md shadow-slate-200/40
+                         hover:shadow-lg hover:scale-[1.05] transition-all 
+                         flex flex-col items-center justify-center gap-5"
+            >
+              <img src={MaleIcon} alt="Male" className="w-32 h-32 object-contain drop-shadow-sm" />
+              <span className="text-lg font-semibold text-slate-800">Male</span>
+            </button>
 
-      {/* Male */}
-      <button
-        onClick={() => (window.location.href = "/quiz?gender=male")}
-        className="w-44 h-56 bg-white rounded-xl border border-slate-200 shadow-sm 
-                   hover:shadow-md hover:scale-[1.04] transition-all 
-                   flex flex-col items-center justify-center gap-5"
-      >
-        <img src={MaleIcon} alt="Male" className="w-28 h-28 object-contain" />
-        <span className="text-lg font-semibold text-slate-800">Male</span>
-      </button>
+            {/* Female */}
+            <button
+              onClick={() => (window.location.href = "/quiz?gender=female")}
+              className="w-48 h-60 bg-white rounded-2xl border border-slate-200/60 
+                         shadow-md shadow-slate-200/40
+                         hover:shadow-lg hover:scale-[1.05] transition-all 
+                         flex flex-col items-center justify-center gap-5"
+            >
+              <img src={FemaleIcon} alt="Female" className="w-32 h-32 object-contain drop-shadow-sm" />
+              <span className="text-lg font-semibold text-slate-800">Female</span>
+            </button>
 
-      {/* Female */}
-      <button
-        onClick={() => (window.location.href = "/quiz?gender=female")}
-        className="w-44 h-56 bg-white rounded-xl border border-slate-200 shadow-sm 
-                   hover:shadow-md hover:scale-[1.04] transition-all 
-                   flex flex-col items-center justify-center gap-5"
-      >
-        <img src={FemaleIcon} alt="Female" className="w-28 h-28 object-contain" />
-        <span className="text-lg font-semibold text-slate-800">Female</span>
-      </button>
+          </div>
 
-    </div>
+          {/* Disclaimer */}
+          <p className="text-xs text-muted-foreground mt-4 max-w-xs mx-auto leading-relaxed">
+            By clicking <strong>“Male”</strong> or <strong>“Female”</strong>, you agree to our{" "}
+            <Link to="/terms" className="underline hover:text-primary">
+              Terms of Use
+            </Link>{" "}
+            and{" "}
+            <Link to="/privacy" className="underline hover:text-primary">
+              Privacy Policy
+            </Link>.
+          </p>
 
-    {/* Disclaimer */}
-    <p className="text-xs text-muted-foreground mt-4 max-w-xs mx-auto leading-relaxed">
-      By clicking <strong>“Male”</strong> or <strong>“Female”</strong>, you agree to our{" "}
-      <Link to="/terms" className="underline hover:text-primary">
-        Terms of Use
-      </Link>{" "}
-      and{" "}
-      <Link to="/privacy" className="underline hover:text-primary">
-        Privacy Policy
-      </Link>.
-    </p>
+          {/* Trust Indicators */}
+          <div className="flex flex-wrap items-center justify-center gap-8 text-muted-foreground mt-10">
+            <div className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-primary" />
+              <span className="text-sm">3 minutes</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <BookOpen className="h-5 w-5 text-primary" />
+              <span className="text-sm">Personalized plan</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Brain className="h-5 w-5 text-primary" />
+              <span className="text-sm">Science-based</span>
+            </div>
+          </div>
+        </div>
 
-    {/* Trust Indicators */}
-    <div className="flex flex-wrap items-center justify-center gap-8 text-muted-foreground mt-10">
-      <div className="flex items-center gap-2">
-        <Clock className="h-5 w-5 text-primary" />
-        <span className="text-sm">3 minutes</span>
-      </div>
-      <div className="flex items-center gap-2">
-        <BookOpen className="h-5 w-5 text-primary" />
-        <span className="text-sm">Personalized plan</span>
-      </div>
-      <div className="flex items-center gap-2">
-        <Brain className="h-5 w-5 text-primary" />
-        <span className="text-sm">Science-based</span>
-      </div>
-    </div>
-  </div>
-
-  {/* Background glow */}
-  <div className="absolute top-1/4 left-10 w-64 h-64 bg-primary/5 rounded-full blur-3xl -z-10" />
-  <div className="absolute bottom-1/4 right-10 w-48 h-48 bg-accent/5 rounded-full blur-3xl -z-10" />
-</main>
-
+        {/* Background glow */}
+        <div className="absolute top-1/4 left-10 w-64 h-64 bg-primary/5 rounded-full blur-3xl -z-10" />
+        <div className="absolute bottom-1/4 right-10 w-48 h-48 bg-accent/5 rounded-full blur-3xl -z-10" />
+      </main>
 
       {/* Footer */}
       <footer className="container mx-auto px-4 py-8 border-t border-border">
