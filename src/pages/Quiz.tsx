@@ -11,7 +11,6 @@ interface Question {
   id: string;
   quiz_id: string;
   question_text: string;
-  component_key: string | null;
   display_order: number;
   is_active: boolean;
 }
@@ -24,20 +23,28 @@ interface Option {
   display_order: number;
 }
 
+interface QuestionComponentRel {
+  question_id: string;
+  components: { component_key: string } | null;
+}
+
 const Quiz = () => {
   const navigate = useNavigate();
 
   const [questions, setQuestions] = useState<Question[]>([]);
   const [options, setOptions] = useState<Option[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+
   const [answers, setAnswers] = useState<
     Record<string, { optionId: string; score: number }>
   >({});
+
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [showEmailCapture, setShowEmailCapture] = useState(false);
 
+  // Load quiz data
   useEffect(() => {
     fetchQuizData();
   }, []);
@@ -53,7 +60,7 @@ const Quiz = () => {
 
       if (quizErr) throw quizErr;
       if (!quiz) {
-        console.warn("No active quiz found");
+        toast.error("No active quiz found");
         setLoading(false);
         return;
       }
@@ -68,24 +75,23 @@ const Quiz = () => {
 
       if (qErr) throw qErr;
 
-      // If no questions → avoid IN([]) error
       if (!qData || qData.length === 0) {
-        console.warn("Quiz exists but has ZERO QUESTIONS");
+        toast.error("This quiz has no questions");
         setQuestions([]);
         setOptions([]);
         setLoading(false);
         return;
       }
 
-      // 3. Get options safely
+      // 3. Get options
       const questionIds = qData.map((q) => q.id);
 
       const { data: oData, error: oErr } = await supabase
         .from("quiz_question_options")
         .select("*")
         .in("question_id", questionIds)
-        .order("question_id", { ascending: true })
-        .order("display_order", { ascending: true });
+        .order("question_id")
+        .order("display_order");
 
       if (oErr) throw oErr;
 
@@ -108,6 +114,7 @@ const Quiz = () => {
     ? ((currentQuestionIndex + 1) / questions.length) * 100
     : 0;
 
+  // Handle selecting an option
   const handleSelectOption = (optionId: string, score: number) => {
     if (!currentQuestion) return;
 
@@ -125,16 +132,36 @@ const Quiz = () => {
     }, 250);
   };
 
-  const calculateScores = () => {
+  // NEW: Multi-component scoring logic
+  const calculateScores = async () => {
     const scores: Record<string, number> = {};
+
+    // Fetch all question-component relations
+    const { data: qComps, error } = await supabase
+      .from("quiz_question_components")
+      .select("question_id, components(component_key)");
+
+    if (error) {
+      console.error("Failed loading question components", error);
+      return { scores: {}, sortedComponents: [] };
+    }
 
     questions.forEach((q) => {
       const ans = answers[q.id];
-      if (ans && q.component_key) {
-        scores[q.component_key] = (scores[q.component_key] || 0) + ans.score;
-      }
+      if (!ans) return;
+
+      // all components attached to this question
+      const compsForQ = qComps.filter((c) => c.question_id === q.id);
+
+      compsForQ.forEach((rel) => {
+        const key = rel.components?.component_key;
+        if (!key) return;
+
+        scores[key] = (scores[key] || 0) + ans.score;
+      });
     });
 
+    // Sort componenet keys by score
     const sortedComponents = Object.entries(scores)
       .sort(([, a], [, b]) => b - a)
       .map(([key]) => key);
@@ -142,6 +169,7 @@ const Quiz = () => {
     return { scores, sortedComponents };
   };
 
+  // Submit quiz
   const handleSubmit = async () => {
     if (!email.trim()) {
       toast.error("Enter your email");
@@ -157,7 +185,7 @@ const Quiz = () => {
     setSubmitting(true);
 
     try {
-      const { scores, sortedComponents } = calculateScores();
+      const { scores, sortedComponents } = await calculateScores();
       const topComponents = sortedComponents.slice(0, 3);
 
       const { data, error } = await supabase
@@ -166,15 +194,17 @@ const Quiz = () => {
           email: email.trim().toLowerCase(),
           answers,
           component_scores: scores,
-          top_components: topComponents as any,
+          top_components: topComponents,
         })
         .select()
         .single();
 
       if (error) throw error;
 
+      // Store locally for Results page
       sessionStorage.setItem("quiz_submission_id", data.id);
       sessionStorage.setItem("component_scores", JSON.stringify(scores));
+
       navigate("/results");
     } catch (err) {
       console.error(err);
@@ -184,6 +214,7 @@ const Quiz = () => {
     }
   };
 
+  // Loading state
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-hero flex items-center justify-center">
@@ -192,6 +223,7 @@ const Quiz = () => {
     );
   }
 
+  // No questions fallback
   if (questions.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-hero flex items-center justify-center">
@@ -203,8 +235,10 @@ const Quiz = () => {
     );
   }
 
+  // UI
   return (
     <div className="min-h-screen bg-gradient-hero">
+      {/* HEADER */}
       <header className="container mx-auto px-4 py-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -216,19 +250,20 @@ const Quiz = () => {
           <span className="text-sm text-muted-foreground">
             {showEmailCapture
               ? "Almost done!"
-              : `Question ${currentQuestionIndex + 1} of ${
-                  questions.length
-                }`}
+              : `Question ${currentQuestionIndex + 1} of ${questions.length}`}
           </span>
         </div>
       </header>
 
+      {/* PROGRESS */}
       <div className="container mx-auto px-4 mb-8">
         <Progress value={showEmailCapture ? 100 : progress} className="h-2" />
       </div>
 
+      {/* MAIN */}
       <main className="container mx-auto px-4 pb-16">
         <div className="max-w-xl mx-auto">
+          {/* QUESTION MODE */}
           {!showEmailCapture ? (
             <div key={currentQuestionIndex} className="animate-fade-in">
               <div className="text-center mb-10">
@@ -241,9 +276,7 @@ const Quiz = () => {
                 {currentOptions.map((opt, i) => (
                   <button
                     key={opt.id}
-                    onClick={() =>
-                      handleSelectOption(opt.id, opt.score || 0)
-                    }
+                    onClick={() => handleSelectOption(opt.id, opt.score || 0)}
                     className={`w-full text-left p-5 rounded-xl border-2 transition-all ${
                       answers[currentQuestion.id]?.optionId === opt.id
                         ? "border-primary bg-primary/10 shadow-soft"
@@ -257,6 +290,7 @@ const Quiz = () => {
               </div>
             </div>
           ) : (
+            // EMAIL MODE
             <div className="text-center animate-fade-in-up">
               <div className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-6">
                 <Mail className="h-8 w-8 text-success" />
