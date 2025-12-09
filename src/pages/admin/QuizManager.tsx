@@ -1,4 +1,4 @@
-// ================= QUIZ MANAGER — REVISED =================
+// ================= QUIZ MANAGER — FINAL =================
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -47,6 +47,7 @@ interface ComponentRow {
 }
 
 interface QuestionComponent {
+  id?: string;
   question_id: string;
   component_id: string;
 }
@@ -61,6 +62,7 @@ const QuizManager = () => {
   const [saving, setSaving] = useState(false);
 
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [componentDialogOpen, setComponentDialogOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
 
   // 🔥 STATE FORM
@@ -75,7 +77,6 @@ const QuizManager = () => {
   });
 
   const [selectedComponents, setSelectedComponents] = useState<string[]>([]);
-
 
   // ========================= FETCH DATA =========================
 
@@ -100,7 +101,8 @@ const QuizManager = () => {
       setOptions(optionsRes.data || []);
       setComponents(componentsRes.data || []);
       setQuestionComponents(qComponentsRes.data || []);
-    } catch {
+    } catch (err) {
+      console.error("fetchData error:", err);
       toast.error("Failed loading data");
     } finally {
       setLoading(false);
@@ -134,7 +136,7 @@ const QuizManager = () => {
 
   // OPEN EDIT
   const openEditDialog = (q: Question) => {
-    const qOpts = options.filter(o => o.question_id === q.id);
+    const qOpts = options.filter(o => o.question_id === q.id).sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
     const qComps = questionComponents
       .filter(c => c.question_id === q.id)
       .map(c => c.component_id);
@@ -145,10 +147,11 @@ const QuizManager = () => {
     setFormData({
       question_text: q.question_text,
       category: q.category || "",
-      options: qOpts.map(o => ({
-        option_text: o.option_text,
-        score: o.score || 0,
-      })),
+      options: qOpts.length > 0 ? qOpts.map(o => ({ option_text: o.option_text, score: o.score || 0 })) : [
+        { option_text: "", score: 1 },
+        { option_text: "", score: 2 },
+        { option_text: "", score: 3 },
+      ],
     });
 
     setDialogOpen(true);
@@ -168,7 +171,7 @@ const QuizManager = () => {
     }
 
     if (selectedComponents.length === 0) {
-      toast.error("Choose at least 1 component");
+      toast.error("Choose at least 1 component (use Assign Components)");
       return;
     }
 
@@ -188,9 +191,18 @@ const QuizManager = () => {
 
         if (error) throw error;
 
-        // DELETE OLD OPTIONS + COMPONENTS
-        await supabase.from("quiz_question_options").delete().eq("question_id", editingQuestion.id);
-        await supabase.from("quiz_question_components").delete().eq("question_id", editingQuestion.id);
+        // DELETE OLD OPTIONS + COMPONENTS (we'll insert fresh)
+        const { error: delOptErr } = await supabase
+          .from("quiz_question_options")
+          .delete()
+          .eq("question_id", editingQuestion.id);
+        if (delOptErr) throw delOptErr;
+
+        const { error: delCompErr } = await supabase
+          .from("quiz_question_components")
+          .delete()
+          .eq("question_id", editingQuestion.id);
+        if (delCompErr) throw delCompErr;
       } else {
         // INSERT NEW QUESTION
         const maxOrder = questions.length
@@ -211,7 +223,7 @@ const QuizManager = () => {
         questionId = data.id;
       }
 
-      if (!questionId) throw "Missing question ID";
+      if (!questionId) throw new Error("Missing question ID");
 
       // INSERT OPTIONS
       const newOptions = formData.options.map((o, i) => ({
@@ -221,25 +233,66 @@ const QuizManager = () => {
         display_order: i + 1,
       }));
 
-      await supabase.from("quiz_question_options").insert(newOptions);
+      const { error: optInsertErr } = await supabase
+        .from("quiz_question_options")
+        .insert(newOptions);
+      if (optInsertErr) throw optInsertErr;
 
-      // INSERT COMPONENTS
+      // INSERT COMPONENTS (relations)
       const newComps = selectedComponents.map(cid => ({
         question_id: questionId!,
         component_id: cid,
       }));
 
-      await supabase.from("quiz_question_components").insert(newComps);
+      const { error: compInsertErr } = await supabase
+        .from("quiz_question_components")
+        .insert(newComps);
+      if (compInsertErr) throw compInsertErr;
 
       toast.success(editingQuestion ? "Question updated" : "Question added");
       setDialogOpen(false);
       resetForm();
       fetchData();
     } catch (err) {
-      console.error(err);
+      console.error("handleSave error:", err);
       toast.error("Failed saving");
     } finally {
       setSaving(false);
+    }
+  };
+
+  // ========================= DELETE =========================
+
+  const handleDelete = async (questionId: string) => {
+    if (!confirm("Delete this question?")) return;
+
+    try {
+      // delete options
+      const { error: delOptsErr } = await supabase
+        .from("quiz_question_options")
+        .delete()
+        .eq("question_id", questionId);
+      if (delOptsErr) throw delOptsErr;
+
+      // delete components relations
+      const { error: delCompsErr } = await supabase
+        .from("quiz_question_components")
+        .delete()
+        .eq("question_id", questionId);
+      if (delCompsErr) throw delCompsErr;
+
+      // delete question
+      const { error: delQErr } = await supabase
+        .from("quiz_questions")
+        .delete()
+        .eq("id", questionId);
+      if (delQErr) throw delQErr;
+
+      toast.success("Question deleted");
+      fetchData();
+    } catch (err) {
+      console.error("handleDelete error:", err);
+      toast.error("Failed to delete question");
     }
   };
 
@@ -259,7 +312,7 @@ const QuizManager = () => {
 
   // Quick helper
   const getOptionList = (id: string) =>
-    options.filter(o => o.question_id === id).sort((a, b) => a.display_order - b.display_order);
+    options.filter(o => o.question_id === id).sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
 
   const getComponentNames = (qid: string) => {
     const compIds = questionComponents
@@ -298,39 +351,57 @@ const QuizManager = () => {
           </TableHeader>
 
           <TableBody>
-            {sortedQuestions.map((q, i) => {
-              const opts = getOptionList(q.id);
-              return (
-                <TableRow key={q.id}>
-                  <TableCell>{i + 1}</TableCell>
-                  <TableCell className="max-w-xs truncate">{q.question_text}</TableCell>
-                  <TableCell>{q.category || "—"}</TableCell>
-                  <TableCell>{getComponentNames(q.id) || "—"}</TableCell>
-                  <TableCell>
-                    {opts.slice(0, 3).map(o => (
-                      <div key={o.id} className="text-xs">• {o.option_text} ({o.score})</div>
-                    ))}
-                    {opts.length > 3 && (
-                      <div className="text-xs text-muted-foreground">
-                        +{opts.length - 3} more
+            {sortedQuestions.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="py-8 text-center">
+                  No questions yet.
+                </TableCell>
+              </TableRow>
+            ) : (
+              sortedQuestions.map((q, i) => {
+                const opts = getOptionList(q.id);
+                return (
+                  <TableRow key={q.id}>
+                    <TableCell>{i + 1}</TableCell>
+                    <TableCell className="max-w-xs truncate">{q.question_text}</TableCell>
+                    <TableCell>{q.category || "—"}</TableCell>
+                    <TableCell>{getComponentNames(q.id) || "—"}</TableCell>
+                    <TableCell>
+                      {opts.slice(0, 3).map(o => (
+                        <div key={o.id} className="text-xs">• {o.option_text} ({o.score})</div>
+                      ))}
+                      {opts.length > 3 && (
+                        <div className="text-xs text-muted-foreground">
+                          +{opts.length - 3} more
+                        </div>
+                      )}
+                    </TableCell>
+
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => openEditDialog(q)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive"
+                          onClick={() => handleDelete(q.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
-                    )}
-                  </TableCell>
-
-                  <TableCell>
-                    <Button variant="ghost" size="icon" onClick={() => openEditDialog(q)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
           </TableBody>
-
         </Table>
       </div>
 
-      {/* DIALOG FORM */}
+      {/* DIALOG FORM (Create / Edit) */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-h-[80vh] overflow-y-auto">
           <DialogHeader>
@@ -347,29 +418,20 @@ const QuizManager = () => {
               <Input
                 value={formData.category}
                 onChange={e => setFormData({ ...formData, category: e.target.value })}
+                placeholder="e.g. mindset, behavior, growth"
               />
             </div>
 
-            {/* COMPONENT CHECKBOXES */}
+            {/* ASSIGN COMPONENTS BUTTON (opens separate popup) */}
             <div>
               <Label>Components</Label>
-              <div className="grid grid-cols-2 gap-2 mt-2">
-                {components.map(c => (
-                  <label key={c.id} className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={selectedComponents.includes(c.id)}
-                      onChange={() => {
-                        setSelectedComponents(prev =>
-                          prev.includes(c.id)
-                            ? prev.filter(x => x !== c.id)
-                            : [...prev, c.id]
-                        );
-                      }}
-                    />
-                    {c.name}
-                  </label>
-                ))}
+              <div className="flex items-center gap-3">
+                <Button variant="outline" onClick={() => setComponentDialogOpen(true)}>
+                  Assign Components
+                </Button>
+                <div className="text-sm text-muted-foreground">
+                  {selectedComponents.length === 0 ? "No components selected" : `${selectedComponents.length} selected`}
+                </div>
               </div>
             </div>
 
@@ -379,6 +441,7 @@ const QuizManager = () => {
               <Textarea
                 value={formData.question_text}
                 onChange={e => setFormData({ ...formData, question_text: e.target.value })}
+                placeholder="Tuliskan pertanyaan..."
               />
             </div>
 
@@ -450,6 +513,36 @@ const QuizManager = () => {
             </Button>
           </DialogFooter>
 
+        </DialogContent>
+      </Dialog>
+
+      {/* DIALOG: Assign Components (separate) */}
+      <Dialog open={componentDialogOpen} onOpenChange={setComponentDialogOpen}>
+        <DialogContent className="max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Assign Components</DialogTitle>
+          </DialogHeader>
+
+          <div className="grid grid-cols-2 gap-3 py-4">
+            {components.map((c) => (
+              <label key={c.id} className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={selectedComponents.includes(c.id)}
+                  onChange={() =>
+                    setSelectedComponents(prev =>
+                      prev.includes(c.id) ? prev.filter(x => x !== c.id) : [...prev, c.id]
+                    )
+                  }
+                />
+                <div>{c.name}</div>
+              </label>
+            ))}
+          </div>
+
+          <DialogFooter>
+            <Button onClick={() => setComponentDialogOpen(false)}>Done</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
