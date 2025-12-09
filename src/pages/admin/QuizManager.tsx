@@ -281,9 +281,13 @@ const QuizManager = () => {
     // =======================================================================
 
     const arr = questions.map(q => ({
-      id: q.id,
-      inputOrder: localOrder[q.id] ?? q.display_order,
-    }));
+  id: q.id,
+  inputOrder:
+    q.id === changedId
+      ? raw
+      : localOrder[q.id] ?? q.display_order,
+}));
+
 
     arr.sort((a, b) => a.inputOrder - b.inputOrder);
 
