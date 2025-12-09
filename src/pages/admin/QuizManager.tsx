@@ -1,5 +1,3 @@
-// ================= QUIZ MANAGER — FINAL (Auto-save ORDER onBlur, Normalized) =================
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -60,7 +58,6 @@ const QuizManager = () => {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [savingOrder, setSavingOrder] = useState(false);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [componentDialogOpen, setComponentDialogOpen] = useState(false);
@@ -79,7 +76,7 @@ const QuizManager = () => {
 
   const [selectedComponents, setSelectedComponents] = useState<string[]>([]);
 
-  // LOCAL ORDER MAP: questionId -> input order (number). We'll normalize on blur.
+  // LOCAL ORDER MAP
   const [localOrder, setLocalOrder] = useState<Record<string, number>>({});
 
   // ========================= FETCH DATA =========================
@@ -101,21 +98,20 @@ const QuizManager = () => {
       if (componentsRes.error) throw componentsRes.error;
       if (qComponentsRes.error) throw qComponentsRes.error;
 
-      // Ensure there's a display_order (fallback to index if missing)
-      const qdata = (questionsRes.data || []).map((q: any, idx: number) => ({
-        ...q,
-        display_order: typeof q.display_order === "number" ? q.display_order : idx + 1,
-      }));
+      // Ensure display_order exists
+      const sorted = (questionsRes.data || []).sort(
+        (a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0)
+      );
 
-      setQuestions(qdata);
+      setQuestions(sorted);
       setOptions(optionsRes.data || []);
       setComponents(componentsRes.data || []);
       setQuestionComponents(qComponentsRes.data || []);
 
-      // Initialize localOrder map from fetched questions (keep existing ordering)
+      // Init local order
       const map: Record<string, number> = {};
-      qdata.forEach((q: Question) => {
-        map[q.id] = q.display_order ?? 0;
+      sorted.forEach(q => {
+        map[q.id] = q.display_order ?? 1;
       });
       setLocalOrder(map);
     } catch (err) {
@@ -153,7 +149,10 @@ const QuizManager = () => {
 
   // OPEN EDIT
   const openEditDialog = (q: Question) => {
-    const qOpts = options.filter(o => o.question_id === q.id).sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
+    const qOpts = options
+      .filter(o => o.question_id === q.id)
+      .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
+
     const qComps = questionComponents
       .filter(c => c.question_id === q.id)
       .map(c => c.component_id);
@@ -164,17 +163,23 @@ const QuizManager = () => {
     setFormData({
       question_text: q.question_text,
       category: q.category || "",
-      options: qOpts.length > 0 ? qOpts.map(o => ({ option_text: o.option_text, score: o.score || 0 })) : [
-        { option_text: "", score: 1 },
-        { option_text: "", score: 2 },
-        { option_text: "", score: 3 },
-      ],
+      options:
+        qOpts.length > 0
+          ? qOpts.map(o => ({
+              option_text: o.option_text,
+              score: o.score || 0,
+            }))
+          : [
+              { option_text: "", score: 1 },
+              { option_text: "", score: 2 },
+              { option_text: "", score: 3 },
+            ],
     });
 
     setDialogOpen(true);
   };
 
-  // ========================= SAVE =========================
+  // ========================= SAVE QUESTION =========================
 
   const handleSave = async () => {
     if (!formData.question_text.trim()) {
@@ -188,16 +193,16 @@ const QuizManager = () => {
     }
 
     if (selectedComponents.length === 0) {
-      toast.error("Choose at least 1 component (use Assign Components)");
+      toast.error("Choose at least 1 component");
       return;
     }
 
     setSaving(true);
+
     try {
       let questionId = editingQuestion?.id;
 
       if (editingQuestion) {
-        // UPDATE QUESTION
         const { error } = await supabase
           .from("quiz_questions")
           .update({
@@ -205,23 +210,11 @@ const QuizManager = () => {
             category: formData.category || null,
           })
           .eq("id", editingQuestion.id);
-
         if (error) throw error;
 
-        // DELETE OLD OPTIONS + COMPONENTS (we'll insert fresh)
-        const { error: delOptErr } = await supabase
-          .from("quiz_question_options")
-          .delete()
-          .eq("question_id", editingQuestion.id);
-        if (delOptErr) throw delOptErr;
-
-        const { error: delCompErr } = await supabase
-          .from("quiz_question_components")
-          .delete()
-          .eq("question_id", editingQuestion.id);
-        if (delCompErr) throw delCompErr;
+        await supabase.from("quiz_question_options").delete().eq("question_id", editingQuestion.id);
+        await supabase.from("quiz_question_components").delete().eq("question_id", editingQuestion.id);
       } else {
-        // INSERT NEW QUESTION
         const maxOrder = questions.length
           ? Math.max(...questions.map(q => q.display_order ?? 0))
           : 0;
@@ -240,162 +233,98 @@ const QuizManager = () => {
         questionId = data.id;
       }
 
-      if (!questionId) throw new Error("Missing question ID");
+      if (!questionId) return;
 
-      // INSERT OPTIONS
+      // Insert options
       const newOptions = formData.options.map((o, i) => ({
-        question_id: questionId,
+        question_id: questionId!,
         option_text: o.option_text,
         score: o.score,
         display_order: i + 1,
       }));
 
-      const { error: optInsertErr } = await supabase
-        .from("quiz_question_options")
-        .insert(newOptions);
-      if (optInsertErr) throw optInsertErr;
+      await supabase.from("quiz_question_options").insert(newOptions);
 
-      // INSERT COMPONENTS (relations)
+      // Insert components
       const newComps = selectedComponents.map(cid => ({
         question_id: questionId!,
         component_id: cid,
       }));
-
-      const { error: compInsertErr } = await supabase
-        .from("quiz_question_components")
-        .insert(newComps);
-      if (compInsertErr) throw compInsertErr;
+      await supabase.from("quiz_question_components").insert(newComps);
 
       toast.success(editingQuestion ? "Question updated" : "Question added");
       setDialogOpen(false);
       resetForm();
       fetchData();
     } catch (err) {
-      console.error("handleSave error:", err);
+      console.error("Save error:", err);
       toast.error("Failed saving");
     } finally {
       setSaving(false);
     }
   };
 
-  // ========================= DELETE =========================
+  // ========================= DELETE QUESTION =========================
 
   const handleDelete = async (questionId: string) => {
     if (!confirm("Delete this question?")) return;
 
     try {
-      // delete options
-      const { error: delOptsErr } = await supabase
-        .from("quiz_question_options")
-        .delete()
-        .eq("question_id", questionId);
-      if (delOptsErr) throw delOptsErr;
+      await supabase.from("quiz_question_options").delete().eq("question_id", questionId);
+      await supabase.from("quiz_question_components").delete().eq("question_id", questionId);
+      await supabase.from("quiz_questions").delete().eq("id", questionId);
 
-      // delete components relations
-      const { error: delCompsErr } = await supabase
-        .from("quiz_question_components")
-        .delete()
-        .eq("question_id", questionId);
-      if (delCompsErr) throw delCompsErr;
-
-      // delete question
-      const { error: delQErr } = await supabase
-        .from("quiz_questions")
-        .delete()
-        .eq("id", questionId);
-      if (delQErr) throw delQErr;
-
-      toast.success("Question deleted");
+      toast.success("Deleted");
       fetchData();
     } catch (err) {
-      console.error("handleDelete error:", err);
-      toast.error("Failed to delete question");
+      console.error("Delete error:", err);
+      toast.error("Failed deleting");
     }
   };
 
-  // ========================= HANDLE ORDER CHANGE (onBlur) =========================
-  /**
-   * Behavior:
-   * - Triggered when a user leaves an order input (onBlur)
-   * - Validate changed input (>=1)
-   * - Use current localOrder map (with fallback to existing display_order)
-   * - Sort by inputOrder, tie-break by existing display_order then id
-   * - Normalize to 1..N and upsert to supabase
-   * - Refresh data
-   */
-  const handleOrderChange = async (changedId: string) => {
-    // avoid concurrent order saves
-    if (savingOrder) return;
+  // ========================= AUTO-SAVE ORDER ON BLUR =========================
 
+  const handleOrderChange = async (changedId: string) => {
     const raw = localOrder[changedId];
 
-    // Validate presence & positivity
-    if (raw === undefined || raw === null || Number.isNaN(raw) || raw <= 0) {
-      toast.error("Order must be a positive number (>= 1)");
-      // reset that input to current display_order from questions
-      const q = questions.find(x => x.id === changedId);
-      setLocalOrder(prev => ({ ...prev, [changedId]: q ? q.display_order ?? 1 : 1 }));
+    if (!raw || raw <= 0) {
+      toast.error("Order must be >= 1");
       return;
     }
 
-    // Build array combining all questions with inputOrder
-    const arr = questions.map(q => {
-      const inputOrder = (localOrder[q.id] !== undefined && !Number.isNaN(localOrder[q.id]))
-        ? localOrder[q.id]
-        : q.display_order ?? 999999;
-      return {
-        id: q.id,
-        inputOrder,
-        currentOrder: q.display_order ?? 999999,
-      };
-    });
-
-    // Validate all are positive numbers (this prevents weird states)
-    for (const item of arr) {
-      if (!Number.isFinite(item.inputOrder) || item.inputOrder <= 0) {
-        toast.error("All orders must be positive numbers (>= 1)");
-        return;
-      }
-    }
-
-    // Sort by inputOrder asc, then currentOrder asc, then id
-    arr.sort((a, b) => {
-      if (a.inputOrder !== b.inputOrder) return a.inputOrder - b.inputOrder;
-      if (a.currentOrder !== b.currentOrder) return a.currentOrder - b.currentOrder;
-      return a.id.localeCompare(b.id);
-    });
-
-    // Reassign sequential display_order 1..N
-    const updates = arr.map((item, idx) => ({
-      id: item.id,
-      display_order: idx + 1,
+    // Build sort array
+    const arr = questions.map(q => ({
+      id: q.id,
+      inputOrder: localOrder[q.id] ?? q.display_order,
+      currentOrder: q.display_order,
     }));
 
-    setSavingOrder(true);
+    // Sort
+    arr.sort((a, b) => {
+      if (a.inputOrder !== b.inputOrder) return a.inputOrder - b.inputOrder;
+      return a.currentOrder - b.currentOrder;
+    });
+
+    // Normalize => 1,2,3,...
+    const updates = arr.map((item, index) => ({
+      id: item.id,
+      display_order: index + 1,
+    }));
+
     try {
       const { error } = await supabase.from("quiz_questions").upsert(updates);
       if (error) throw error;
 
-      // Update local map optimistically to reflect normalized values
-      const newLocal: Record<string, number> = {};
-      updates.forEach(u => {
-        newLocal[u.id] = u.display_order;
-      });
-      setLocalOrder(newLocal);
-
-      // Refresh full data (ensures options/components stay consistent)
-      await fetchData();
-      // Small UX toast (optional)
       toast.success("Order updated");
+
+      await fetchData();
     } catch (err) {
-      console.error("handleOrderChange error:", err);
+      console.error("Order error:", err);
       toast.error("Failed updating order");
-    } finally {
-      setSavingOrder(false);
     }
   };
 
-  // ========================= UI HELPERS =========================
+  // ========================= UI =========================
 
   if (loading) {
     return (
@@ -405,12 +334,10 @@ const QuizManager = () => {
     );
   }
 
-  // For display, sort by display_order
   const sortedQuestions = [...questions].sort(
     (a, b) => (a.display_order ?? 0) - (b.display_order ?? 0)
   );
 
-  // Quick helper
   const getOptionList = (id: string) =>
     options.filter(o => o.question_id === id).sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
 
@@ -431,12 +358,9 @@ const QuizManager = () => {
       {/* HEADER */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Quiz Manager</h1>
-        <div className="flex items-center gap-2">
-          <Button onClick={openCreateDialog}>
-            <Plus className="h-4 w-4 mr-2" /> Add Question
-          </Button>
-          {/* No Save Order button anymore — auto-save on blur */}
-        </div>
+        <Button onClick={openCreateDialog}>
+          <Plus className="h-4 w-4 mr-2" /> Add Question
+        </Button>
       </div>
 
       {/* TABLE */}
@@ -468,18 +392,17 @@ const QuizManager = () => {
                   <TableRow key={q.id}>
                     <TableCell>{i + 1}</TableCell>
 
-                    {/* ORDER INPUT (auto-save onBlur) */}
+                    {/* ORDER INPUT (auto save onBlur) */}
                     <TableCell>
                       <Input
                         type="number"
                         className="w-24"
-                        value={localOrder[q.id] ?? q.display_order ?? i + 1}
+                        value={localOrder[q.id] ?? q.display_order}
                         onChange={(e) => {
                           const v = Number(e.target.value);
-                          setLocalOrder(prev => ({ ...prev, [q.id]: Number.isNaN(v) ? 0 : v }));
+                          setLocalOrder(prev => ({ ...prev, [q.id]: v }));
                         }}
                         onBlur={() => handleOrderChange(q.id)}
-                        disabled={savingOrder}
                       />
                     </TableCell>
 
@@ -521,13 +444,11 @@ const QuizManager = () => {
         </Table>
       </div>
 
-      {/* DIALOG FORM (Create / Edit) */}
+      {/* DIALOG FORM */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
-              {editingQuestion ? "Edit Question" : "Add Question"}
-            </DialogTitle>
+            <DialogTitle>{editingQuestion ? "Edit Question" : "Add Question"}</DialogTitle>
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
@@ -542,7 +463,7 @@ const QuizManager = () => {
               />
             </div>
 
-            {/* ASSIGN COMPONENTS BUTTON (opens separate popup) */}
+            {/* COMPONENTS */}
             <div>
               <Label>Components</Label>
               <div className="flex items-center gap-3">
@@ -550,12 +471,14 @@ const QuizManager = () => {
                   Assign Components
                 </Button>
                 <div className="text-sm text-muted-foreground">
-                  {selectedComponents.length === 0 ? "No components selected" : `${selectedComponents.length} selected`}
+                  {selectedComponents.length === 0
+                    ? "No components selected"
+                    : `${selectedComponents.length} selected`}
                 </div>
               </div>
             </div>
 
-            {/* QUESTION TEXT */}
+            {/* QUESTION */}
             <div>
               <Label>Question</Label>
               <Textarea
@@ -568,10 +491,8 @@ const QuizManager = () => {
             {/* OPTIONS */}
             <div>
               <Label>Options</Label>
-
               {formData.options.map((opt, i) => (
                 <div key={i} className="flex items-center gap-2 mt-2">
-
                   <Input
                     value={opt.option_text}
                     onChange={(e) => {
@@ -596,16 +517,15 @@ const QuizManager = () => {
                   <Button
                     variant="destructive"
                     size="icon"
-                    onClick={() =>
+                    onClick={() => {
                       setFormData({
                         ...formData,
                         options: formData.options.filter((_, idx) => idx !== i),
-                      })
-                    }
+                      });
+                    }}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
-
                 </div>
               ))}
 
@@ -624,19 +544,17 @@ const QuizManager = () => {
                 + Add Option
               </Button>
             </div>
-
           </div>
 
           <DialogFooter>
-            <Button onClick={handleSave} disabled={saving}>
+            <Button disabled={saving} onClick={handleSave}>
               {saving ? "Saving..." : editingQuestion ? "Save Changes" : "Add Question"}
             </Button>
           </DialogFooter>
-
         </DialogContent>
       </Dialog>
 
-      {/* DIALOG: Assign Components (separate) */}
+      {/* DIALOG: ASSIGN COMPONENTS */}
       <Dialog open={componentDialogOpen} onOpenChange={setComponentDialogOpen}>
         <DialogContent className="max-h-[80vh] overflow-y-auto">
           <DialogHeader>
@@ -651,11 +569,13 @@ const QuizManager = () => {
                   checked={selectedComponents.includes(c.id)}
                   onChange={() =>
                     setSelectedComponents(prev =>
-                      prev.includes(c.id) ? prev.filter(x => x !== c.id) : [...prev, c.id]
+                      prev.includes(c.id)
+                        ? prev.filter(x => x !== c.id)
+                        : [...prev, c.id]
                     )
                   }
                 />
-                <div>{c.name}</div>
+                {c.name}
               </label>
             ))}
           </div>
