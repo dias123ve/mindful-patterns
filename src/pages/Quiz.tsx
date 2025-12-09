@@ -25,7 +25,12 @@ interface Option {
 
 interface QuestionComponentRel {
   question_id: string;
-  components: { component_key: string } | null;
+  component_id: string;
+}
+
+interface ComponentRow {
+  id: string;
+  component_key: string;
 }
 
 const Quiz = () => {
@@ -33,22 +38,22 @@ const Quiz = () => {
 
   const [questions, setQuestions] = useState<Question[]>([]);
   const [options, setOptions] = useState<Option[]>([]);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [componentRels, setComponentRels] = useState<QuestionComponentRel[]>([]);
+  const [components, setComponents] = useState<ComponentRow[]>([]);
 
-  const [answers, setAnswers] = useState<
-    Record<string, { optionId: string; score: number }>
-  >({});
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [answers, setAnswers] = useState<Record<string, { optionId: string; score: number }>>({});
 
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [showEmailCapture, setShowEmailCapture] = useState(false);
 
-  // Load quiz data
   useEffect(() => {
     fetchQuizData();
   }, []);
 
+  // ========================= FETCH QUIZ DATA =========================
   const fetchQuizData = async () => {
     try {
       // 1. Get active quiz
@@ -60,7 +65,6 @@ const Quiz = () => {
 
       if (quizErr) throw quizErr;
       if (!quiz) {
-        toast.error("No active quiz found");
         setLoading(false);
         return;
       }
@@ -76,27 +80,41 @@ const Quiz = () => {
       if (qErr) throw qErr;
 
       if (!qData || qData.length === 0) {
-        toast.error("This quiz has no questions");
         setQuestions([]);
         setOptions([]);
         setLoading(false);
         return;
       }
 
-      // 3. Get options
       const questionIds = qData.map((q) => q.id);
 
+      // 3. Get options
       const { data: oData, error: oErr } = await supabase
         .from("quiz_question_options")
         .select("*")
         .in("question_id", questionIds)
-        .order("question_id")
-        .order("display_order");
+        .order("display_order", { ascending: true });
 
       if (oErr) throw oErr;
 
+      // 4. Get question → component relations
+      const { data: rels, error: relErr } = await supabase
+        .from("quiz_question_components")
+        .select("question_id, component_id");
+
+      if (relErr) throw relErr;
+
+      // 5. Get components table
+      const { data: comps, error: compErr } = await supabase
+        .from("components")
+        .select("id, component_key");
+
+      if (compErr) throw compErr;
+
       setQuestions(qData);
       setOptions(oData || []);
+      setComponentRels(rels || []);
+      setComponents(comps || []);
     } catch (err) {
       console.error("Fetch error:", err);
       toast.error("Failed to load quiz");
@@ -105,16 +123,14 @@ const Quiz = () => {
     }
   };
 
+  // ========================= SELECT OPTION =========================
   const currentQuestion = questions[currentQuestionIndex];
-  const currentOptions = options.filter(
-    (o) => o.question_id === currentQuestion?.id
-  );
+  const currentOptions = options.filter((o) => o.question_id === currentQuestion?.id);
 
   const progress = questions.length
     ? ((currentQuestionIndex + 1) / questions.length) * 100
     : 0;
 
-  // Handle selecting an option
   const handleSelectOption = (optionId: string, score: number) => {
     if (!currentQuestion) return;
 
@@ -132,36 +148,28 @@ const Quiz = () => {
     }, 250);
   };
 
-  // NEW: Multi-component scoring logic
-  const calculateScores = async () => {
+  // ========================= SCORE CALCULATION =========================
+  const calculateScores = () => {
     const scores: Record<string, number> = {};
-
-    // Fetch all question-component relations
-    const { data: qComps, error } = await supabase
-      .from("quiz_question_components")
-      .select("question_id, components(component_key)");
-
-    if (error) {
-      console.error("Failed loading question components", error);
-      return { scores: {}, sortedComponents: [] };
-    }
 
     questions.forEach((q) => {
       const ans = answers[q.id];
       if (!ans) return;
 
-      // all components attached to this question
-      const compsForQ = qComps.filter((c) => c.question_id === q.id);
+      // ambil semua component_id terkait question
+      const rels = componentRels.filter((r) => r.question_id === q.id);
 
-      compsForQ.forEach((rel) => {
-        const key = rel.components?.component_key;
+      rels.forEach((rel) => {
+        const comp = components.find((c) => c.id === rel.component_id);
+        if (!comp) return;
+
+        const key = comp.component_key;
         if (!key) return;
 
         scores[key] = (scores[key] || 0) + ans.score;
       });
     });
 
-    // Sort componenet keys by score
     const sortedComponents = Object.entries(scores)
       .sort(([, a], [, b]) => b - a)
       .map(([key]) => key);
@@ -169,7 +177,7 @@ const Quiz = () => {
     return { scores, sortedComponents };
   };
 
-  // Submit quiz
+  // ========================= SUBMIT QUIZ =========================
   const handleSubmit = async () => {
     if (!email.trim()) {
       toast.error("Enter your email");
@@ -185,7 +193,7 @@ const Quiz = () => {
     setSubmitting(true);
 
     try {
-      const { scores, sortedComponents } = await calculateScores();
+      const { scores, sortedComponents } = calculateScores();
       const topComponents = sortedComponents.slice(0, 3);
 
       const { data, error } = await supabase
@@ -201,10 +209,8 @@ const Quiz = () => {
 
       if (error) throw error;
 
-      // Store locally for Results page
       sessionStorage.setItem("quiz_submission_id", data.id);
       sessionStorage.setItem("component_scores", JSON.stringify(scores));
-
       navigate("/results");
     } catch (err) {
       console.error(err);
@@ -214,7 +220,7 @@ const Quiz = () => {
     }
   };
 
-  // Loading state
+  // ========================= UI =========================
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-hero flex items-center justify-center">
@@ -223,7 +229,6 @@ const Quiz = () => {
     );
   }
 
-  // No questions fallback
   if (questions.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-hero flex items-center justify-center">
@@ -235,10 +240,8 @@ const Quiz = () => {
     );
   }
 
-  // UI
   return (
     <div className="min-h-screen bg-gradient-hero">
-      {/* HEADER */}
       <header className="container mx-auto px-4 py-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -255,15 +258,12 @@ const Quiz = () => {
         </div>
       </header>
 
-      {/* PROGRESS */}
       <div className="container mx-auto px-4 mb-8">
         <Progress value={showEmailCapture ? 100 : progress} className="h-2" />
       </div>
 
-      {/* MAIN */}
       <main className="container mx-auto px-4 pb-16">
         <div className="max-w-xl mx-auto">
-          {/* QUESTION MODE */}
           {!showEmailCapture ? (
             <div key={currentQuestionIndex} className="animate-fade-in">
               <div className="text-center mb-10">
@@ -290,7 +290,6 @@ const Quiz = () => {
               </div>
             </div>
           ) : (
-            // EMAIL MODE
             <div className="text-center animate-fade-in-up">
               <div className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-6">
                 <Mail className="h-8 w-8 text-success" />
@@ -333,9 +332,7 @@ const Quiz = () => {
                   )}
                 </Button>
 
-                <p className="text-xs text-muted-foreground">
-                  No spam. Ever.
-                </p>
+                <p className="text-xs text-muted-foreground">No spam. Ever.</p>
               </div>
             </div>
           )}
