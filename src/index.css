@@ -1,12 +1,17 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
+/* ------------------------------------------------------------------ */
+/*  FONT: INTER (Global Typography System)                           */
+/* ------------------------------------------------------------------ */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap");
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ------------------------------------------------------------------ */
+/*  BASE THEME VARIABLES (Light & Dark)                              */
+/* ------------------------------------------------------------------ */
 @layer base {
   :root {
-    /* Calming teal-based palette for psychology/wellness */
     --background: 40 33% 98%;
     --foreground: 220 25% 12%;
 
@@ -16,18 +21,16 @@
     --popover: 0 0% 100%;
     --popover-foreground: 220 25% 12%;
 
-    /* Teal primary - trust, calm, professional */
+    /* Primary teal – calm, professional */
     --primary: 174 62% 35%;
     --primary-foreground: 0 0% 100%;
 
-    /* Warm cream secondary */
     --secondary: 40 33% 94%;
     --secondary-foreground: 220 25% 12%;
 
     --muted: 40 20% 92%;
     --muted-foreground: 220 15% 45%;
 
-    /* Coral accent for CTAs */
     --accent: 12 76% 61%;
     --accent-foreground: 0 0% 100%;
 
@@ -40,14 +43,26 @@
 
     --radius: 0.75rem;
 
-    /* Custom tokens */
+    /* Extra tokens */
     --success: 158 64% 40%;
     --success-foreground: 0 0% 100%;
-    
-    --gradient-primary: linear-gradient(135deg, hsl(174 62% 35%) 0%, hsl(174 62% 45%) 100%);
-    --gradient-accent: linear-gradient(135deg, hsl(12 76% 61%) 0%, hsl(20 80% 55%) 100%);
-    --gradient-hero: linear-gradient(180deg, hsl(40 33% 98%) 0%, hsl(174 30% 95%) 100%);
-    
+
+    --gradient-primary: linear-gradient(
+      135deg,
+      hsl(174 62% 35%) 0%,
+      hsl(174 62% 45%) 100%
+    );
+    --gradient-accent: linear-gradient(
+      135deg,
+      hsl(12 76% 61%) 0%,
+      hsl(20 80% 55%) 100%
+    );
+    --gradient-hero: linear-gradient(
+      180deg,
+      hsl(40 33% 98%) 0%,
+      hsl(174 30% 95%) 100%
+    );
+
     --shadow-soft: 0 4px 20px -4px hsl(220 25% 12% / 0.08);
     --shadow-medium: 0 8px 30px -6px hsl(220 25% 12% / 0.12);
     --shadow-glow: 0 0 40px hsl(174 62% 35% / 0.2);
@@ -101,9 +116,10 @@
     --sidebar-border: 220 20% 22%;
     --sidebar-ring: 174 62% 45%;
   }
-}
 
-@layer base {
+  /* --------------------------------------------------------------- */
+  /*  Base Typography                                                */
+  /* --------------------------------------------------------------- */
   * {
     @apply border-border;
   }
@@ -116,11 +132,17 @@
     @apply bg-background text-foreground font-sans antialiased;
   }
 
-  h1, h2, h3 {
-    @apply font-display;
+  /* Clean, modern headings */
+  h1,
+  h2,
+  h3 {
+    @apply font-sans font-bold;
   }
 }
 
+/* ------------------------------------------------------------------ */
+/* Utility Classes                                                    */
+/* ------------------------------------------------------------------ */
 @layer utilities {
   .text-gradient-primary {
     @apply bg-clip-text text-transparent;
@@ -172,6 +194,9 @@
   }
 }
 
+/* ------------------------------------------------------------------ */
+/* Animations                                                        */
+/* ------------------------------------------------------------------ */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -204,7 +229,8 @@
 }
 
 @keyframes pulseSoft {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {
@@ -213,9 +239,8 @@
 }
 
 /* ------------------------------------------------------------------ */
-/* 🔥 Anti-Glitch Smooth Fade-Up Animation (recommended)              */
+/* Smooth Fade-Up (Hero Animation)                                   */
 /* ------------------------------------------------------------------ */
-
 .fade-up {
   opacity: 0;
   transform: translateY(16px);
