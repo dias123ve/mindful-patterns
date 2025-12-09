@@ -1,4 +1,4 @@
-// ================= QUIZ MANAGER — FINAL (Diagnostics) =================
+// ================= QUIZ MANAGER — Order allows duplicates & zero =================
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -81,6 +81,8 @@ const QuizManager = () => {
 
   // ORDER STATE
   const [localOrder, setLocalOrder] = useState<Record<string, number>>({});
+  // track last changed id to place it below equals on client-side sort
+  const [lastChangedId, setLastChangedId] = useState<string | null>(null);
 
   // ========================= FETCH DATA =========================
 
@@ -111,6 +113,9 @@ const QuizManager = () => {
       const map: Record<string, number> = {};
       qdata.forEach(q => (map[q.id] = q.display_order));
       setLocalOrder(map);
+
+      // reset lastChangedId on fresh fetch to avoid permanent tie-breaker effect
+      setLastChangedId(null);
 
     } catch (err) {
       console.error("fetchData error:", err);
@@ -266,91 +271,62 @@ const QuizManager = () => {
 
   // ========================= AUTO-SAVE ORDER (onBlur) =========================
 
-  // DIAGNOSTIC & ROBUST VERSION
+  /**
+   * Behaviour:
+   * - Accepts newValue >= 0 (including 0)
+   * - Allows duplicate display_order values
+   * - If newValue equals existing display_order on other rows,
+   *   the moved item is displayed BELOW them (client-side tie-breaker using lastChangedId).
+   * - Performs a single-row UPDATE for the changed question (safer with RLS).
+   */
   const handleOrderChange = async (changedId: string, newValue: number) => {
-    // normalize input
     const raw = Number(newValue);
+
     if (isNaN(raw)) {
       toast.error("Invalid number");
       return;
     }
-    if (!Number.isFinite(raw) || raw < 1) {
-      toast.error("Order must be >= 1");
+
+    // allow 0 and positive integers only (you said "boleh 0 juga")
+    if (!Number.isFinite(raw) || raw < 0) {
+      toast.error("Order must be >= 0");
       return;
     }
 
-    // Build desired ordering using latest input value (not relying on a possibly stale state)
-    const arr = questions.map((q) => {
-      const fallback = (localOrder[q.id] ?? q.display_order);
-      return {
-        id: q.id,
-        inputOrder: q.id === changedId ? raw : fallback,
-      };
-    });
-
-    // Debug: show what we intend to sort by BEFORE sorting
-    console.log("[order-debug] before sort arr:", JSON.parse(JSON.stringify(arr)));
-
-    // Sort by desired order
-    arr.sort((a, b) => a.inputOrder - b.inputOrder);
-
-    // Debug: show after sort
-    console.log("[order-debug] after sort arr:", JSON.parse(JSON.stringify(arr)));
-
-    // Normalize to contiguous ranks 1..N
-    const updates = arr.map((it, idx) => ({
-      id: it.id,
-      display_order: idx + 1,
-    }));
-
-    // Debug: payload to send
-    console.log("[order-debug] payload updates:", JSON.parse(JSON.stringify(updates)));
+    // Optimistically update localOrder so input shows the new value immediately
+    setLocalOrder(prev => ({ ...prev, [changedId]: raw }));
+    setLastChangedId(changedId);
 
     setSavingOrder(true);
     try {
-      // Use onConflict 'id' explicitly to ensure upsert acts as update for existing rows
-     // update each row individually (safe and avoids not-null issues)
-try {
-  const resp = await supabase.rpc("reorder_quiz_questions", {
-    payload: updates
-  });
+      // Update only the changed row on the server (avoid upsert bulk issues)
+      const r = await supabase
+        .from("quiz_questions")
+        .update({ display_order: raw })
+        .eq("id", changedId);
 
-  if (resp.error) {
-    console.error("RPC error:", resp.error);
-    toast.error("Failed updating order: " + resp.error.message);
-  } else {
-    toast.success("Order updated");
-    await fetchData();
-  }
-} catch (err) {
-  console.error("RPC exception:", err);
-  toast.error("Failed updating order (exception)");
-}
-
-
-
-      // Log full response
-      console.log("[order-debug] supabase resp:", resp);
-
-      if (resp.error) {
-        // If Supabase returns an error object
-        console.error("[order-debug] supabase error:", resp.error);
-        toast.error(`Order update failed: ${resp.error.message}`);
-      } else {
-        // Success: resp.data may contain updated rows
-        toast.success("Order updated");
-        // Refresh list from server (will also refresh localOrder map)
+      if (r.error) {
+        console.error("[ORDER UPDATE ERROR]", r.error);
+        toast.error("Order update failed: " + (r.error.message ?? "unknown"));
+        // do not change local state further; optionally refetch
         await fetchData();
+        setSavingOrder(false);
+        return;
       }
+
+      toast.success("Order updated");
+      // Refresh to get canonical data from server (and to clear lastChangedId tie-breaker)
+      await fetchData();
     } catch (err) {
-      console.error("[order-debug] unexpected error:", err);
+      console.error("[ORDER UPDATE EXCEPTION]", err);
       toast.error("Failed updating order (exception)");
+      await fetchData();
     } finally {
       setSavingOrder(false);
     }
   };
 
-  // ========================= UI HELPERS =========================
+  // ========================= UI HELPERS & SORTING =========================
 
   if (loading) {
     return (
@@ -360,9 +336,24 @@ try {
     );
   }
 
-  const sortedQuestions = [...questions].sort(
-    (a, b) => a.display_order - b.display_order
-  );
+  // Build an index map representing current loaded order to preserve stability.
+  const indexMap = Object.fromEntries(questions.map((q, i) => [q.id, i]));
+
+  // Sort by display_order asc, and if equal, put lastChangedId BELOW other equals.
+  const sortedQuestions = [...questions].sort((a, b) => {
+    if ((a.display_order ?? 0) !== (b.display_order ?? 0)) {
+      return (a.display_order ?? 0) - (b.display_order ?? 0);
+    }
+
+    // tie-breaker: place lastChangedId after any other with same display_order
+    if (lastChangedId) {
+      if (a.id === lastChangedId && b.id !== lastChangedId) return 1;
+      if (b.id === lastChangedId && a.id !== lastChangedId) return -1;
+    }
+
+    // final tie-breaker: stable by existing index
+    return (indexMap[a.id] ?? 0) - (indexMap[b.id] ?? 0);
+  });
 
   const getOptionList = (id: string) =>
     options
@@ -430,6 +421,7 @@ try {
                           const v = Number(e.target.value);
                           setLocalOrder(prev => ({ ...prev, [q.id]: v }));
                         }}
+                        // pass the literal input value so we don't rely on setState timing
                         onBlur={(e) => handleOrderChange(q.id, Number(e.target.value))}
                         disabled={savingOrder}
                       />
