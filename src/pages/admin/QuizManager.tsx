@@ -1,4 +1,4 @@
-// ================= QUIZ MANAGER — FINAL FIX (Order Working) =================
+// ================= QUIZ MANAGER — FINAL WORKING ORDER =================
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -266,27 +266,30 @@ const QuizManager = () => {
 
   // ========================= AUTO-SAVE ORDER (onBlur) =========================
 
+  // FIXED VERSION — now receives newValue directly from input, no stale state
   const handleOrderChange = async (changedId: string, newValue: number) => {
-    const raw = newValue;
 
-    if (!raw || isNaN(raw) || raw < 1) {
-      toast.error("Invalid order number");
+    if (newValue < 1 || isNaN(newValue)) {
+      toast.error("Order must be >= 1");
       return;
     }
 
-    // Build array of updated orders
-    const arr = questions.map(q => ({
+    // Build normalized reorder array
+    const arr = questions.map((q) => ({
       id: q.id,
-      inputOrder: q.id === changedId ? raw : localOrder[q.id] ?? q.display_order,
+      inputOrder:
+        q.id === changedId
+          ? newValue
+          : (localOrder[q.id] ?? q.display_order),
     }));
 
-    // Sort by new order
+    // Sort by desired order
     arr.sort((a, b) => a.inputOrder - b.inputOrder);
 
-    // Normalize into 1..N
-    const updates = arr.map((item, i) => ({
-      id: item.id,
-      display_order: i + 1,
+    // Normalize to 1,2,3,...
+    const updates = arr.map((it, idx) => ({
+      id: it.id,
+      display_order: idx + 1,
     }));
 
     setSavingOrder(true);
@@ -295,7 +298,6 @@ const QuizManager = () => {
       toast.success("Order updated");
       await fetchData();
     } catch (err) {
-      console.error(err);
       toast.error("Failed updating order");
     }
     setSavingOrder(false);
@@ -361,4 +363,206 @@ const QuizManager = () => {
             {sortedQuestions.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className="text-center py-6">
-                  N
+                  No questions yet.
+                </TableCell>
+              </TableRow>
+            ) : (
+              sortedQuestions.map((q, index) => {
+                const opts = getOptionList(q.id);
+
+                return (
+                  <TableRow key={q.id}>
+                    <TableCell>{index + 1}</TableCell>
+
+                    <TableCell>
+                      <Input
+                        type="number"
+                        className="w-20"
+                        value={localOrder[q.id] ?? q.display_order}
+                        onChange={(e) => {
+                          const v = Number(e.target.value);
+                          setLocalOrder(prev => ({ ...prev, [q.id]: v }));
+                        }}
+                        onBlur={(e) => handleOrderChange(q.id, Number(e.target.value))}
+                        disabled={savingOrder}
+                      />
+                    </TableCell>
+
+                    <TableCell className="max-w-xs truncate">
+                      {q.question_text}
+                    </TableCell>
+
+                    <TableCell>{q.category ?? "—"}</TableCell>
+
+                    <TableCell>{getComponentNames(q.id) || "—"}</TableCell>
+
+                    <TableCell>
+                      {opts.slice(0, 3).map(o => (
+                        <div key={o.id} className="text-xs">
+                          • {o.option_text} ({o.score})
+                        </div>
+                      ))}
+                      {opts.length > 3 && (
+                        <div className="text-xs text-muted-foreground">
+                          +{opts.length - 3} more
+                        </div>
+                      )}
+                    </TableCell>
+
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => openEditDialog(q)}>
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive"
+                          onClick={() => handleDelete(q.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* DIALOG FORM */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingQuestion ? "Edit Question" : "Add Question"}</DialogTitle>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-4">
+
+            <div>
+              <Label>Category</Label>
+              <Input
+                value={formData.category}
+                onChange={e => setFormData({ ...formData, category: e.target.value })}
+                placeholder="e.g. mindset"
+              />
+            </div>
+
+            <div>
+              <Label>Question</Label>
+              <Textarea
+                value={formData.question_text}
+                onChange={e => setFormData({ ...formData, question_text: e.target.value })}
+                placeholder="Write question here..."
+              />
+            </div>
+
+            <div>
+              <Label>Options</Label>
+
+              {formData.options.map((opt, i) => (
+                <div key={i} className="flex items-center gap-2 mt-2">
+                  <Input
+                    value={opt.option_text}
+                    onChange={(e) => {
+                      const copy = [...formData.options];
+                      copy[i].option_text = e.target.value;
+                      setFormData({ ...formData, options: copy });
+                    }}
+                    placeholder={`Option ${i + 1}`}
+                  />
+
+                  <Input
+                    type="number"
+                    className="w-20"
+                    value={opt.score}
+                    onChange={(e) => {
+                      const copy = [...formData.options];
+                      copy[i].score = Number(e.target.value);
+                      setFormData({ ...formData, options: copy });
+                    }}
+                  />
+
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    onClick={() =>
+                      setFormData({
+                        ...formData,
+                        options: formData.options.filter((_, idx) => idx !== i),
+                      })
+                    }
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              ))}
+
+              <Button
+                className="mt-2"
+                onClick={() =>
+                  setFormData({
+                    ...formData,
+                    options: [...formData.options, { option_text: "", score: 1 }],
+                  })
+                }
+              >
+                + Add Option
+              </Button>
+            </div>
+
+            <div>
+              <Label>Components</Label>
+              <Button variant="outline" onClick={() => setComponentDialogOpen(true)}>
+                Assign Components ({selectedComponents.length})
+              </Button>
+            </div>
+
+          </div>
+
+          <DialogFooter>
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? "Saving..." : editingQuestion ? "Save Changes" : "Add Question"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={componentDialogOpen} onOpenChange={setComponentDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Select Components</DialogTitle>
+          </DialogHeader>
+
+          <div className="grid grid-cols-2 gap-3 py-4">
+            {components.map(c => (
+              <label key={c.id} className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={selectedComponents.includes(c.id)}
+                  onChange={() =>
+                    setSelectedComponents(prev =>
+                      prev.includes(c.id)
+                        ? prev.filter(x => x !== c.id)
+                        : [...prev, c.id]
+                    )
+                  }
+                />
+                {c.name}
+              </label>
+            ))}
+          </div>
+
+          <DialogFooter>
+            <Button onClick={() => setComponentDialogOpen(false)}>Done</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+    </div>
+  );
+};
+
+export default QuizManager;
