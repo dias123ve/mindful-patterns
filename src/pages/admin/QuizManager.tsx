@@ -310,18 +310,23 @@ const QuizManager = () => {
     try {
       // Use onConflict 'id' explicitly to ensure upsert acts as update for existing rows
      // update each row individually (safe and avoids not-null issues)
-for (const u of updates) {
-  const r = await supabase
-    .from("quiz_questions")
-    .update({ display_order: u.display_order })
-    .eq("id", u.id);
+try {
+  const resp = await supabase.rpc("reorder_quiz_questions", {
+    payload: updates
+  });
 
-  if (r.error) {
-    console.error("Order update error:", r.error);
-    toast.error("Failed updating order");
-    return;
+  if (resp.error) {
+    console.error("RPC error:", resp.error);
+    toast.error("Failed updating order: " + resp.error.message);
+  } else {
+    toast.success("Order updated");
+    await fetchData();
   }
+} catch (err) {
+  console.error("RPC exception:", err);
+  toast.error("Failed updating order (exception)");
 }
+
 
 
       // Log full response
