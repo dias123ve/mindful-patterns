@@ -309,10 +309,20 @@ const QuizManager = () => {
     setSavingOrder(true);
     try {
       // Use onConflict 'id' explicitly to ensure upsert acts as update for existing rows
-      const resp = await supabase
-        .from("quiz_questions")
-        .upsert(updates, { onConflict: "id" })
-        .select();
+     // update each row individually (safe and avoids not-null issues)
+for (const u of updates) {
+  const r = await supabase
+    .from("quiz_questions")
+    .update({ display_order: u.display_order })
+    .eq("id", u.id);
+
+  if (r.error) {
+    console.error("Order update error:", r.error);
+    toast.error("Failed updating order");
+    return;
+  }
+}
+
 
       // Log full response
       console.log("[order-debug] supabase resp:", resp);
