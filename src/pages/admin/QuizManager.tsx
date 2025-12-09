@@ -1,3 +1,5 @@
+// ================= QUIZ MANAGER — FINAL (Auto-save ORDER onBlur, Normalized) =================
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -58,12 +60,13 @@ const QuizManager = () => {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savingOrder, setSavingOrder] = useState(false);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [componentDialogOpen, setComponentDialogOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
 
-  // 🔥 STATE FORM
+  // FORM STATE
   const [formData, setFormData] = useState({
     question_text: "",
     category: "",
@@ -76,7 +79,7 @@ const QuizManager = () => {
 
   const [selectedComponents, setSelectedComponents] = useState<string[]>([]);
 
-  // LOCAL ORDER MAP
+  // ORDER STATE
   const [localOrder, setLocalOrder] = useState<Record<string, number>>({});
 
   // ========================= FETCH DATA =========================
@@ -89,37 +92,33 @@ const QuizManager = () => {
         await Promise.all([
           supabase.from("quiz_questions").select("*"),
           supabase.from("quiz_question_options").select("*"),
-          supabase.from("components").select("id,name,component_key").order("name"),
+          supabase.from("components").select("*").order("name"),
           supabase.from("quiz_question_components").select("*"),
         ]);
 
       if (questionsRes.error) throw questionsRes.error;
-      if (optionsRes.error) throw optionsRes.error;
-      if (componentsRes.error) throw componentsRes.error;
-      if (qComponentsRes.error) throw qComponentsRes.error;
 
-      // Ensure display_order exists
-      const sorted = (questionsRes.data || []).sort(
-        (a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0)
-      );
+      const qdata = (questionsRes.data || []).map((q: any, idx: number) => ({
+        ...q,
+        display_order: q.display_order ?? idx + 1,
+      }));
 
-      setQuestions(sorted);
+      setQuestions(qdata);
       setOptions(optionsRes.data || []);
       setComponents(componentsRes.data || []);
       setQuestionComponents(qComponentsRes.data || []);
 
-      // Init local order
+      // Update local order mirror
       const map: Record<string, number> = {};
-      sorted.forEach(q => {
-        map[q.id] = q.display_order ?? 1;
-      });
+      qdata.forEach(q => (map[q.id] = q.display_order));
       setLocalOrder(map);
+
     } catch (err) {
       console.error("fetchData error:", err);
       toast.error("Failed loading data");
-    } finally {
-      setLoading(false);
     }
+
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -127,6 +126,7 @@ const QuizManager = () => {
   }, []);
 
   // ========================= RESET FORM =========================
+
   const resetForm = () => {
     setFormData({
       question_text: "",
@@ -141,17 +141,17 @@ const QuizManager = () => {
     setEditingQuestion(null);
   };
 
-  // OPEN CREATE
+  // ========================= OPEN DIALOGS =========================
+
   const openCreateDialog = () => {
     resetForm();
     setDialogOpen(true);
   };
 
-  // OPEN EDIT
   const openEditDialog = (q: Question) => {
     const qOpts = options
       .filter(o => o.question_id === q.id)
-      .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
+      .sort((a, b) => a.display_order - b.display_order);
 
     const qComps = questionComponents
       .filter(c => c.question_id === q.id)
@@ -162,13 +162,10 @@ const QuizManager = () => {
 
     setFormData({
       question_text: q.question_text,
-      category: q.category || "",
+      category: q.category ?? "",
       options:
         qOpts.length > 0
-          ? qOpts.map(o => ({
-              option_text: o.option_text,
-              score: o.score || 0,
-            }))
+          ? qOpts.map(o => ({ option_text: o.option_text, score: o.score ?? 0 }))
           : [
               { option_text: "", score: 1 },
               { option_text: "", score: 2 },
@@ -186,40 +183,36 @@ const QuizManager = () => {
       toast.error("Write a question");
       return;
     }
-
     if (formData.options.some(o => !o.option_text.trim())) {
       toast.error("Fill all option text");
       return;
     }
-
     if (selectedComponents.length === 0) {
       toast.error("Choose at least 1 component");
       return;
     }
 
     setSaving(true);
-
     try {
       let questionId = editingQuestion?.id;
 
       if (editingQuestion) {
-        const { error } = await supabase
-          .from("quiz_questions")
-          .update({
-            question_text: formData.question_text,
-            category: formData.category || null,
-          })
-          .eq("id", editingQuestion.id);
-        if (error) throw error;
+        // UPDATE
+        await supabase.from("quiz_questions").update({
+          question_text: formData.question_text,
+          category: formData.category || null,
+        }).eq("id", editingQuestion.id);
 
         await supabase.from("quiz_question_options").delete().eq("question_id", editingQuestion.id);
         await supabase.from("quiz_question_components").delete().eq("question_id", editingQuestion.id);
       } else {
-        const maxOrder = questions.length
-          ? Math.max(...questions.map(q => q.display_order ?? 0))
-          : 0;
+        // CREATE
+        const maxOrder =
+          questions.length > 0
+            ? Math.max(...questions.map(q => q.display_order ?? 0))
+            : 0;
 
-        const { data, error } = await supabase
+        const { data } = await supabase
           .from("quiz_questions")
           .insert({
             question_text: formData.question_text,
@@ -229,102 +222,90 @@ const QuizManager = () => {
           .select()
           .single();
 
-        if (error) throw error;
         questionId = data.id;
       }
 
-      if (!questionId) return;
+      if (!questionId) throw new Error("Missing question ID");
 
-      // Insert options
-      const newOptions = formData.options.map((o, i) => ({
+      // INSERT OPTIONS
+      const optsToInsert = formData.options.map((o, i) => ({
         question_id: questionId!,
         option_text: o.option_text,
         score: o.score,
         display_order: i + 1,
       }));
+      await supabase.from("quiz_question_options").insert(optsToInsert);
 
-      await supabase.from("quiz_question_options").insert(newOptions);
-
-      // Insert components
-      const newComps = selectedComponents.map(cid => ({
+      // INSERT COMPONENT RELATIONS
+      const compsToInsert = selectedComponents.map(cid => ({
         question_id: questionId!,
         component_id: cid,
       }));
-      await supabase.from("quiz_question_components").insert(newComps);
+      await supabase.from("quiz_question_components").insert(compsToInsert);
 
       toast.success(editingQuestion ? "Question updated" : "Question added");
       setDialogOpen(false);
       resetForm();
       fetchData();
+
     } catch (err) {
-      console.error("Save error:", err);
+      console.error(err);
       toast.error("Failed saving");
-    } finally {
-      setSaving(false);
     }
+
+    setSaving(false);
   };
 
   // ========================= DELETE QUESTION =========================
 
-  const handleDelete = async (questionId: string) => {
+  const handleDelete = async (id: string) => {
     if (!confirm("Delete this question?")) return;
 
-    try {
-      await supabase.from("quiz_question_options").delete().eq("question_id", questionId);
-      await supabase.from("quiz_question_components").delete().eq("question_id", questionId);
-      await supabase.from("quiz_questions").delete().eq("id", questionId);
+    await supabase.from("quiz_question_options").delete().eq("question_id", id);
+    await supabase.from("quiz_question_components").delete().eq("question_id", id);
+    await supabase.from("quiz_questions").delete().eq("id", id);
 
-      toast.success("Deleted");
-      fetchData();
-    } catch (err) {
-      console.error("Delete error:", err);
-      toast.error("Failed deleting");
-    }
+    toast.success("Deleted");
+    fetchData();
   };
 
-  // ========================= AUTO-SAVE ORDER ON BLUR =========================
+  // ========================= AUTO-SAVE ORDER (onBlur) =========================
 
   const handleOrderChange = async (changedId: string) => {
     const raw = localOrder[changedId];
 
-    if (!raw || raw <= 0) {
+    if (!raw || raw < 1) {
       toast.error("Order must be >= 1");
       return;
     }
 
-    // Build sort array
+    // Build sortable array
     const arr = questions.map(q => ({
       id: q.id,
       inputOrder: localOrder[q.id] ?? q.display_order,
-      currentOrder: q.display_order,
     }));
 
-    // Sort
-    arr.sort((a, b) => {
-      if (a.inputOrder !== b.inputOrder) return a.inputOrder - b.inputOrder;
-      return a.currentOrder - b.currentOrder;
-    });
+    // Sort by inputOrder
+    arr.sort((a, b) => a.inputOrder - b.inputOrder);
 
-    // Normalize => 1,2,3,...
-    const updates = arr.map((item, index) => ({
-      id: item.id,
-      display_order: index + 1,
+    // Normalize → 1,2,3,...
+    const updates = arr.map((it, idx) => ({
+      id: it.id,
+      display_order: idx + 1,
     }));
 
+    setSavingOrder(true);
     try {
-      const { error } = await supabase.from("quiz_questions").upsert(updates);
-      if (error) throw error;
-
+      await supabase.from("quiz_questions").upsert(updates);
       toast.success("Order updated");
-
       await fetchData();
     } catch (err) {
-      console.error("Order error:", err);
       toast.error("Failed updating order");
     }
+    setSavingOrder(false);
   };
 
-  // ========================= UI =========================
+  // ========================= UI HELPERS =========================
 
   if (loading) {
     return (
@@ -335,31 +316,35 @@ const QuizManager = () => {
   }
 
   const sortedQuestions = [...questions].sort(
-    (a, b) => (a.display_order ?? 0) - (b.display_order ?? 0)
+    (a, b) => a.display_order - b.display_order
   );
 
   const getOptionList = (id: string) =>
-    options.filter(o => o.question_id === id).sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
+    options
+      .filter(o => o.question_id === id)
+      .sort((a, b) => a.display_order - b.display_order);
 
   const getComponentNames = (qid: string) => {
-    const compIds = questionComponents
+    const ids = questionComponents
       .filter(x => x.question_id === qid)
       .map(x => x.component_id);
 
     return components
-      .filter(c => compIds.includes(c.id))
+      .filter(c => ids.includes(c.id))
       .map(c => c.name)
       .join(", ");
   };
 
+  // ========================= UI =========================
+
   return (
     <div className="space-y-6">
-
       {/* HEADER */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Quiz Manager</h1>
         <Button onClick={openCreateDialog}>
-          <Plus className="h-4 w-4 mr-2" /> Add Question
+          <Plus className="h-4 w-4 mr-2" />
+          Add Question
         </Button>
       </div>
 
@@ -381,37 +366,46 @@ const QuizManager = () => {
           <TableBody>
             {sortedQuestions.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="py-8 text-center">
+                <TableCell colSpan={7} className="text-center py-6">
                   No questions yet.
                 </TableCell>
               </TableRow>
             ) : (
-              sortedQuestions.map((q, i) => {
+              sortedQuestions.map((q, index) => {
                 const opts = getOptionList(q.id);
+
                 return (
                   <TableRow key={q.id}>
-                    <TableCell>{i + 1}</TableCell>
+                    <TableCell>{index + 1}</TableCell>
 
-                    {/* ORDER INPUT (auto save onBlur) */}
+                    {/* ORDER INPUT */}
                     <TableCell>
                       <Input
                         type="number"
-                        className="w-24"
+                        className="w-20"
                         value={localOrder[q.id] ?? q.display_order}
                         onChange={(e) => {
                           const v = Number(e.target.value);
                           setLocalOrder(prev => ({ ...prev, [q.id]: v }));
                         }}
                         onBlur={() => handleOrderChange(q.id)}
+                        disabled={savingOrder}
                       />
                     </TableCell>
 
-                    <TableCell className="max-w-xs truncate">{q.question_text}</TableCell>
-                    <TableCell>{q.category || "—"}</TableCell>
+                    <TableCell className="max-w-xs truncate">
+                      {q.question_text}
+                    </TableCell>
+
+                    <TableCell>{q.category ?? "—"}</TableCell>
+
                     <TableCell>{getComponentNames(q.id) || "—"}</TableCell>
+
                     <TableCell>
                       {opts.slice(0, 3).map(o => (
-                        <div key={o.id} className="text-xs">• {o.option_text} ({o.score})</div>
+                        <div key={o.id} className="text-xs">
+                          • {o.option_text} ({o.score})
+                        </div>
                       ))}
                       {opts.length > 3 && (
                         <div className="text-xs text-muted-foreground">
@@ -423,16 +417,15 @@ const QuizManager = () => {
                     <TableCell>
                       <div className="flex gap-1">
                         <Button variant="ghost" size="icon" onClick={() => openEditDialog(q)}>
-                          <Pencil className="h-4 w-4" />
+                          <Pencil className="w-4 h-4" />
                         </Button>
-
                         <Button
                           variant="ghost"
                           size="icon"
                           className="text-destructive"
                           onClick={() => handleDelete(q.id)}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
                     </TableCell>
@@ -446,51 +439,35 @@ const QuizManager = () => {
 
       {/* DIALOG FORM */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingQuestion ? "Edit Question" : "Add Question"}</DialogTitle>
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
 
-            {/* CATEGORY */}
             <div>
               <Label>Category</Label>
               <Input
                 value={formData.category}
                 onChange={e => setFormData({ ...formData, category: e.target.value })}
-                placeholder="e.g. mindset, behavior, growth"
+                placeholder="e.g. mindset"
               />
             </div>
 
-            {/* COMPONENTS */}
-            <div>
-              <Label>Components</Label>
-              <div className="flex items-center gap-3">
-                <Button variant="outline" onClick={() => setComponentDialogOpen(true)}>
-                  Assign Components
-                </Button>
-                <div className="text-sm text-muted-foreground">
-                  {selectedComponents.length === 0
-                    ? "No components selected"
-                    : `${selectedComponents.length} selected`}
-                </div>
-              </div>
-            </div>
-
-            {/* QUESTION */}
             <div>
               <Label>Question</Label>
               <Textarea
                 value={formData.question_text}
                 onChange={e => setFormData({ ...formData, question_text: e.target.value })}
-                placeholder="Tuliskan pertanyaan..."
+                placeholder="Write question here..."
               />
             </div>
 
             {/* OPTIONS */}
             <div>
               <Label>Options</Label>
+
               {formData.options.map((opt, i) => (
                 <div key={i} className="flex items-center gap-2 mt-2">
                   <Input
@@ -517,14 +494,14 @@ const QuizManager = () => {
                   <Button
                     variant="destructive"
                     size="icon"
-                    onClick={() => {
+                    onClick={() =>
                       setFormData({
                         ...formData,
                         options: formData.options.filter((_, idx) => idx !== i),
-                      });
-                    }}
+                      })
+                    }
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="w-4 h-4" />
                   </Button>
                 </div>
               ))}
@@ -534,35 +511,41 @@ const QuizManager = () => {
                 onClick={() =>
                   setFormData({
                     ...formData,
-                    options: [
-                      ...formData.options,
-                      { option_text: "", score: formData.options.length + 1 },
-                    ],
+                    options: [...formData.options, { option_text: "", score: 1 }],
                   })
                 }
               >
                 + Add Option
               </Button>
             </div>
+
+            {/* COMPONENTS */}
+            <div>
+              <Label>Components</Label>
+              <Button variant="outline" onClick={() => setComponentDialogOpen(true)}>
+                Assign Components ({selectedComponents.length})
+              </Button>
+            </div>
+
           </div>
 
           <DialogFooter>
-            <Button disabled={saving} onClick={handleSave}>
+            <Button onClick={handleSave} disabled={saving}>
               {saving ? "Saving..." : editingQuestion ? "Save Changes" : "Add Question"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* DIALOG: ASSIGN COMPONENTS */}
+      {/* COMPONENT SELECTOR */}
       <Dialog open={componentDialogOpen} onOpenChange={setComponentDialogOpen}>
-        <DialogContent className="max-h-[80vh] overflow-y-auto">
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle>Assign Components</DialogTitle>
+            <DialogTitle>Select Components</DialogTitle>
           </DialogHeader>
 
           <div className="grid grid-cols-2 gap-3 py-4">
-            {components.map((c) => (
+            {components.map(c => (
               <label key={c.id} className="flex items-center gap-2">
                 <input
                   type="checkbox"
@@ -585,6 +568,7 @@ const QuizManager = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
     </div>
   );
 };
