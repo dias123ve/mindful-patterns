@@ -1,4 +1,4 @@
-// ================= QUIZ MANAGER — FINAL =================
+// ================= QUIZ MANAGER — FINAL (with Normalized Order) =================
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -60,6 +60,7 @@ const QuizManager = () => {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savingOrder, setSavingOrder] = useState(false);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [componentDialogOpen, setComponentDialogOpen] = useState(false);
@@ -78,6 +79,9 @@ const QuizManager = () => {
 
   const [selectedComponents, setSelectedComponents] = useState<string[]>([]);
 
+  // LOCAL ORDER MAP: questionId -> input order (number). We'll normalize on save.
+  const [localOrder, setLocalOrder] = useState<Record<string, number>>({});
+
   // ========================= FETCH DATA =========================
 
   const fetchData = async () => {
@@ -86,8 +90,8 @@ const QuizManager = () => {
     try {
       const [questionsRes, optionsRes, componentsRes, qComponentsRes] =
         await Promise.all([
-          supabase.from("quiz_questions").select("*").order("display_order"),
-          supabase.from("quiz_question_options").select("*").order("display_order"),
+          supabase.from("quiz_questions").select("*"),
+          supabase.from("quiz_question_options").select("*"),
           supabase.from("components").select("id,name,component_key").order("name"),
           supabase.from("quiz_question_components").select("*"),
         ]);
@@ -97,10 +101,23 @@ const QuizManager = () => {
       if (componentsRes.error) throw componentsRes.error;
       if (qComponentsRes.error) throw qComponentsRes.error;
 
-      setQuestions(questionsRes.data || []);
+      // Ensure there's a display_order (fallback to index if missing)
+      const qdata = (questionsRes.data || []).map((q: any, idx: number) => ({
+        ...q,
+        display_order: typeof q.display_order === "number" ? q.display_order : idx + 1,
+      }));
+
+      setQuestions(qdata);
       setOptions(optionsRes.data || []);
       setComponents(componentsRes.data || []);
       setQuestionComponents(qComponentsRes.data || []);
+
+      // Initialize localOrder map from fetched questions (keep existing ordering)
+      const map: Record<string, number> = {};
+      qdata.forEach((q: Question) => {
+        map[q.id] = q.display_order ?? 0;
+      });
+      setLocalOrder(map);
     } catch (err) {
       console.error("fetchData error:", err);
       toast.error("Failed loading data");
@@ -296,7 +313,70 @@ const QuizManager = () => {
     }
   };
 
-  // ========================= UI =========================
+  // ========================= SAVE ORDER (Normalized) =========================
+  /**
+   * Normalization logic:
+   * - Take localOrder map (questionId -> input number)
+   * - For any missing entries, use existing display_order or large number
+   * - Build array of { id, inputOrder }
+   * - Sort ascending by inputOrder, fallback by existing display_order then id
+   * - Reassign sequential display_order starting from 1
+   * - Upsert to supabase
+   */
+  const saveOrder = async () => {
+    // Validate inputs
+    const entries = Object.entries(localOrder);
+    if (entries.length === 0) {
+      toast.error("No order to save");
+      return;
+    }
+
+    // Build normalized array
+    const arr = questions.map(q => {
+      const raw = localOrder[q.id];
+      // If user empties input or NaN, fallback to current display_order
+      const inputOrder = typeof raw === "number" && !isNaN(raw) ? raw : q.display_order ?? 999999;
+      return { id: q.id, inputOrder, currentOrder: q.display_order ?? 999999 };
+    });
+
+    // Validate all inputOrder are positive integers
+    for (const item of arr) {
+      if (!Number.isFinite(item.inputOrder) || item.inputOrder <= 0) {
+        toast.error("All orders must be positive numbers (>= 1)");
+        return;
+      }
+    }
+
+    // Sort by inputOrder asc, tie-breaker by currentOrder asc, then id
+    arr.sort((a, b) => {
+      if (a.inputOrder !== b.inputOrder) return a.inputOrder - b.inputOrder;
+      if (a.currentOrder !== b.currentOrder) return a.currentOrder - b.currentOrder;
+      return a.id.localeCompare(b.id);
+    });
+
+    // Reassign sequential display_order
+    const updates = arr.map((item, idx) => ({
+      id: item.id,
+      display_order: idx + 1,
+    }));
+
+    setSavingOrder(true);
+    try {
+      const { error } = await supabase.from("quiz_questions").upsert(updates);
+      if (error) throw error;
+
+      toast.success("Order updated and normalized");
+      // Refresh data (this will also reset localOrder)
+      await fetchData();
+    } catch (err) {
+      console.error("saveOrder error:", err);
+      toast.error("Failed to save order");
+    } finally {
+      setSavingOrder(false);
+    }
+  };
+
+  // ========================= UI HELPERS =========================
 
   if (loading) {
     return (
@@ -306,6 +386,7 @@ const QuizManager = () => {
     );
   }
 
+  // For display, sort by display_order
   const sortedQuestions = [...questions].sort(
     (a, b) => (a.display_order ?? 0) - (b.display_order ?? 0)
   );
@@ -331,9 +412,20 @@ const QuizManager = () => {
       {/* HEADER */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Quiz Manager</h1>
-        <Button onClick={openCreateDialog}>
-          <Plus className="h-4 w-4 mr-2" /> Add Question
-        </Button>
+
+        <div className="flex items-center gap-2">
+          <Button onClick={openCreateDialog}>
+            <Plus className="h-4 w-4 mr-2" /> Add Question
+          </Button>
+
+          <Button
+            variant="outline"
+            onClick={saveOrder}
+            disabled={savingOrder}
+          >
+            {savingOrder ? "Saving..." : "Save Order"}
+          </Button>
+        </div>
       </div>
 
       {/* TABLE */}
@@ -342,6 +434,7 @@ const QuizManager = () => {
           <TableHeader>
             <TableRow>
               <TableHead>#</TableHead>
+              <TableHead>Order</TableHead>
               <TableHead>Question</TableHead>
               <TableHead>Category</TableHead>
               <TableHead>Components</TableHead>
@@ -353,7 +446,7 @@ const QuizManager = () => {
           <TableBody>
             {sortedQuestions.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="py-8 text-center">
+                <TableCell colSpan={7} className="py-8 text-center">
                   No questions yet.
                 </TableCell>
               </TableRow>
@@ -363,6 +456,20 @@ const QuizManager = () => {
                 return (
                   <TableRow key={q.id}>
                     <TableCell>{i + 1}</TableCell>
+
+                    {/* ORDER INPUT */}
+                    <TableCell>
+                      <Input
+                        type="number"
+                        className="w-24"
+                        value={localOrder[q.id] ?? q.display_order ?? i + 1}
+                        onChange={(e) => {
+                          const v = Number(e.target.value);
+                          setLocalOrder(prev => ({ ...prev, [q.id]: Number.isNaN(v) ? 0 : v }));
+                        }}
+                      />
+                    </TableCell>
+
                     <TableCell className="max-w-xs truncate">{q.question_text}</TableCell>
                     <TableCell>{q.category || "—"}</TableCell>
                     <TableCell>{getComponentNames(q.id) || "—"}</TableCell>
