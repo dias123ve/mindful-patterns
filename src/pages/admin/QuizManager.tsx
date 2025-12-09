@@ -1,4 +1,4 @@
-// ================= QUIZ MANAGER — FINAL (Auto-save ORDER onBlur, Normalized) =================
+// ================= QUIZ MANAGER — FINAL (Order FIXED) =================
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -108,7 +108,6 @@ const QuizManager = () => {
       setComponents(componentsRes.data || []);
       setQuestionComponents(qComponentsRes.data || []);
 
-      // Update local order mirror
       const map: Record<string, number> = {};
       qdata.forEach(q => (map[q.id] = q.display_order));
       setLocalOrder(map);
@@ -197,7 +196,6 @@ const QuizManager = () => {
       let questionId = editingQuestion?.id;
 
       if (editingQuestion) {
-        // UPDATE
         await supabase.from("quiz_questions").update({
           question_text: formData.question_text,
           category: formData.category || null,
@@ -206,7 +204,6 @@ const QuizManager = () => {
         await supabase.from("quiz_question_options").delete().eq("question_id", editingQuestion.id);
         await supabase.from("quiz_question_components").delete().eq("question_id", editingQuestion.id);
       } else {
-        // CREATE
         const maxOrder =
           questions.length > 0
             ? Math.max(...questions.map(q => q.display_order ?? 0))
@@ -227,7 +224,6 @@ const QuizManager = () => {
 
       if (!questionId) throw new Error("Missing question ID");
 
-      // INSERT OPTIONS
       const optsToInsert = formData.options.map((o, i) => ({
         question_id: questionId!,
         option_text: o.option_text,
@@ -236,7 +232,6 @@ const QuizManager = () => {
       }));
       await supabase.from("quiz_question_options").insert(optsToInsert);
 
-      // INSERT COMPONENT RELATIONS
       const compsToInsert = selectedComponents.map(cid => ({
         question_id: questionId!,
         component_id: cid,
@@ -274,21 +269,24 @@ const QuizManager = () => {
   const handleOrderChange = async (changedId: string) => {
     const raw = localOrder[changedId];
 
-    if (!raw || raw < 1) {
+    // ========================= FIXED ORDER VALIDATION =========================
+    if (raw === undefined || raw === null || isNaN(raw)) {
+      toast.error("Invalid number");
+      return;
+    }
+    if (raw < 1) {
       toast.error("Order must be >= 1");
       return;
     }
+    // =======================================================================
 
-    // Build sortable array
     const arr = questions.map(q => ({
       id: q.id,
       inputOrder: localOrder[q.id] ?? q.display_order,
     }));
 
-    // Sort by inputOrder
     arr.sort((a, b) => a.inputOrder - b.inputOrder);
 
-    // Normalize → 1,2,3,...
     const updates = arr.map((it, idx) => ({
       id: it.id,
       display_order: idx + 1,
@@ -339,7 +337,6 @@ const QuizManager = () => {
 
   return (
     <div className="space-y-6">
-      {/* HEADER */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Quiz Manager</h1>
         <Button onClick={openCreateDialog}>
@@ -348,7 +345,6 @@ const QuizManager = () => {
         </Button>
       </div>
 
-      {/* TABLE */}
       <div className="border rounded-lg">
         <Table>
           <TableHeader>
@@ -378,7 +374,6 @@ const QuizManager = () => {
                   <TableRow key={q.id}>
                     <TableCell>{index + 1}</TableCell>
 
-                    {/* ORDER INPUT */}
                     <TableCell>
                       <Input
                         type="number"
@@ -464,7 +459,6 @@ const QuizManager = () => {
               />
             </div>
 
-            {/* OPTIONS */}
             <div>
               <Label>Options</Label>
 
@@ -519,7 +513,6 @@ const QuizManager = () => {
               </Button>
             </div>
 
-            {/* COMPONENTS */}
             <div>
               <Label>Components</Label>
               <Button variant="outline" onClick={() => setComponentDialogOpen(true)}>
@@ -537,7 +530,6 @@ const QuizManager = () => {
         </DialogContent>
       </Dialog>
 
-      {/* COMPONENT SELECTOR */}
       <Dialog open={componentDialogOpen} onOpenChange={setComponentDialogOpen}>
         <DialogContent>
           <DialogHeader>
