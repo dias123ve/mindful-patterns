@@ -4,11 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Brain, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
-import NowToGoalVisual from "@/components/NowToGoalVisual";
-import AboutYourPlan from "@/components/AboutYourPlan"; // will be updated to "Our Goal"
-import OfferSection from "@/components/OfferSection";
-import ExplanationSections from "@/components/ExplanationSections"; 
-import HolisticExplanation from "@/components/HolisticExplanation"; // NEW
+import NowToGoalVisual from "@/components/offer/NowToGoalVisual";
+import AboutYourPlan from "@/components/offer/AboutYourPlan"; // will be updated to "Our Goal"
+import OfferSection from "@/components/offer/OfferSection";
+import ExplanationSections from "@/components/offer/ExplanationSections"; 
+import HolisticExplanation from "@/components/offer/HolisticExplanation"; // NEW
 
 interface ComponentData {
   id: string;
