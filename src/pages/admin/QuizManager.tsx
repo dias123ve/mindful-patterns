@@ -1,4 +1,4 @@
-// ================= QUIZ MANAGER — FINAL (with Normalized Order) =================
+// ================= QUIZ MANAGER — FINAL (Auto-save ORDER onBlur, Normalized) =================
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -79,7 +79,7 @@ const QuizManager = () => {
 
   const [selectedComponents, setSelectedComponents] = useState<string[]>([]);
 
-  // LOCAL ORDER MAP: questionId -> input order (number). We'll normalize on save.
+  // LOCAL ORDER MAP: questionId -> input order (number). We'll normalize on blur.
   const [localOrder, setLocalOrder] = useState<Record<string, number>>({});
 
   // ========================= FETCH DATA =========================
@@ -313,33 +313,44 @@ const QuizManager = () => {
     }
   };
 
-  // ========================= SAVE ORDER (Normalized) =========================
+  // ========================= HANDLE ORDER CHANGE (onBlur) =========================
   /**
-   * Normalization logic:
-   * - Take localOrder map (questionId -> input number)
-   * - For any missing entries, use existing display_order or large number
-   * - Build array of { id, inputOrder }
-   * - Sort ascending by inputOrder, fallback by existing display_order then id
-   * - Reassign sequential display_order starting from 1
-   * - Upsert to supabase
+   * Behavior:
+   * - Triggered when a user leaves an order input (onBlur)
+   * - Validate changed input (>=1)
+   * - Use current localOrder map (with fallback to existing display_order)
+   * - Sort by inputOrder, tie-break by existing display_order then id
+   * - Normalize to 1..N and upsert to supabase
+   * - Refresh data
    */
-  const saveOrder = async () => {
-    // Validate inputs
-    const entries = Object.entries(localOrder);
-    if (entries.length === 0) {
-      toast.error("No order to save");
+  const handleOrderChange = async (changedId: string) => {
+    // avoid concurrent order saves
+    if (savingOrder) return;
+
+    const raw = localOrder[changedId];
+
+    // Validate presence & positivity
+    if (raw === undefined || raw === null || Number.isNaN(raw) || raw <= 0) {
+      toast.error("Order must be a positive number (>= 1)");
+      // reset that input to current display_order from questions
+      const q = questions.find(x => x.id === changedId);
+      setLocalOrder(prev => ({ ...prev, [changedId]: q ? q.display_order ?? 1 : 1 }));
       return;
     }
 
-    // Build normalized array
+    // Build array combining all questions with inputOrder
     const arr = questions.map(q => {
-      const raw = localOrder[q.id];
-      // If user empties input or NaN, fallback to current display_order
-      const inputOrder = typeof raw === "number" && !isNaN(raw) ? raw : q.display_order ?? 999999;
-      return { id: q.id, inputOrder, currentOrder: q.display_order ?? 999999 };
+      const inputOrder = (localOrder[q.id] !== undefined && !Number.isNaN(localOrder[q.id]))
+        ? localOrder[q.id]
+        : q.display_order ?? 999999;
+      return {
+        id: q.id,
+        inputOrder,
+        currentOrder: q.display_order ?? 999999,
+      };
     });
 
-    // Validate all inputOrder are positive integers
+    // Validate all are positive numbers (this prevents weird states)
     for (const item of arr) {
       if (!Number.isFinite(item.inputOrder) || item.inputOrder <= 0) {
         toast.error("All orders must be positive numbers (>= 1)");
@@ -347,14 +358,14 @@ const QuizManager = () => {
       }
     }
 
-    // Sort by inputOrder asc, tie-breaker by currentOrder asc, then id
+    // Sort by inputOrder asc, then currentOrder asc, then id
     arr.sort((a, b) => {
       if (a.inputOrder !== b.inputOrder) return a.inputOrder - b.inputOrder;
       if (a.currentOrder !== b.currentOrder) return a.currentOrder - b.currentOrder;
       return a.id.localeCompare(b.id);
     });
 
-    // Reassign sequential display_order
+    // Reassign sequential display_order 1..N
     const updates = arr.map((item, idx) => ({
       id: item.id,
       display_order: idx + 1,
@@ -365,12 +376,20 @@ const QuizManager = () => {
       const { error } = await supabase.from("quiz_questions").upsert(updates);
       if (error) throw error;
 
-      toast.success("Order updated and normalized");
-      // Refresh data (this will also reset localOrder)
+      // Update local map optimistically to reflect normalized values
+      const newLocal: Record<string, number> = {};
+      updates.forEach(u => {
+        newLocal[u.id] = u.display_order;
+      });
+      setLocalOrder(newLocal);
+
+      // Refresh full data (ensures options/components stay consistent)
       await fetchData();
+      // Small UX toast (optional)
+      toast.success("Order updated");
     } catch (err) {
-      console.error("saveOrder error:", err);
-      toast.error("Failed to save order");
+      console.error("handleOrderChange error:", err);
+      toast.error("Failed updating order");
     } finally {
       setSavingOrder(false);
     }
@@ -412,19 +431,11 @@ const QuizManager = () => {
       {/* HEADER */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Quiz Manager</h1>
-
         <div className="flex items-center gap-2">
           <Button onClick={openCreateDialog}>
             <Plus className="h-4 w-4 mr-2" /> Add Question
           </Button>
-
-          <Button
-            variant="outline"
-            onClick={saveOrder}
-            disabled={savingOrder}
-          >
-            {savingOrder ? "Saving..." : "Save Order"}
-          </Button>
+          {/* No Save Order button anymore — auto-save on blur */}
         </div>
       </div>
 
@@ -457,7 +468,7 @@ const QuizManager = () => {
                   <TableRow key={q.id}>
                     <TableCell>{i + 1}</TableCell>
 
-                    {/* ORDER INPUT */}
+                    {/* ORDER INPUT (auto-save onBlur) */}
                     <TableCell>
                       <Input
                         type="number"
@@ -467,6 +478,8 @@ const QuizManager = () => {
                           const v = Number(e.target.value);
                           setLocalOrder(prev => ({ ...prev, [q.id]: Number.isNaN(v) ? 0 : v }));
                         }}
+                        onBlur={() => handleOrderChange(q.id)}
+                        disabled={savingOrder}
                       />
                     </TableCell>
 
