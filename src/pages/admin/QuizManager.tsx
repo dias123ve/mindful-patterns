@@ -1,4 +1,4 @@
-// ================= QUIZ MANAGER — FINAL WORKING ORDER =================
+// ================= QUIZ MANAGER — FINAL (Diagnostics) =================
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -266,41 +266,73 @@ const QuizManager = () => {
 
   // ========================= AUTO-SAVE ORDER (onBlur) =========================
 
-  // FIXED VERSION — now receives newValue directly from input, no stale state
+  // DIAGNOSTIC & ROBUST VERSION
   const handleOrderChange = async (changedId: string, newValue: number) => {
-
-    if (newValue < 1 || isNaN(newValue)) {
+    // normalize input
+    const raw = Number(newValue);
+    if (isNaN(raw)) {
+      toast.error("Invalid number");
+      return;
+    }
+    if (!Number.isFinite(raw) || raw < 1) {
       toast.error("Order must be >= 1");
       return;
     }
 
-    // Build normalized reorder array
-    const arr = questions.map((q) => ({
-      id: q.id,
-      inputOrder:
-        q.id === changedId
-          ? newValue
-          : (localOrder[q.id] ?? q.display_order),
-    }));
+    // Build desired ordering using latest input value (not relying on a possibly stale state)
+    const arr = questions.map((q) => {
+      const fallback = (localOrder[q.id] ?? q.display_order);
+      return {
+        id: q.id,
+        inputOrder: q.id === changedId ? raw : fallback,
+      };
+    });
+
+    // Debug: show what we intend to sort by BEFORE sorting
+    console.log("[order-debug] before sort arr:", JSON.parse(JSON.stringify(arr)));
 
     // Sort by desired order
     arr.sort((a, b) => a.inputOrder - b.inputOrder);
 
-    // Normalize to 1,2,3,...
+    // Debug: show after sort
+    console.log("[order-debug] after sort arr:", JSON.parse(JSON.stringify(arr)));
+
+    // Normalize to contiguous ranks 1..N
     const updates = arr.map((it, idx) => ({
       id: it.id,
       display_order: idx + 1,
     }));
 
+    // Debug: payload to send
+    console.log("[order-debug] payload updates:", JSON.parse(JSON.stringify(updates)));
+
     setSavingOrder(true);
     try {
-      await supabase.from("quiz_questions").upsert(updates);
-      toast.success("Order updated");
-      await fetchData();
+      // Use onConflict 'id' explicitly to ensure upsert acts as update for existing rows
+      const resp = await supabase
+        .from("quiz_questions")
+        .upsert(updates, { onConflict: "id" })
+        .select();
+
+      // Log full response
+      console.log("[order-debug] supabase resp:", resp);
+
+      if (resp.error) {
+        // If Supabase returns an error object
+        console.error("[order-debug] supabase error:", resp.error);
+        toast.error(`Order update failed: ${resp.error.message}`);
+      } else {
+        // Success: resp.data may contain updated rows
+        toast.success("Order updated");
+        // Refresh list from server (will also refresh localOrder map)
+        await fetchData();
+      }
     } catch (err) {
-      toast.error("Failed updating order");
+      console.error("[order-debug] unexpected error:", err);
+      toast.error("Failed updating order (exception)");
+    } finally {
+      setSavingOrder(false);
     }
-    setSavingOrder(false);
   };
 
   // ========================= UI HELPERS =========================
