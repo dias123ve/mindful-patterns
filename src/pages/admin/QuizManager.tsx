@@ -280,13 +280,20 @@ const QuizManager = () => {
     }
     // =======================================================================
 
-    const arr = questions.map(q => ({
-  id: q.id,
-  inputOrder:
-    q.id === changedId
-      ? raw
-      : localOrder[q.id] ?? q.display_order,
-}));
+    const arr = questions.map((q) => {
+  let val = localOrder[q.id];
+
+  // If localOrder empty or invalid → use old display_order
+  if (val === undefined || val === null || isNaN(val)) {
+    val = q.display_order;
+  }
+
+  return {
+    id: q.id,
+    inputOrder: q.id === changedId ? raw : val,
+  };
+});
+
 
 
     arr.sort((a, b) => a.inputOrder - b.inputOrder);
