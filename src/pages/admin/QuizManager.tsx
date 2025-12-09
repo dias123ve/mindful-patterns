@@ -1,4 +1,4 @@
-// ================= QUIZ MANAGER — FINAL WORKING ORDER =================
+// ================= QUIZ MANAGER — FINAL (Order FIXED) =================
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -266,27 +266,38 @@ const QuizManager = () => {
 
   // ========================= AUTO-SAVE ORDER (onBlur) =========================
 
-  // FIXED VERSION — now receives newValue directly from input, no stale state
-  const handleOrderChange = async (changedId: string, newValue: number) => {
+  const handleOrderChange = async (changedId: string) => {
+    const raw = localOrder[changedId];
 
-    if (newValue < 1 || isNaN(newValue)) {
+    // ========================= FIXED ORDER VALIDATION =========================
+    if (raw === undefined || raw === null || isNaN(raw)) {
+      toast.error("Invalid number");
+      return;
+    }
+    if (raw < 1) {
       toast.error("Order must be >= 1");
       return;
     }
+    // =======================================================================
 
-    // Build normalized reorder array
-    const arr = questions.map((q) => ({
-      id: q.id,
-      inputOrder:
-        q.id === changedId
-          ? newValue
-          : (localOrder[q.id] ?? q.display_order),
-    }));
+    const arr = questions.map((q) => {
+  let val = localOrder[q.id];
 
-    // Sort by desired order
+  // If localOrder empty or invalid → use old display_order
+  if (val === undefined || val === null || isNaN(val)) {
+    val = q.display_order;
+  }
+
+  return {
+    id: q.id,
+    inputOrder: q.id === changedId ? raw : val,
+  };
+});
+
+
+
     arr.sort((a, b) => a.inputOrder - b.inputOrder);
 
-    // Normalize to 1,2,3,...
     const updates = arr.map((it, idx) => ({
       id: it.id,
       display_order: idx + 1,
@@ -383,7 +394,7 @@ const QuizManager = () => {
                           const v = Number(e.target.value);
                           setLocalOrder(prev => ({ ...prev, [q.id]: v }));
                         }}
-                        onBlur={(e) => handleOrderChange(q.id, Number(e.target.value))}
+                        onBlur={() => handleOrderChange(q.id)}
                         disabled={savingOrder}
                       />
                     </TableCell>
