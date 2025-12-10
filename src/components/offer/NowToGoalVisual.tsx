@@ -25,7 +25,6 @@ const NowToGoalVisual = ({
   const personNowSrc = `/images/${gender}_now.png`;
   const personGoalSrc = `/images/${gender}_goal.png`;
 
-  // width kalkulasi
   const getModerateWidth = (score: number) => Math.max((score / MAX_SCORE) * 78, 30);
   const getLowWidth = (score: number) => Math.max((score / MAX_SCORE) * 45, 18);
 
@@ -56,13 +55,13 @@ const NowToGoalVisual = ({
               const width = getModerateWidth(score);
 
               return (
-                <div key={comp.id}>
+                <div key={comp.id} className="max-w-[260px]">
                   <div className="flex justify-between text-sm mb-1">
                     <span className="font-medium">{comp.name}</span>
                     <span className="text-muted-foreground">Moderate</span>
                   </div>
 
-                  <div className="relative h-2 bg-slate-200 rounded-full overflow-visible">
+                  <div className="relative h-2 bg-slate-200 rounded-full overflow-visible max-w-[240px]">
                     <div
                       className="h-full bg-slate-400/50 rounded-full"
                       style={{ width: width + "%" }}
@@ -81,13 +80,13 @@ const NowToGoalVisual = ({
               const width = getLowWidth(score);
 
               return (
-                <div>
+                <div className="max-w-[260px]">
                   <div className="flex justify-between text-sm mb-1">
                     <span className="font-medium">{negativeComponent.name}</span>
                     <span className="text-muted-foreground">Low</span>
                   </div>
 
-                  <div className="relative h-2 bg-slate-200 rounded-full overflow-visible">
+                  <div className="relative h-2 bg-slate-200 rounded-full overflow-visible max-w-[240px]">
                     <div
                       className="h-full bg-amber-400/70 rounded-full"
                       style={{ width: width + "%" }}
@@ -110,6 +109,7 @@ const NowToGoalVisual = ({
             Future You
           </h3>
 
+          {/* BIG IMAGE */}
           <div className="flex justify-center mb-6">
             <img
               src={personGoalSrc}
@@ -121,13 +121,13 @@ const NowToGoalVisual = ({
           <div className="space-y-5">
 
             {positiveComponents.map((comp) => (
-              <div key={comp.id}>
+              <div key={comp.id} className="max-w-[260px]">
                 <div className="flex justify-between text-sm mb-1">
                   <span className="font-medium">{comp.name}</span>
                   <span className="text-success">Higher</span>
                 </div>
 
-                <div className="relative h-2 bg-emerald-100 rounded-full overflow-visible">
+                <div className="relative h-2 bg-emerald-100 rounded-full overflow-visible max-w-[260px]">
                   <div
                     className="h-full bg-emerald-500 rounded-full"
                     style={{ width: "90%" }}
@@ -141,13 +141,13 @@ const NowToGoalVisual = ({
             ))}
 
             {negativeComponent && (
-              <div>
+              <div className="max-w-[260px]">
                 <div className="flex justify-between text-sm mb-1">
                   <span className="font-medium">{negativeComponent.name}</span>
                   <span className="text-success">Stronger</span>
                 </div>
 
-                <div className="relative h-2 bg-emerald-100 rounded-full overflow-visible">
+                <div className="relative h-2 bg-emerald-100 rounded-full overflow-visible max-w-[260px]">
                   <div
                     className="h-full bg-emerald-500 rounded-full"
                     style={{ width: "82%" }}
