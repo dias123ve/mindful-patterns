@@ -137,9 +137,12 @@ const NowToGoalVisual = ({
         transform: translateX(0);
         opacity: 0;
       }
-      10% {
-        opacity: 1;
+      2% {
+        opacity: 0.4;
       }
+      5% {
+        opacity: 1;
+        }
 
       /* gerak ke kanan */
       70% {
@@ -149,15 +152,8 @@ const NowToGoalVisual = ({
 
       /* mulai hilang pelan */
       71% {
-        opacity: 0.7;
-      }
-      80% {
-        opacity: 0.2;
-      }
-
-      /* hilang total sebelum reset posisi */
-      90% {
         opacity: 0;
+      
       }
 
       /* reset posisi tapi tetap invisible */
