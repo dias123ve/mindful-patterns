@@ -101,7 +101,9 @@ const NowToGoalVisual = ({
         </div>
 
         {/* CENTER ARROW */}
-  <div className="arrow-container">
+  <div 
+    className="arrow-container absolute top-[45%] left-1/2 -translate-x-1/2"
+  >
   <svg 
     className="arrow-icon"
     viewBox="0 0 24 24"
@@ -120,13 +122,13 @@ const NowToGoalVisual = ({
       display: flex;
       justify-content: center;
       align-items: center;
-      padding-top: 40px;
+      padding-top: 60px;
       padding-bottom: 20px;
     }
 
     .arrow-icon {
-      width: 90px;
-      height: 90px;
+      width: 70px;
+      height: 120px;
       color: #d1d5db; /* gray-300 */
       animation: slideSmooth 4s ease-in-out infinite;
     }
