@@ -1,9 +1,10 @@
 import {
+  Radar,
   RadarChart,
   PolarGrid,
   PolarAngleAxis,
-  Radar,
   ResponsiveContainer,
+  Customized,
 } from "recharts";
 
 interface OctagramChartProps {
@@ -21,91 +22,75 @@ const ORDER = [
   "self-compassion",
 ];
 
-// Convert Supabase { self-identity: 72, ... } → [{ label, value }]
+// Format Supabase scores → radar data
 const formatData = (scores: Record<string, number>) =>
   ORDER.map((key) => ({
     key,
-    label: key
-      .replace("self-", "Self-")
-      .replace(/-/g, " ")
-      .replace(/\b\w/g, (c) => c.toUpperCase()),
+    label: key.replace("self-", "Self-").replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
     value: scores[key] ?? 0,
   }));
 
-// Determine dotType (high, low, normal)
-const addDotTypes = (data: any[]) => {
+// Detect highlight
+const getDotTypes = (data: any[]) => {
   const values = data.map((d) => d.value);
   const sorted = [...values].sort((a, b) => b - a);
-
   const highestTwo = sorted.slice(0, 2);
   const lowest = sorted[sorted.length - 1];
 
   return data.map((d) => ({
     ...d,
     dotType:
-      d.value === lowest
-        ? "low"
-        : highestTwo.includes(d.value)
-        ? "high"
-        : "normal",
+      d.value === lowest ? "low" : highestTwo.includes(d.value) ? "high" : "normal",
   }));
 };
 
-// CUSTOM DOT
-const CustomDot = ({ cx, cy, payload }: any) => {
-  if (!cx || !cy || !payload) return null;
-
-  const type = payload.dotType;
-
-  if (type === "high") {
-    return (
-      <g>
-        <circle cx={cx} cy={cy} r={18} fill="#27D787" opacity={0.25} />
-        <circle cx={cx} cy={cy} r={10} fill="#27D787" />
-        <circle cx={cx} cy={cy} r={4} fill="white" opacity={0.9} />
-      </g>
-    );
-  }
-
-  if (type === "low") {
-    return (
-      <g>
-        <circle cx={cx} cy={cy} r={18} fill="#FF8A3D" opacity={0.25} />
-        <circle cx={cx} cy={cy} r={10} fill="#FF8A3D" />
-        <circle cx={cx} cy={cy} r={4} fill="white" opacity={0.9} />
-      </g>
-    );
-  }
-
+// Custom dot renderer using a top-level layer
+const DotLayer = ({ cx, cy, radius, points }: any) => {
   return (
-    <circle cx={cx} cy={cy} r={5} fill="white" stroke="#14B8A6" strokeWidth={2} />
-  );
-};
+    <g>
+      {points.map((p: any, i: number) => {
+        const { x, y, dotType } = p;
 
-// CUSTOM LABEL
-const CustomLabel = ({ x, y, payload, index }: any) => {
-  if (!x || !y) return null;
+        if (dotType === "high") {
+          return (
+            <g key={i}>
+              <circle cx={x} cy={y} r={18} fill="#27D787" opacity={0.25} />
+              <circle cx={x} cy={y} r={10} fill="#27D787" />
+              <circle cx={x} cy={y} r={4} fill="white" opacity={0.9} />
+            </g>
+          );
+        }
 
-  const dyAdjust = index === 0 ? -6 : index === 4 ? 12 : 4;
+        if (dotType === "low") {
+          return (
+            <g key={i}>
+              <circle cx={x} cy={y} r={18} fill="#FF8A3D" opacity={0.25} />
+              <circle cx={x} cy={y} r={10} fill="#FF8A3D" />
+              <circle cx={x} cy={y} r={4} fill="white" opacity={0.9} />
+            </g>
+          );
+        }
 
-  return (
-    <text
-      x={x}
-      y={y + dyAdjust}
-      textAnchor="middle"
-      fill="#64748b"
-      fontSize={13}
-      fontWeight={500}
-      dy={3}
-    >
-      {payload.value}
-    </text>
+        return (
+          <circle
+            key={i}
+            cx={x}
+            cy={y}
+            r={5}
+            fill="white"
+            stroke="#14B8A6"
+            strokeWidth={2}
+          />
+        );
+      })}
+    </g>
   );
 };
 
 const OctagramChart = ({ scores }: OctagramChartProps) => {
+  // Format and detect highlight groups
   let data = formatData(scores);
-  data = addDotTypes(data);
+  data = getDotTypes(data);
 
   return (
     <div className="flex flex-col items-center mt-1">
@@ -113,15 +98,55 @@ const OctagramChart = ({ scores }: OctagramChartProps) => {
         <ResponsiveContainer width="100%" height={430}>
           <RadarChart cx="50%" cy="50%" outerRadius="78%" data={data}>
             <PolarGrid stroke="#d7e2eb" strokeWidth={1} gridType="polygon" />
-            <PolarAngleAxis dataKey="label" tick={CustomLabel} tickLine={false} />
 
+            <PolarAngleAxis
+              dataKey="label"
+              tickLine={false}
+              tick={({ x, y, payload, index }) => {
+                const dy = index === 0 ? -6 : index === 4 ? 12 : 4;
+                return (
+                  <text
+                    x={x}
+                    y={y + dy}
+                    textAnchor="middle"
+                    fill="#64748b"
+                    fontSize={13}
+                    fontWeight={500}
+                    dy={3}
+                  >
+                    {payload.value}
+                  </text>
+                );
+              }}
+            />
+
+            {/* Main shape */}
             <Radar
               dataKey="value"
               stroke="#14B8A6"
               strokeWidth={2}
               fill="#4DD4AC"
               fillOpacity={0.35}
-              dot={<CustomDot />}
+              dot={false} // ← disable default dots
+            />
+
+            {/* CUSTOM DOT LAYER */}
+            <Customized
+              component={({ width, height, cx, cy, radius }) => {
+                // Compute each point's (x,y)
+                const points = data.map((d, i) => {
+                  const angle = (Math.PI * 2 * i) / data.length - Math.PI / 2;
+                  const r = (d.value / 100) * radius * 1.35; // adjust scaling
+
+                  return {
+                    ...d,
+                    x: cx + r * Math.cos(angle),
+                    y: cy + r * Math.sin(angle),
+                  };
+                });
+
+                return <DotLayer points={points} />;
+              }}
             />
           </RadarChart>
         </ResponsiveContainer>
