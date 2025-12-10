@@ -23,8 +23,42 @@ const Offer = () => {
   const [positiveComponents, setPositiveComponents] = useState<ComponentData[]>([]);
   const [negativeComponent, setNegativeComponent] = useState<ComponentData | null>(null);
 
-  // raw normalized scores
   const [componentScores, setComponentScores] = useState<Record<string, number>>({});
+
+  // ----------------------------------------------------
+  // 🔥 DISCOUNT TIMER LOGIC
+  // ----------------------------------------------------
+
+  const [timeLeft, setTimeLeft] = useState(600); // 10 minutes
+
+  useEffect(() => {
+    let start = sessionStorage.getItem("offer_start_time");
+
+    if (!start) {
+      start = Date.now().toString();
+      sessionStorage.setItem("offer_start_time", start);
+    }
+
+    const tick = () => {
+      const elapsed = Math.floor((Date.now() - Number(start)) / 1000);
+      const remaining = 600 - elapsed;
+      setTimeLeft(remaining > 0 ? remaining : 0);
+    };
+
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const formatTime = (sec: number) => {
+    const m = String(Math.floor(sec / 60)).padStart(2, "0");
+    const s = String(sec % 60).padStart(2, "0");
+    return `${m}:${s}`;
+  };
+
+  // ----------------------------------------------------
+  // 🔥 FETCH RESULTS FROM DB / SESSION
+  // ----------------------------------------------------
 
   useEffect(() => {
     fetchResults();
@@ -43,11 +77,9 @@ const Offer = () => {
     try {
       let scores: Record<string, number> = {};
 
-      // Load from sessionStorage first
       if (componentScoresStr) {
         scores = JSON.parse(componentScoresStr);
       } else {
-        // Load from Supabase fallback
         const { data: submission, error: subError } = await supabase
           .from("quiz_submissions")
           .select("component_scores")
@@ -58,23 +90,21 @@ const Offer = () => {
         scores = (submission?.component_scores as Record<string, number>) || {};
       }
 
-      // 🔥 Normalize underscore → hyphen
+      // Normalize underscore → hyphen
       const normalizedScores: Record<string, number> = {};
       Object.entries(scores).forEach(([key, value]) => {
-        const normalizedKey = key.replace(/_/g, "-"); // MATCH Supabase keys
-        normalizedScores[normalizedKey] = value;
+        normalizedScores[key.replace(/_/g, "-")] = value;
       });
 
       setComponentScores(normalizedScores);
 
-      // Load component metadata
+      // Load metadata
       const { data: componentsData, error: compError } = await supabase
         .from("components")
         .select("id, name, component_key");
 
       if (compError) throw compError;
 
-      // Sort based on normalized scores
       const sortedKeys = Object.entries(normalizedScores)
         .sort(([, a], [, b]) => b - a)
         .map(([key]) => key);
@@ -83,7 +113,6 @@ const Offer = () => {
         .map((key) => componentsData?.find((c) => c.component_key === key))
         .filter(Boolean) as ComponentData[];
 
-      // Pick strengths & weakest
       if (sortedComponents.length >= 3) {
         setPositiveComponents(sortedComponents.slice(0, 2));
         setNegativeComponent(sortedComponents[sortedComponents.length - 1]);
@@ -112,8 +141,14 @@ const Offer = () => {
     );
   }
 
+  // ----------------------------------------------------
+  // 🔥 PAGE RENDER
+  // ----------------------------------------------------
+
   return (
     <div className="min-h-screen bg-gradient-hero">
+
+      {/* HEADER */}
       <header className="container mx-auto px-4 py-6">
         <Link to="/" className="flex items-center gap-2">
           <Brain className="h-7 w-7 text-primary" />
@@ -123,57 +158,21 @@ const Offer = () => {
         </Link>
       </header>
 
-      <main className="container mx-auto px-4 py-8 pb-16">
-        <div className="max-w-4xl mx-auto space-y-12">
+      {/* 🔥 FLOATING DISCOUNT BAR */}
+      {timeLeft > 0 && (
+        <div className="
+          fixed top-0 left-0 w-full z-50 
+          bg-white/95 backdrop-blur 
+          border-b border-border 
+          px-4 py-3
+        ">
+          <div className="max-w-4xl mx-auto flex items-center justify-between">
+            <span className="text-sm font-medium text-foreground">
+              Discount is reserved for:{" "}
+              <span className="text-green-600 font-semibold">
+                {formatTime(timeLeft)}
+              </span>
+            </span>
 
-          {/* NOW → GOAL VISUAL */}
-          <NowToGoalVisual
-            positiveComponents={positiveComponents}
-            negativeComponent={negativeComponent}
-            componentScores={componentScores} // 🔥 FIXED: always normalized scores
-          />
-
-          {/* HEADLINE */}
-          <div className="text-center fade-up" style={{ animationDelay: "0.08s" }}>
-            <h1 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-3">
-              Your personalized plan is ready.
-            </h1>
-            <p className="text-muted-foreground max-w-md mx-auto">
-              Built from your strongest patterns and your key challenge.
-            </p>
-          </div>
-
-          {/* FIRST OFFER */}
-          <OfferSection
-            positiveComponents={positiveComponents}
-            negativeComponent={negativeComponent}
-          />
-
-          {/* OUR GOAL */}
-          <AboutYourPlan />
-
-          {/* HOLISTIC EXPLANATIONS */}
-          <HolisticExplanation />
-
-          {/* STANDARD EXPLANATIONS */}
-          <ExplanationSections />
-
-          {/* SECOND OFFER */}
-          <OfferSection
-            positiveComponents={positiveComponents}
-            negativeComponent={negativeComponent}
-          />
-
-        </div>
-      </main>
-
-      <footer className="container mx-auto px-4 py-8 border-t border-border">
-        <div className="text-center text-sm text-muted-foreground">
-          <p>© {new Date().getFullYear()} MindProfile. All rights reserved.</p>
-        </div>
-      </footer>
-    </div>
-  );
-};
-
-export default Offer;
+            <button
+              o
