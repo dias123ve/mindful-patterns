@@ -23,7 +23,7 @@ const Offer = () => {
   const [positiveComponents, setPositiveComponents] = useState<ComponentData[]>([]);
   const [negativeComponent, setNegativeComponent] = useState<ComponentData | null>(null);
 
-  // ✅ NEW: store raw scores
+  // raw normalized scores
   const [componentScores, setComponentScores] = useState<Record<string, number>>({});
 
   useEffect(() => {
@@ -47,7 +47,7 @@ const Offer = () => {
       if (componentScoresStr) {
         scores = JSON.parse(componentScoresStr);
       } else {
-        // Fallback: load from supabase
+        // Load from Supabase fallback
         const { data: submission, error: subError } = await supabase
           .from("quiz_submissions")
           .select("component_scores")
@@ -58,8 +58,14 @@ const Offer = () => {
         scores = (submission?.component_scores as Record<string, number>) || {};
       }
 
-      // Save the scores to state
-      setComponentScores(scores);
+      // 🔥 Normalize underscore → hyphen
+      const normalizedScores: Record<string, number> = {};
+      Object.entries(scores).forEach(([key, value]) => {
+        const normalizedKey = key.replace(/_/g, "-"); // MATCH Supabase keys
+        normalizedScores[normalizedKey] = value;
+      });
+
+      setComponentScores(normalizedScores);
 
       // Load component metadata
       const { data: componentsData, error: compError } = await supabase
@@ -68,15 +74,16 @@ const Offer = () => {
 
       if (compError) throw compError;
 
-      // Sort components by score
-      const sortedKeys = Object.entries(scores)
+      // Sort based on normalized scores
+      const sortedKeys = Object.entries(normalizedScores)
         .sort(([, a], [, b]) => b - a)
         .map(([key]) => key);
 
       const sortedComponents = sortedKeys
-        .map(key => componentsData?.find(c => c.component_key === key))
+        .map((key) => componentsData?.find((c) => c.component_key === key))
         .filter(Boolean) as ComponentData[];
 
+      // Pick strengths & weakest
       if (sortedComponents.length >= 3) {
         setPositiveComponents(sortedComponents.slice(0, 2));
         setNegativeComponent(sortedComponents[sortedComponents.length - 1]);
@@ -123,7 +130,7 @@ const Offer = () => {
           <NowToGoalVisual
             positiveComponents={positiveComponents}
             negativeComponent={negativeComponent}
-            componentScores={componentScores}   // ✅ FIXED: pass scores
+            componentScores={componentScores} // 🔥 FIXED: always normalized scores
           />
 
           {/* HEADLINE */}
@@ -137,7 +144,7 @@ const Offer = () => {
           </div>
 
           {/* FIRST OFFER */}
-          <OfferSection 
+          <OfferSection
             positiveComponents={positiveComponents}
             negativeComponent={negativeComponent}
           />
@@ -152,7 +159,7 @@ const Offer = () => {
           <ExplanationSections />
 
           {/* SECOND OFFER */}
-          <OfferSection 
+          <OfferSection
             positiveComponents={positiveComponents}
             negativeComponent={negativeComponent}
           />
