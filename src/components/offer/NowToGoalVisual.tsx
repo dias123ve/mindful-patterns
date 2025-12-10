@@ -25,7 +25,7 @@ const NowToGoalVisual = ({
   const personNowSrc = `/images/${gender}_now.png`;
   const personGoalSrc = `/images/${gender}_goal.png`;
 
-  const getStrongPos = (score: number) => Math.max((score / MAX_SCORE) * 78, 30);
+  const getStrongPos = (score: number) => Math.max((score / MAX_SCORE) * 85, 30);
   const getLowPos = (score: number) => Math.max((score / MAX_SCORE) * 45, 18);
 
   return (
@@ -101,7 +101,7 @@ const NowToGoalVisual = ({
         </div>
 
         {/* CENTER ARROW */}
-       <div className="flex justify-center items-center pt-24">
+      <div className="flex justify-center items-center pt-20">
   <svg
     className="w-20 h-20 text-gray-400"
     viewBox="0 0 24 24"
@@ -111,7 +111,7 @@ const NowToGoalVisual = ({
     strokeLinecap="round"
     strokeLinejoin="round"
     style={{
-      animation: "slide-right 4s ease-in-out infinite"
+      animation: "arrow-slide 3.2s ease-in-out infinite"
     }}
   >
     <polyline points="9 18 15 12 9 6"></polyline>
@@ -119,13 +119,16 @@ const NowToGoalVisual = ({
   </svg>
 
   <style>{`
-    @keyframes slide-right {
-      0%   { transform: translateX(0); opacity: 0.4; }
-      50%  { transform: translateX(15px); opacity: 1; }
-      100% { transform: translateX(0); opacity: 0.4; }
+    @keyframes arrow-slide {
+      0%   { transform: translateX(-15px); opacity: 0; }
+      15%  { transform: translateX(-10px); opacity: 0.5; }
+      35%  { transform: translateX(0); opacity: 1; }
+      70%  { transform: translateX(20px); opacity: 0.4; }
+      100% { transform: translateX(25px); opacity: 0; }
     }
   `}</style>
 </div>
+
 
 
         {/* RIGHT — FUTURE YOU */}
@@ -177,12 +180,12 @@ const NowToGoalVisual = ({
 
                   <div
                     className="absolute h-2 rounded-full"
-                    style={{ backgroundColor: "#FFD54F", width: "78%" }}
+                    style={{ backgroundColor: "#FFD54F", width: "70%" }}
                   />
 
                   <div
                     className="absolute -top-[4px] h-3 w-3 rounded-full shadow"
-                    style={{ backgroundColor: "#FBC02D", left: "78%" }}
+                    style={{ backgroundColor: "#FBC02D", left: "65%" }}
                   />
                 </div>
               </div>
