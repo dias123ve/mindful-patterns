@@ -41,7 +41,7 @@ const OfferSection = ({ positiveComponents, negativeComponent }: OfferSectionPro
       <div className="grid md:grid-cols-2 gap-6 mb-12">
         
         {/* Single Ebook Offer */}
-        <div className="bg-card rounded-2xl p-6 md:p-8 shadow-soft border border-border fade-up">
+        <div className="bg-card rounded-2xl p-6 md:p-8 shadow-soft border border-border fade-up flex flex-col justify-between">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-12 h-12 rounded-full bg-warning-light flex items-center justify-center">
               <BookOpen className="h-6 w-6 text-warning" />
@@ -55,6 +55,13 @@ const OfferSection = ({ positiveComponents, negativeComponent }: OfferSectionPro
                   Ebook to steady your {negativeComponent.name}
                 </p>
               )}
+              {negativeComponent && (
+  <div className="flex items-center gap-2 text-orange-500 mt-1">
+    <span className="w-2 h-2 rounded-full bg-orange-500" />
+    <span>Challenge Guide: {negativeComponent.name}</span>
+  </div>
+)}
+
             </div>
           </div>
 
@@ -126,8 +133,8 @@ const OfferSection = ({ positiveComponents, negativeComponent }: OfferSectionPro
               ))}
 
               {negativeComponent && (
-                <li className="flex items-center gap-2 text-yellow-500">
-                  <span className="w-1.5 h-1.5 rounded-full bg-yellow-500" />
+                <li className="flex items-center gap-2 text-orange-500">
+                  <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
                   <span>Challenge Guide: {negativeComponent.name}</span>
                 </li>
               )}
