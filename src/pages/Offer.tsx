@@ -5,10 +5,10 @@ import { Brain, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import NowToGoalVisual from "@/components/offer/NowToGoalVisual";
-import AboutYourPlan from "@/components/offer/AboutYourPlan"; // will be updated to "Our Goal"
+import AboutYourPlan from "@/components/offer/AboutYourPlan";
 import OfferSection from "@/components/offer/OfferSection";
-import ExplanationSections from "@/components/offer/ExplanationSections"; 
-import HolisticExplanation from "@/components/offer/HolisticExplanation"; // NEW
+import ExplanationSections from "@/components/offer/ExplanationSections";
+import HolisticExplanation from "@/components/offer/HolisticExplanation";
 
 interface ComponentData {
   id: string;
@@ -19,8 +19,12 @@ interface ComponentData {
 const Offer = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+
   const [positiveComponents, setPositiveComponents] = useState<ComponentData[]>([]);
   const [negativeComponent, setNegativeComponent] = useState<ComponentData | null>(null);
+
+  // ✅ NEW: store raw scores
+  const [componentScores, setComponentScores] = useState<Record<string, number>>({});
 
   useEffect(() => {
     fetchResults();
@@ -37,11 +41,13 @@ const Offer = () => {
     }
 
     try {
-      let componentScores: Record<string, number> = {};
-      
+      let scores: Record<string, number> = {};
+
+      // Load from sessionStorage first
       if (componentScoresStr) {
-        componentScores = JSON.parse(componentScoresStr);
+        scores = JSON.parse(componentScoresStr);
       } else {
+        // Fallback: load from supabase
         const { data: submission, error: subError } = await supabase
           .from("quiz_submissions")
           .select("component_scores")
@@ -49,16 +55,21 @@ const Offer = () => {
           .single();
 
         if (subError) throw subError;
-        componentScores = (submission?.component_scores as Record<string, number>) || {};
+        scores = (submission?.component_scores as Record<string, number>) || {};
       }
 
+      // Save the scores to state
+      setComponentScores(scores);
+
+      // Load component metadata
       const { data: componentsData, error: compError } = await supabase
         .from("components")
         .select("id, name, component_key");
 
       if (compError) throw compError;
 
-      const sortedKeys = Object.entries(componentScores)
+      // Sort components by score
+      const sortedKeys = Object.entries(scores)
         .sort(([, a], [, b]) => b - a)
         .map(([key]) => key);
 
@@ -67,8 +78,8 @@ const Offer = () => {
         .filter(Boolean) as ComponentData[];
 
       if (sortedComponents.length >= 3) {
-        setPositiveComponents(sortedComponents.slice(0, 2)); // strongest 1 & 2
-        setNegativeComponent(sortedComponents[sortedComponents.length - 1]); // lowest
+        setPositiveComponents(sortedComponents.slice(0, 2));
+        setNegativeComponent(sortedComponents[sortedComponents.length - 1]);
       } else if (sortedComponents.length === 2) {
         setPositiveComponents([sortedComponents[0]]);
         setNegativeComponent(sortedComponents[1]);
@@ -76,6 +87,7 @@ const Offer = () => {
         setPositiveComponents([sortedComponents[0]]);
         setNegativeComponent(null);
       }
+
     } catch (error) {
       console.error("Error fetching results:", error);
       toast.error("Failed to load offer.");
@@ -107,13 +119,14 @@ const Offer = () => {
       <main className="container mx-auto px-4 py-8 pb-16">
         <div className="max-w-4xl mx-auto space-y-12">
 
-          {/* Now → Goal Visual Section */}
-          <NowToGoalVisual 
+          {/* NOW → GOAL VISUAL */}
+          <NowToGoalVisual
             positiveComponents={positiveComponents}
             negativeComponent={negativeComponent}
+            componentScores={componentScores}   // ✅ FIXED: pass scores
           />
 
-          {/* Personalized Plan Headline */}
+          {/* HEADLINE */}
           <div className="text-center fade-up" style={{ animationDelay: "0.08s" }}>
             <h1 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-3">
               Your personalized plan is ready.
@@ -123,22 +136,22 @@ const Offer = () => {
             </p>
           </div>
 
-          {/* FIRST OFFER SECTION */}
+          {/* FIRST OFFER */}
           <OfferSection 
             positiveComponents={positiveComponents}
             negativeComponent={negativeComponent}
           />
 
-          {/* OUR GOAL (formerly AboutYourPlan) */}
+          {/* OUR GOAL */}
           <AboutYourPlan />
 
           {/* HOLISTIC EXPLANATIONS */}
           <HolisticExplanation />
 
-          {/* Traditional Explanation Sections */}
+          {/* STANDARD EXPLANATIONS */}
           <ExplanationSections />
 
-          {/* SECOND OFFER SECTION */}
+          {/* SECOND OFFER */}
           <OfferSection 
             positiveComponents={positiveComponents}
             negativeComponent={negativeComponent}
