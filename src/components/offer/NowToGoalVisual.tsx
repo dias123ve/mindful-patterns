@@ -52,13 +52,13 @@ const NowToGoalVisual = ({
                 <div key={comp.id} className="space-y-1">
 
                   {/* LABEL */}
-                  <div className="flex justify-between px-1 w-[58%] mx-auto">
+                  <div className="flex justify-between px-1 w-[64%] mx-auto">
                     <span className="text-[15px] font-semibold text-black">{comp.name}</span>
                     <span className="text-[13px] text-black opacity-80">(Strong)</span>
                   </div>
 
                   {/* BAR */}
-                  <div className="relative h-2 rounded-full bg-[#E5E7EB] w-[58%] mx-auto">
+                  <div className="relative h-2 rounded-full bg-[#E5E7EB] w-[64%] mx-auto">
                     <div
                       className="h-full rounded-full"
                       style={{ backgroundColor: "#FFB74D", width: "100%" }}
