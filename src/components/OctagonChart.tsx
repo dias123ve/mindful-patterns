@@ -1,83 +1,74 @@
 import React from "react";
-import { Radar } from "react-chartjs-2";
-import {
-  Chart as ChartJS,
-  RadialLinearScale,
-  PointElement,
-  LineElement,
-  Filler,
-  Tooltip,
-  Legend,
-} from "chart.js";
-
-ChartJS.register(
-  RadialLinearScale,
-  PointElement,
-  LineElement,
-  Filler,
-  Tooltip,
-  Legend
-);
 
 interface OctagonChartProps {
   scores: Record<string, number>;
-  labels: string[];
+  componentNames: Record<string, string>;
 }
 
-const OctagonChart: React.FC<OctagonChartProps> = ({ scores, labels }) => {
-  // Convert the score dictionary into an ordered array matching the labels
-  const dataValues = labels.map((key) => scores[key] ?? 0);
+const OctagonChart: React.FC<OctagonChartProps> = ({ scores, componentNames }) => {
+  const maxScore = 50; // max per component
+  const keys = Object.keys(scores);
 
-  const data = {
-    labels,
-    datasets: [
-      {
-        label: "Your Profile",
-        data: dataValues,
-        backgroundColor: "rgba(99, 102, 241, 0.25)", // soft primary
-        borderColor: "rgba(99, 102, 241, 1)", // primary
-        borderWidth: 2,
-        pointBackgroundColor: "rgba(99, 102, 241, 1)",
-        pointRadius: 3,
-      },
-    ],
-  };
+  // Convert polar coordinates to x,y positions
+  const points = keys.map((key, i) => {
+    const angle = (Math.PI * 2 * i) / keys.length - Math.PI / 2; // start at top
+    const radius = 120 * (scores[key] / maxScore); // scale radius by score
+    const x = radius * Math.cos(angle);
+    const y = radius * Math.sin(angle);
+    return `${x},${y}`;
+  });
 
-  const options = {
-    responsive: true,
-    maintainAspectRatio: false,
-    scales: {
-      r: {
-        suggestedMin: 0,
-        suggestedMax: 100, // adjust if your scale differs
-        ticks: {
-          display: false,
-        },
-        grid: {
-          color: "rgba(0,0,0,0.08)",
-        },
-        angleLines: {
-          color: "rgba(0,0,0,0.1)",
-        },
-        pointLabels: {
-          font: {
-            size: 12,
-            family: "'Inter', sans-serif",
-          },
-          color: "#6b7280", // muted grey
-        },
-      },
-    },
-    plugins: {
-      legend: {
-        display: false,
-      },
-    },
-  };
+  // Outer perfect octagon (for reference grid)
+  const outerPoints = keys.map((_, i) => {
+    const angle = (Math.PI * 2 * i) / keys.length - Math.PI / 2;
+    const radius = 120; // full radius
+    const x = radius * Math.cos(angle);
+    const y = radius * Math.sin(angle);
+    return `${x},${y}`;
+  });
 
   return (
-    <div className="w-full h-72 md:h-80 lg:h-96">
-      <Radar data={data} options={options} />
+    <div className="w-full flex justify-center">
+      <svg width="320" height="320" viewBox="-160 -160 320 320">
+        {/* Outer octagon */}
+        <polygon
+          points={outerPoints.join(" ")}
+          fill="none"
+          stroke="rgba(0,0,0,0.15)"
+          strokeWidth="1.5"
+        />
+
+        {/* Filled score shape */}
+        <polygon
+          points={points.join(" ")}
+          fill="rgba(99,102,241,0.35)"
+          stroke="rgb(99,102,241)"
+          strokeWidth="2"
+        />
+
+        {/* Labels around the octagon */}
+        {keys.map((key, i) => {
+          const angle = (Math.PI * 2 * i) / keys.length - Math.PI / 2;
+          const labelRadius = 150;
+          const x = labelRadius * Math.cos(angle);
+          const y = labelRadius * Math.sin(angle);
+
+          return (
+            <text
+              key={key}
+              x={x}
+              y={y}
+              fill="#6b7280"
+              fontSize="11"
+              fontFamily="Inter, sans-serif"
+              textAnchor="middle"
+              alignmentBaseline="middle"
+            >
+              {componentNames[key] ?? key}
+            </text>
+          );
+        })}
+      </svg>
     </div>
   );
 };
