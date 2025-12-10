@@ -2,8 +2,16 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Brain, BookOpen, Loader2, CheckCircle2, Sparkles, AlertTriangle, Download } from "lucide-react";
+import {
+  Brain,
+  BookOpen,
+  Loader2,
+  CheckCircle2,
+  AlertTriangle,
+  Download,
+} from "lucide-react";
 import { toast } from "sonner";
+import OctagonChart from "@/components/OctagonChart";
 
 interface ComponentData {
   id: string;
@@ -20,8 +28,14 @@ interface ComponentData {
 const Results = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [positiveComponents, setPositiveComponents] = useState<ComponentData[]>([]);
-  const [negativeComponent, setNegativeComponent] = useState<ComponentData | null>(null);
+  const [componentScores, setComponentScores] = useState<
+    Record<string, number>
+  >({});
+  const [positiveComponents, setPositiveComponents] = useState<ComponentData[]>(
+    []
+  );
+  const [negativeComponent, setNegativeComponent] =
+    useState<ComponentData | null>(null);
 
   useEffect(() => {
     fetchResults();
@@ -38,11 +52,14 @@ const Results = () => {
     }
 
     try {
-      let componentScores: Record<string, number> = {};
-      
+      let scores: Record<string, number> = {};
+
+      // Try loading from sessionStorage
       if (componentScoresStr) {
-        componentScores = JSON.parse(componentScoresStr);
+        scores = JSON.parse(componentScoresStr);
+        setComponentScores(scores);
       } else {
+        // Fallback to database
         const { data: submission, error: subError } = await supabase
           .from("quiz_submissions")
           .select("component_scores")
@@ -50,26 +67,33 @@ const Results = () => {
           .single();
 
         if (subError) throw subError;
-        componentScores = (submission?.component_scores as Record<string, number>) || {};
+
+        scores = (submission?.component_scores ||
+          {}) as Record<string, number>;
+        setComponentScores(scores);
       }
 
       const { data: componentsData, error: compError } = await supabase
         .from("components")
-        .select("id, name, component_key, description_positive, example_positive, pdf_positive_url, description_negative, example_negative, pdf_negative_url");
+        .select(
+          "id, name, component_key, description_positive, example_positive, pdf_positive_url, description_negative, example_negative, pdf_negative_url"
+        );
 
       if (compError) throw compError;
 
-      const sortedKeys = Object.entries(componentScores)
+      const sortedKeys = Object.entries(scores)
         .sort(([, a], [, b]) => b - a)
         .map(([key]) => key);
 
       const sortedComponents = sortedKeys
-        .map(key => componentsData?.find(c => c.component_key === key))
+        .map((key) => componentsData?.find((c) => c.component_key === key))
         .filter(Boolean) as ComponentData[];
 
       if (sortedComponents.length >= 3) {
         setPositiveComponents(sortedComponents.slice(0, 2));
-        setNegativeComponent(sortedComponents[sortedComponents.length - 1]);
+        setNegativeComponent(
+          sortedComponents[sortedComponents.length - 1]
+        );
       } else if (sortedComponents.length === 2) {
         setPositiveComponents([sortedComponents[0]]);
         setNegativeComponent(sortedComponents[1]);
@@ -96,6 +120,7 @@ const Results = () => {
 
   return (
     <div className="min-h-screen bg-gradient-hero">
+      {/* HEADER */}
       <header className="container mx-auto px-4 py-6">
         <Link to="/" className="flex items-center gap-2">
           <Brain className="h-7 w-7 text-primary" />
@@ -107,19 +132,40 @@ const Results = () => {
 
       <main className="container mx-auto px-4 py-8 pb-16">
         <div className="max-w-3xl mx-auto">
+
+          {/* NEW HEADER WITH CHART */}
           <div className="text-center mb-12 animate-fade-in-up">
             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6">
               <CheckCircle2 className="h-8 w-8 text-primary" />
             </div>
+
             <h1 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-4">
-              Your Thinking Profile
+              Your Self Profile
             </h1>
+
             <p className="text-muted-foreground max-w-md mx-auto">
-              Based on your responses, here are your key thinking patterns.
+              Based on your responses, here are your patterns.
             </p>
+
+            {/* OCTAGON CHART */}
+            <div className="max-w-md mx-auto mt-10">
+              <OctagonChart
+                scores={componentScores}
+                labels={[
+                  "self_identity",
+                  "self_esteem",
+                  "self_compassion",
+                  "emotional_sensitivity",
+                  "motivation",
+                  "self_awareness",
+                  "values_clarity",
+                  "direction_focus",
+                ]}
+              />
+            </div>
           </div>
 
-          {/* YOUR STRENGTHS */}
+          {/* HIGHEST SCORES */}
           {positiveComponents.length > 0 && (
             <section className="mb-12">
               <div className="flex items-center gap-3 mb-6">
@@ -127,7 +173,7 @@ const Results = () => {
                   <CheckCircle2 className="h-5 w-5 text-green-600" />
                 </div>
                 <h2 className="text-2xl font-display font-bold text-foreground">
-                  Your Strengths
+                  Your Highest Scores
                 </h2>
               </div>
 
@@ -149,7 +195,8 @@ const Results = () => {
                         </h3>
 
                         <p className="text-muted-foreground mb-4 leading-relaxed">
-                          {component.description_positive || "No description provided."}
+                          {component.description_positive ||
+                            "No description provided."}
                         </p>
 
                         <div className="bg-green-50 dark:bg-green-950/30 rounded-xl p-4 mb-4">
@@ -158,7 +205,8 @@ const Results = () => {
                             Examples in Daily Life
                           </h4>
                           <p className="text-sm text-muted-foreground">
-                            {component.example_positive || "No examples provided."}
+                            {component.example_positive ||
+                              "No examples provided."}
                           </p>
                         </div>
 
@@ -181,7 +229,7 @@ const Results = () => {
             </section>
           )}
 
-          {/* WEAK SPOT */}
+          {/* LOWEST SCORE */}
           {negativeComponent && (
             <section className="mb-16">
               <div className="flex items-center gap-3 mb-6">
@@ -189,7 +237,7 @@ const Results = () => {
                   <AlertTriangle className="h-5 w-5 text-amber-600" />
                 </div>
                 <h2 className="text-2xl font-display font-bold text-foreground">
-                  Your Growth Area
+                  Your Lowest Score
                 </h2>
               </div>
 
@@ -208,7 +256,8 @@ const Results = () => {
                     </h3>
 
                     <p className="text-muted-foreground mb-4 leading-relaxed">
-                      {negativeComponent.description_negative || "No description provided."}
+                      {negativeComponent.description_negative ||
+                        "No description provided."}
                     </p>
 
                     <div className="bg-amber-50 dark:bg-amber-950/30 rounded-xl p-4 mb-4">
@@ -217,7 +266,8 @@ const Results = () => {
                         How This Shows Up
                       </h4>
                       <p className="text-sm text-muted-foreground">
-                        {negativeComponent.example_negative || "No examples provided."}
+                        {negativeComponent.example_negative ||
+                          "No examples provided."}
                       </p>
                     </div>
 
@@ -238,7 +288,7 @@ const Results = () => {
             </section>
           )}
 
-          {/* NEW CTA — CONTINUE BUTTON */}
+          {/* CONTINUE BUTTON */}
           <div className="text-center animate-fade-in-up mt-12">
             <Button
               size="lg"
