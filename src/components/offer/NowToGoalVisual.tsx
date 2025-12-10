@@ -101,58 +101,55 @@ const NowToGoalVisual = ({
         </div>
 
         {/* CENTER ARROW */}
-  <div className="flex justify-center items-center pt-10 pb-4 relative overflow-hidden w-40 h-20">
-
-  {/* Wrapper bergerak */}
-  <div
-    className="absolute flex gap-6"
-    style={{
-      animation: "arrowMarquee 2.8s linear infinite"
-    }}
+  <div className="arrow-container">
+  <svg 
+    className="arrow-icon"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
   >
-    {/* Panah 1 */}
-    <svg
-      className="w-10 h-10 text-gray-300 shrink-0"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <polyline points="9 18 15 12 9 6"></polyline>
-      <polyline points="15 18 21 12 15 6"></polyline>
-    </svg>
-
-    {/* Panah 2 (duplikasi untuk seamless loop) */}
-    <svg
-      className="w-10 h-10 text-gray-300 shrink-0"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <polyline points="9 18 15 12 9 6"></polyline>
-      <polyline points="15 18 21 12 15 6"></polyline>
-    </svg>
-  </div>
+    <polyline points="9 18 15 12 9 6"></polyline>
+    <polyline points="15 18 21 12 15 6"></polyline>
+  </svg>
 
   <style>{`
-    @keyframes arrowMarquee {
+    .arrow-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding-top: 40px;
+      padding-bottom: 20px;
+    }
+
+    .arrow-icon {
+      width: 90px;
+      height: 90px;
+      color: #d1d5db; /* gray-300 */
+      animation: slideRight 3.8s ease-in-out infinite;
+    }
+
+    @keyframes slideRight {
       0% {
-        transform: translateX(-40%);
+        transform: translateX(0);
+        opacity: 1;
+      }
+      70% {
+        transform: translateX(40px);
+        opacity: 1;
+      }
+      80% {
+        opacity: 0; /* menghilang supaya reset tak terlihat */
       }
       100% {
-        transform: translateX(40%);
+        transform: translateX(0);
+        opacity: 0; 
       }
     }
   `}</style>
 </div>
-
-
-
 
 
         {/* RIGHT — FUTURE YOU */}
