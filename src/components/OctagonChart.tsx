@@ -6,56 +6,48 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-interface OctagramChartProps {
-  scores: Record<string, number>;
-}
-
-// Order matters to keep polygon consistent
-const ORDER = [
-  "self-identity",
-  "self-esteem",
-  "self-confidence",
-  "self-agency",
-  "self-assertiveness",
-  "self-regulation",
-  "self-motivation",
-  "self-compassion",
+// ---------------------
+// DATA (EDITABLE)
+// ---------------------
+const rawData = [
+  { label: "Self-Identity", value: 72 },
+  { label: "Self-Esteem", value: 55 },
+  { label: "Self-Confidence", value: 48 },
+  { label: "Self-Agency", value: 68 },
+  { label: "Self-Assertiveness", value: 40 },
+  { label: "Self-Regulation", value: 35 }, // lowest
+  { label: "Self-Motivation", value: 60 },
+  { label: "Self-Compassion", value: 45 },
 ];
 
-// Convert DB object → chart data array
-const formatData = (scores: Record<string, number>) =>
-  ORDER.map((key) => ({
-    label: key
-      .replace(/self-/g, "Self-")
-      .replace(/-/g, " ")
-      .replace(/\b\w/g, (c) => c.toUpperCase()),
-    value: scores[key] ?? 0,
-  }));
-
 // ---------------------
-// DOT LOGIC
+// LOGIC FOR HIGHLIGHT
 // ---------------------
-const getHighlightType = (data: any[]) => {
-  const values = data.map((d) => d.value);
-  const sorted = [...values].sort((a, b) => b - a);
+const values = rawData.map((d) => d.value);
+const sorted = [...values].sort((a, b) => b - a);
 
-  const highestTwo = sorted.slice(0, 2);
-  const lowest = sorted[sorted.length - 1];
+const highestTwo = sorted.slice(0, 2);
+const lowestOne = sorted[sorted.length - 1];
 
-  return (value: number) => {
-    if (value === lowest) return "low";
-    if (highestTwo.includes(value)) return "high";
-    return "normal";
-  };
+const getType = (value: number) => {
+  if (value === lowestOne) return "low";
+  if (highestTwo.includes(value)) return "high";
+  return "normal";
 };
 
+// 🔥 APPLY DOT TYPE INTO DATA
+const data = rawData.map((d) => ({
+  ...d,
+  dotType: getType(d.value),
+}));
+
 // ---------------------
-// CUSTOM DOT
+// CUSTOM DOT COMPONENT
 // ---------------------
 const CustomDot = ({ cx, cy, payload }: any) => {
   if (!cx || !cy || !payload) return null;
 
-  const type = payload._dotType;
+  const type = payload.dotType; // ← FIXED: use dotType, not payload.value
 
   if (type === "high") {
     return (
@@ -77,14 +69,23 @@ const CustomDot = ({ cx, cy, payload }: any) => {
     );
   }
 
-  return <circle cx={cx} cy={cy} r={5} fill="white" stroke="#14B8A6" strokeWidth={2} />;
+  return (
+    <circle
+      cx={cx}
+      cy={cy}
+      r={5}
+      fill="white"
+      stroke="#14B8A6"
+      strokeWidth={2}
+    />
+  );
 };
 
 // ---------------------
 // CUSTOM LABEL
 // ---------------------
 const CustomLabel = ({ x, y, payload, index }: any) => {
-  if (!x || !y) return null;
+  if (!x || !y || !payload) return null;
 
   const dyAdjust =
     index === 0 ? -6 : index === 4 ? 12 : 4;
@@ -107,15 +108,10 @@ const CustomLabel = ({ x, y, payload, index }: any) => {
 // ---------------------
 // MAIN COMPONENT
 // ---------------------
-const OctagramChart = ({ scores }: OctagramChartProps) => {
-  const data = formatData(scores);
-
-  const typeChecker = getHighlightType(data);
-  data.forEach((d) => (d._dotType = typeChecker(d.value)));
-
+const OctagramChart = () => {
   return (
     <div className="flex flex-col items-center mt-1">
-      {/* Radar Chart */}
+      {/* RADAR CHART */}
       <div className="w-full max-w-xl">
         <ResponsiveContainer width="100%" height={430}>
           <RadarChart cx="50%" cy="50%" outerRadius="78%" data={data}>
@@ -139,15 +135,13 @@ const OctagramChart = ({ scores }: OctagramChartProps) => {
         </ResponsiveContainer>
       </div>
 
-      {/* Legend */}
+      {/* LEGEND */}
       <div className="flex gap-6 mt-1 text-sm text-gray-600">
         <div className="flex items-center gap-2">
-          <span className="w-3 h-3 rounded-full bg-[#27D787]" />
-          Top Scores
+          <span className="w-3 h-3 rounded-full bg-[#27D787]" /> Top Scores
         </div>
         <div className="flex items-center gap-2">
-          <span className="w-3 h-3 rounded-full bg-[#FF8A3D]" />
-          Growth Area
+          <span className="w-3 h-3 rounded-full bg-[#FF8A3D]" /> Growth Area
         </div>
       </div>
     </div>
