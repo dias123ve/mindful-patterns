@@ -101,43 +101,42 @@ const NowToGoalVisual = ({
         </div>
 
         {/* CENTER ARROW */}
-      <div className="flex justify-center items-center pt-16 pb-8">
-  <svg
-    className="w-24 h-24 text-gray-300"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    style={{
-      animation: "arrowSmooth 3.6s cubic-bezier(0.4, 0, 0.2, 1) infinite"
-    }}
-  >
-    <polyline points="9 18 15 12 9 6"></polyline>
-    <polyline points="15 18 21 12 15 6"></polyline>
-  </svg>
+    <div className="flex justify-center items-center pt-16 pb-8">
+  <div className="relative w-32 h-12 overflow-hidden flex items-center justify-center">
+
+    <svg
+      className="absolute w-16 h-16 text-gray-300 arrow-smooth"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <polyline points="9 18 15 12 9 6"></polyline>
+      <polyline points="15 18 21 12 15 6"></polyline>
+    </svg>
+
+  </div>
 
   <style>{`
-    @keyframes arrowSmooth {
+    .arrow-smooth {
+      animation: smooth-drift 2.8s linear infinite;
+    }
+
+    @keyframes smooth-drift {
       0% {
-        transform: translateX(-22px);
+        transform: translateX(-140%);
         opacity: 0;
       }
-      20% {
-        transform: translateX(-10px);
-        opacity: 0.6;
-      }
-      50% {
-        transform: translateX(0px);
+      15% {
         opacity: 1;
       }
-      80% {
-        transform: translateX(22px);
-        opacity: 0.6;
+      85% {
+        opacity: 1;
       }
       100% {
-        transform: translateX(32px);
+        transform: translateX(140%);
         opacity: 0;
       }
     }
