@@ -83,8 +83,28 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
 
   return (
     <div className="octagram-chart-container">
-      <ResponsiveContainer width="100%" height={500}>
-        <RadarChart cx="50%" cy="50%" outerRadius="70%" data={data}>
+    <ResponsiveContainer width="100%" height={600}>
+  <RadarChart
+    cx="50%"
+    cy="50%"
+    outerRadius="75%"
+    data={data}
+    margin={{ top: 60, right: 60, bottom: 60, left: 60 }}
+  >
+
+<div className="flex justify-center gap-6 mt-4 text-sm text-gray-600">
+  <div className="flex items-center gap-2">
+    <span className="w-3 h-3 rounded-full bg-[#27D787]"></span>
+    <span>Top Score</span>
+  </div>
+
+  <div className="flex items-center gap-2">
+    <span className="w-3 h-3 rounded-full bg-[#FF8A3D]"></span>
+    <span>Grow Area</span>
+  </div>
+</div>
+
+    
           <PolarGrid stroke="#e2e8f0" strokeWidth={1} gridType="polygon" />
 
           <PolarAngleAxis dataKey="label" tick={CustomLabel} tickLine={false} />
