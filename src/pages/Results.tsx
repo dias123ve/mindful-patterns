@@ -163,7 +163,6 @@ const Results = () => {
                 componentNames={componentNames}
               />
             </div>
-          </div>
 
           {/* YOUR HIGHEST SCORES */}
           {positiveComponents.length > 0 && (
