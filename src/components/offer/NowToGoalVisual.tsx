@@ -9,7 +9,7 @@ interface ComponentData {
 interface NowToGoalVisualProps {
   positiveComponents: ComponentData[];
   negativeComponent: ComponentData | null;
-  componentScores: Record<string, number>; // NEW
+  componentScores: Record<string, number>;
 }
 
 const MAX_SCORE = 50;
@@ -19,48 +19,61 @@ const NowToGoalVisual = ({
   negativeComponent,
   componentScores
 }: NowToGoalVisualProps) => {
-
-  // ambil gender dari sessionStorage
+  // gender from session (default to female if not set)
   const gender = sessionStorage.getItem("gender") === "male" ? "male" : "female";
 
   const personNowSrc = `/images/${gender}_now.png`;
   const personGoalSrc = `/images/${gender}_goal.png`;
 
-  // fungsi hitung bar
+  /**
+   * Now widths:
+   * - strongest components scale up to 70%
+   * - lowest component uses a "blown" scale (100%) so low scores look visibly small,
+   *   but we enforce a minimum width so a tiny score still shows a thin bar
+   */
   const getNowWidth = (score: number, isLowest: boolean) => {
+    const s = Math.max(0, Number(score || 0));
     if (isLowest) {
-      return Math.min((score / MAX_SCORE) * 120, 40) + "%";
+      // aggressive scale for low so it looks small, but min 8% and max 40%
+      const pct = (s / MAX_SCORE) * 100;
+      return Math.max(8, Math.min(pct, 40)) + "%";
     }
-    return Math.min((score / MAX_SCORE) * 80, 80) + "%";
+    // for non-low (moderate/strong), cap at 70% and ensure minimal visibility if score > 0
+    const pct = (s / MAX_SCORE) * 70;
+    return (s > 0 ? Math.max(6, Math.min(pct, 70)) : "6%") as any;
   };
 
+  /**
+   * Future widths:
+   * - not full width to avoid feeling "perfect"
+   * - strengths => 92%
+   * - weakest => 78%
+   */
   const getGoalWidth = (isLowest: boolean) => {
-    return isLowest ? "90%" : "100%";
+    return isLowest ? "78%" : "92%";
   };
 
   return (
     <div className="bg-card rounded-2xl p-6 md:p-8 shadow-soft border border-border fade-up">
-
-      <div className="grid md:grid-cols-[1fr_auto_1fr] gap-6 md:gap-8 items-center">
-
-        {/* NOW SECTION */}
+      <div className="grid md:grid-cols-[1fr_auto_1fr] gap-6 md:gap-8 items-start">
+        {/* LEFT: NOW column */}
         <div className="space-y-4">
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             Now
           </h3>
 
-          {/* FOTO NOW */}
-          <div className="flex justify-center md:hidden mb-4">
+          {/* Avatar on top for desktop */}
+          <div className="hidden md:flex justify-center mb-3">
             <img
               src={personNowSrc}
               alt="Now avatar"
-              className="w-24 h-24 object-contain rounded-xl shadow"
+              className="w-20 h-20 object-cover rounded-xl shadow"
             />
           </div>
 
           <div className="space-y-3">
             {positiveComponents.map((comp) => {
-              const score = componentScores[comp.component_key] || 0;
+              const score = componentScores?.[comp.component_key] ?? 0;
               return (
                 <div key={comp.id} className="space-y-1.5">
                   <div className="flex items-center justify-between text-sm">
@@ -82,7 +95,7 @@ const NowToGoalVisual = ({
 
             {negativeComponent && (
               (() => {
-                const score = componentScores[negativeComponent.component_key] || 0;
+                const score = componentScores?.[negativeComponent.component_key] ?? 0;
                 return (
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between text-sm">
@@ -105,30 +118,39 @@ const NowToGoalVisual = ({
           </div>
         </div>
 
-        {/* CENTER VISUAL: FOTO NOW → FOTO GOAL */}
-        <div className="flex flex-col items-center gap-4">
-          <img
-            src={personNowSrc}
-            alt="Now avatar"
-            className="hidden md:block w-24 h-24 object-contain rounded-xl shadow"
-          />
-
-          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-            <ArrowRight className="h-5 w-5 text-primary" />
+        {/* CENTER: avatar small (mobile) + arrow */}
+        <div className="flex flex-col items-center gap-4 justify-start">
+          {/* Mobile avatars */}
+          <div className="md:hidden flex items-center gap-2">
+            <img src={personNowSrc} alt="Now" className="w-16 h-16 object-cover rounded-xl shadow" />
+            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+              <ArrowRight className="h-4 w-4 text-primary rotate-90" />
+            </div>
+            <img src={personGoalSrc} alt="Goal" className="w-16 h-16 object-cover rounded-xl shadow" />
           </div>
 
-          <img
-            src={personGoalSrc}
-            alt="Goal avatar"
-            className="hidden md:block w-24 h-24 object-contain rounded-xl shadow"
-          />
+          {/* Desktop arrow */}
+          <div className="hidden md:flex items-center">
+            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+              <ArrowRight className="h-5 w-5 text-primary" />
+            </div>
+          </div>
         </div>
 
-        {/* FUTURE SECTION */}
+        {/* RIGHT: FUTURE column */}
         <div className="space-y-4">
           <h3 className="text-sm font-semibold uppercase tracking-wide text-success">
             Future You
           </h3>
+
+          {/* Avatar on top for desktop */}
+          <div className="hidden md:flex justify-center mb-3">
+            <img
+              src={personGoalSrc}
+              alt="Goal avatar"
+              className="w-20 h-20 object-cover rounded-xl shadow"
+            />
+          </div>
 
           <div className="space-y-3">
             {positiveComponents.map((comp) => (
@@ -168,7 +190,6 @@ const NowToGoalVisual = ({
             )}
           </div>
         </div>
-
       </div>
     </div>
   );
