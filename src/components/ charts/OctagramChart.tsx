@@ -4,13 +4,14 @@ import {
   PolarAngleAxis,
   Radar,
   ResponsiveContainer,
+  Customized,
 } from "recharts";
 
 interface OctagramChartProps {
   scores: Record<string, number>;
 }
 
-// ORDER of components for consistent radar shape
+// ORDER for consistent display
 const ORDER = [
   "self-identity",
   "self-esteem",
@@ -22,7 +23,7 @@ const ORDER = [
   "self-compassion",
 ];
 
-// Convert Supabase scores → chart-ready data
+// Format Supabase scores into chart data
 const formatData = (scores: Record<string, number>) => {
   const values = ORDER.map((k) => scores[k] ?? 0);
   const sorted = [...values].sort((a, b) => b - a);
@@ -30,7 +31,7 @@ const formatData = (scores: Record<string, number>) => {
   const highestTwo = sorted.slice(0, 2);
   const lowest = sorted[sorted.length - 1];
 
-  return ORDER.map((key, index) => {
+  return ORDER.map((key) => {
     const value = scores[key] ?? 0;
 
     let dotType: "high" | "low" | "normal" = "normal";
@@ -45,52 +46,11 @@ const formatData = (scores: Record<string, number>) => {
         .replace(/\b\w/g, (c) => c.toUpperCase()),
       value,
       dotType,
-
-      // ⭐ Secret Trick to force Recharts to include dotType into payload
-      _dotValue: 1,
     };
   });
 };
 
-// CUSTOM DOT
-const CustomDot = ({ cx, cy, payload }: any) => {
-  if (!payload || !cx || !cy) return null;
-
-  const type = payload.dotType;
-
-  if (type === "high") {
-    return (
-      <g>
-        <circle cx={cx} cy={cy} r={18} fill="#27D787" opacity={0.28} />
-        <circle cx={cx} cy={cy} r={10} fill="#27D787" />
-        <circle cx={cx} cy={cy} r={4} fill="white" opacity={0.9} />
-      </g>
-    );
-  }
-
-  if (type === "low") {
-    return (
-      <g>
-        <circle cx={cx} cy={cy} r={18} fill="#FF8A3D" opacity={0.28} />
-        <circle cx={cx} cy={cy} r={10} fill="#FF8A3D" />
-        <circle cx={cx} cy={cy} r={4} fill="white" opacity={0.9} />
-      </g>
-    );
-  }
-
-  return (
-    <circle
-      cx={cx}
-      cy={cy}
-      r={5}
-      fill="white"
-      stroke="#14B8A6"
-      strokeWidth={2}
-    />
-  );
-};
-
-// CUSTOM LABEL — prevent overlap
+// Custom Label (prevents overlap)
 const CustomLabel = ({ x, y, payload, index }: any) => {
   if (!x || !y) return null;
 
@@ -116,10 +76,9 @@ const OctagramChart = ({ scores }: OctagramChartProps) => {
 
   return (
     <div className="flex flex-col items-center mt-1">
-      {/* Radar Chart */}
       <div className="w-full max-w-xl">
         <ResponsiveContainer width="100%" height={430}>
-          <RadarChart cx="50%" cy="50%" outerRadius="78%" data={data}>
+          <RadarChart cx="50%" cy="50%" outerRadius="75%" data={data}>
             <PolarGrid stroke="#d7e2eb" strokeWidth={1} gridType="polygon" />
 
             <PolarAngleAxis
@@ -128,13 +87,91 @@ const OctagramChart = ({ scores }: OctagramChartProps) => {
               tickLine={false}
             />
 
+            {/* Main radar shape */}
             <Radar
               dataKey="value"
               stroke="#14B8A6"
               strokeWidth={2}
               fill="#4DD4AC"
               fillOpacity={0.35}
-              dot={<CustomDot />}
+              dot={false}
+            />
+
+            {/* ⭐ CUSTOM DOTS (HIGH, LOW, NORMAL) */}
+            <Customized
+              component={({ cx, cy, radius }) => {
+                const total = data.length;
+
+                return (
+                  <g>
+                    {data.map((entry, i) => {
+                      const angle =
+                        (Math.PI * 2 * i) / total - Math.PI / 2;
+                      const r = (entry.value / 100) * radius;
+
+                      const x = cx + r * Math.cos(angle);
+                      const y = cy + r * Math.sin(angle);
+
+                      if (entry.dotType === "high") {
+                        return (
+                          <g key={i}>
+                            <circle
+                              cx={x}
+                              cy={y}
+                              r={18}
+                              fill="#27D787"
+                              opacity={0.25}
+                            />
+                            <circle cx={x} cy={y} r={10} fill="#27D787" />
+                            <circle
+                              cx={x}
+                              cy={y}
+                              r={4}
+                              fill="white"
+                              opacity={0.9}
+                            />
+                          </g>
+                        );
+                      }
+
+                      if (entry.dotType === "low") {
+                        return (
+                          <g key={i}>
+                            <circle
+                              cx={x}
+                              cy={y}
+                              r={18}
+                              fill="#FF8A3D"
+                              opacity={0.25}
+                            />
+                            <circle cx={x} cy={y} r={10} fill="#FF8A3D" />
+                            <circle
+                              cx={x}
+                              cy={y}
+                              r={4}
+                              fill="white"
+                              opacity={0.9}
+                            />
+                          </g>
+                        );
+                      }
+
+                      return (
+                        <g key={i}>
+                          <circle
+                            cx={x}
+                            cy={y}
+                            r={5}
+                            fill="white"
+                            stroke="#14B8A6"
+                            strokeWidth={2}
+                          />
+                        </g>
+                      );
+                    })}
+                  </g>
+                );
+              }}
             />
           </RadarChart>
         </ResponsiveContainer>
