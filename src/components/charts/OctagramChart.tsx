@@ -133,7 +133,7 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
             cy="46%"
             outerRadius="68%"
             data={data}
-            margin={{ top: 10, right: 60, bottom: 10, left: 60 }}
+            margin={{ top: 10, right: 40, bottom: 10, left: 40 }}
           >
             <PolarGrid stroke="#e2e8f0" strokeWidth={1} gridType="polygon" />
             <PolarAngleAxis dataKey="label" tick={CustomLabel} tickLine={false} />
