@@ -25,7 +25,6 @@ const NowToGoalVisual = ({
   const personNowSrc = `/images/${gender}_now.png`;
   const personGoalSrc = `/images/${gender}_goal.png`;
 
-  // posisi bar
   const getStrongPos = (score: number) => Math.max((score / MAX_SCORE) * 78, 30);
   const getLowPos = (score: number) => Math.max((score / MAX_SCORE) * 45, 18);
 
@@ -43,6 +42,7 @@ const NowToGoalVisual = ({
           <img src={personNowSrc} className="w-[200px] h-auto object-contain mx-auto mb-2" />
 
           <div className="space-y-5">
+
             {positiveComponents.map((comp) => {
               const score = componentScores[comp.component_key] || 0;
               const pos = getStrongPos(score);
@@ -50,13 +50,13 @@ const NowToGoalVisual = ({
               return (
                 <div key={comp.id} className="space-y-1">
 
-                  {/* Title + Status */}
+                  {/* LABELS */}
                   <div className="flex justify-between px-1 w-[70%] mx-auto">
                     <span className="text-[15px] font-semibold">{comp.name}</span>
                     <span className="text-[13px] opacity-60">(Strong)</span>
                   </div>
 
-                  {/* TRACK */}
+                  {/* TRACK (ABU) */}
                   <div className="relative h-2 bg-[#D5D7DB] rounded-full w-[70%] mx-auto">
 
                     {/* BAR */}
@@ -75,13 +75,14 @@ const NowToGoalVisual = ({
               );
             })}
 
-            {/* LOW COMPONENT */}
+            {/* LOW */}
             {negativeComponent && (() => {
               const score = componentScores[negativeComponent.component_key] || 0;
               const pos = getLowPos(score);
 
               return (
                 <div className="space-y-1">
+
                   <div className="flex justify-between px-1 w-[70%] mx-auto">
                     <span className="text-[15px] font-semibold">{negativeComponent.name}</span>
                     <span className="text-[13px] opacity-60">(Low)</span>
@@ -100,15 +101,25 @@ const NowToGoalVisual = ({
                 </div>
               );
             })()}
+
           </div>
         </div>
 
-        {/* MIDDLE — BIG ARROW */}
-        <div className="flex justify-center items-center pt-14">
-          <div className="text-gray-400 text-4xl font-light select-none">
-            &gt;&gt;
-          </div>
-        </div>
+        {/* CENTER ARROW */}
+        <div className="flex justify-center items-center pt-18">
+  <svg 
+    className="w-20 h-20 text-gray-400 animate-ping"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <polyline points="9 18 15 12 9 6"></polyline>
+    <polyline points="15 18 21 12 15 6"></polyline>
+  </svg>
+</div>
 
         {/* RIGHT — FUTURE YOU */}
         <div className="text-center">
@@ -129,10 +140,16 @@ const NowToGoalVisual = ({
                   <span className="text-[13px] opacity-60">(Elevated)</span>
                 </div>
 
-                <div className="relative h-2 bg-[#D0E3D5] rounded-full w-[70%] mx-auto">
+                {/* TRACK KANAN — ABU */}
+                <div className="relative h-2 bg-[#D5D7DB] rounded-full w-[70%] mx-auto">
 
-                  <div className="absolute h-2 bg-emerald-500 rounded-full" style={{ width: "100%" }} />
+                  {/* BAR */}
+                  <div
+                    className="absolute h-2 rounded-full bg-emerald-500"
+                    style={{ width: "100%" }}
+                  />
 
+                  {/* DOT */}
                   <div
                     className="absolute -top-[4px] h-3 w-3 bg-emerald-600 rounded-full shadow"
                     style={{ left: "92%" }}
@@ -141,7 +158,7 @@ const NowToGoalVisual = ({
               </div>
             ))}
 
-            {/* Steady */}
+            {/* STEADY */}
             {negativeComponent && (
               <div className="space-y-1">
 
@@ -150,7 +167,7 @@ const NowToGoalVisual = ({
                   <span className="text-[13px] opacity-60">(Steady)</span>
                 </div>
 
-                <div className="relative h-2 bg-[#F0E6B8] rounded-full w-[70%] mx-auto">
+                <div className="relative h-2 bg-[#D5D7DB] rounded-full w-[70%] mx-auto">
 
                   <div
                     className="absolute h-2 rounded-full"
@@ -162,12 +179,12 @@ const NowToGoalVisual = ({
                     style={{ backgroundColor: "#FBC02D", left: "82%" }}
                   />
                 </div>
+
               </div>
             )}
 
           </div>
         </div>
-
       </div>
     </div>
   );
