@@ -101,11 +101,18 @@ const NowToGoalVisual = ({
         </div>
 
         {/* CENTER ARROW */}
-    <div className="flex justify-center items-center pt-16 pb-8">
-  <div className="relative w-32 h-12 overflow-hidden flex items-center justify-center">
+  <div className="flex justify-center items-center pt-10 pb-4 relative overflow-hidden w-40 h-20">
 
+  {/* Wrapper bergerak */}
+  <div
+    className="absolute flex gap-6"
+    style={{
+      animation: "arrowMarquee 2.8s linear infinite"
+    }}
+  >
+    {/* Panah 1 */}
     <svg
-      className="absolute w-16 h-16 text-gray-300 arrow-smooth"
+      className="w-10 h-10 text-gray-300 shrink-0"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -117,31 +124,33 @@ const NowToGoalVisual = ({
       <polyline points="15 18 21 12 15 6"></polyline>
     </svg>
 
+    {/* Panah 2 (duplikasi untuk seamless loop) */}
+    <svg
+      className="w-10 h-10 text-gray-300 shrink-0"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <polyline points="9 18 15 12 9 6"></polyline>
+      <polyline points="15 18 21 12 15 6"></polyline>
+    </svg>
   </div>
 
   <style>{`
-    .arrow-smooth {
-      animation: smooth-drift 2.8s linear infinite;
-    }
-
-    @keyframes smooth-drift {
+    @keyframes arrowMarquee {
       0% {
-        transform: translateX(-140%);
-        opacity: 0;
-      }
-      15% {
-        opacity: 1;
-      }
-      85% {
-        opacity: 1;
+        transform: translateX(-40%);
       }
       100% {
-        transform: translateX(140%);
-        opacity: 0;
+        transform: translateX(40%);
       }
     }
   `}</style>
 </div>
+
 
 
 
