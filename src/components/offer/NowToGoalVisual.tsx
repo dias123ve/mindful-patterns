@@ -9,11 +9,38 @@ interface ComponentData {
 interface NowToGoalVisualProps {
   positiveComponents: ComponentData[];
   negativeComponent: ComponentData | null;
+  componentScores: Record<string, number>; // NEW
 }
 
-const NowToGoalVisual = ({ positiveComponents, negativeComponent }: NowToGoalVisualProps) => {
+const MAX_SCORE = 50;
+
+const NowToGoalVisual = ({
+  positiveComponents,
+  negativeComponent,
+  componentScores
+}: NowToGoalVisualProps) => {
+
+  // ambil gender dari sessionStorage
+  const gender = sessionStorage.getItem("gender") === "male" ? "male" : "female";
+
+  const personNowSrc = `/images/${gender}_now.png`;
+  const personGoalSrc = `/images/${gender}_goal.png`;
+
+  // fungsi hitung bar
+  const getNowWidth = (score: number, isLowest: boolean) => {
+    if (isLowest) {
+      return Math.min((score / MAX_SCORE) * 120, 40) + "%";
+    }
+    return Math.min((score / MAX_SCORE) * 80, 80) + "%";
+  };
+
+  const getGoalWidth = (isLowest: boolean) => {
+    return isLowest ? "90%" : "100%";
+  };
+
   return (
     <div className="bg-card rounded-2xl p-6 md:p-8 shadow-soft border border-border fade-up">
+
       <div className="grid md:grid-cols-[1fr_auto_1fr] gap-6 md:gap-8 items-center">
 
         {/* NOW SECTION */}
@@ -22,59 +49,82 @@ const NowToGoalVisual = ({ positiveComponents, negativeComponent }: NowToGoalVis
             Now
           </h3>
 
-          <div className="space-y-3">
-            {positiveComponents.map((comp) => (
-              <div key={comp.id} className="space-y-1.5">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-foreground font-medium truncate pr-2">
-                    {comp.name}
-                  </span>
-                  <span className="text-muted-foreground font-medium shrink-0">Moderate</span>
-                </div>
+          {/* FOTO NOW */}
+          <div className="flex justify-center md:hidden mb-4">
+            <img
+              src={personNowSrc}
+              alt="Now avatar"
+              className="w-24 h-24 object-contain rounded-xl shadow"
+            />
+          </div>
 
-                <div className="h-2 bg-muted rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-muted-foreground/40 rounded-full transition-all duration-500"
-                    style={{ width: "55%" }}
-                  />
+          <div className="space-y-3">
+            {positiveComponents.map((comp) => {
+              const score = componentScores[comp.component_key] || 0;
+              return (
+                <div key={comp.id} className="space-y-1.5">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-foreground font-medium truncate pr-2">
+                      {comp.name}
+                    </span>
+                    <span className="text-muted-foreground font-medium shrink-0">Moderate</span>
+                  </div>
+
+                  <div className="h-2 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-muted-foreground/40 rounded-full transition-all duration-500"
+                      style={{ width: getNowWidth(score, false) }}
+                    />
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
 
             {negativeComponent && (
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-foreground font-medium truncate pr-2">
-                    {negativeComponent.name}
-                  </span>
-                  <span className="text-warning font-medium shrink-0">Low</span>
-                </div>
+              (() => {
+                const score = componentScores[negativeComponent.component_key] || 0;
+                return (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-foreground font-medium truncate pr-2">
+                        {negativeComponent.name}
+                      </span>
+                      <span className="text-warning font-medium shrink-0">Low</span>
+                    </div>
 
-                <div className="h-2 bg-muted rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-warning rounded-full transition-all duration-500"
-                    style={{ width: "25%" }}
-                  />
-                </div>
-              </div>
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-warning rounded-full transition-all duration-500"
+                        style={{ width: getNowWidth(score, true) }}
+                      />
+                    </div>
+                  </div>
+                );
+              })()
             )}
           </div>
         </div>
 
-        {/* ARROW */}
-        <div className="hidden md:flex items-center justify-center">
+        {/* CENTER VISUAL: FOTO NOW → FOTO GOAL */}
+        <div className="flex flex-col items-center gap-4">
+          <img
+            src={personNowSrc}
+            alt="Now avatar"
+            className="hidden md:block w-24 h-24 object-contain rounded-xl shadow"
+          />
+
           <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
             <ArrowRight className="h-5 w-5 text-primary" />
           </div>
+
+          <img
+            src={personGoalSrc}
+            alt="Goal avatar"
+            className="hidden md:block w-24 h-24 object-contain rounded-xl shadow"
+          />
         </div>
 
-        <div className="flex md:hidden items-center justify-center py-2">
-          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center rotate-90">
-            <ArrowRight className="h-4 w-4 text-primary" />
-          </div>
-        </div>
-
-        {/* FUTURE STATE */}
+        {/* FUTURE SECTION */}
         <div className="space-y-4">
           <h3 className="text-sm font-semibold uppercase tracking-wide text-success">
             Future You
@@ -93,7 +143,7 @@ const NowToGoalVisual = ({ positiveComponents, negativeComponent }: NowToGoalVis
                 <div className="h-2 bg-success-light rounded-full overflow-hidden">
                   <div
                     className="h-full bg-success rounded-full transition-all duration-500"
-                    style={{ width: "80%" }}
+                    style={{ width: getGoalWidth(false) }}
                   />
                 </div>
               </div>
@@ -111,7 +161,7 @@ const NowToGoalVisual = ({ positiveComponents, negativeComponent }: NowToGoalVis
                 <div className="h-2 bg-success-light rounded-full overflow-hidden">
                   <div
                     className="h-full bg-success rounded-full transition-all duration-500"
-                    style={{ width: "65%" }}
+                    style={{ width: getGoalWidth(true) }}
                   />
                 </div>
               </div>
