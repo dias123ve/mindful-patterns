@@ -5,6 +5,7 @@ import {
   PolarAngleAxis,
   PolarRadiusAxis,
   ResponsiveContainer,
+  Customized,
 } from "recharts";
 
 interface OctagonChartProps {
@@ -12,7 +13,7 @@ interface OctagonChartProps {
   componentNames?: Record<string, string>;
 }
 
-// FINAL VALID KEYS — MATCH DB EXACTLY
+// ORDERED KEYS — MATCH DB EXACTLY
 const ORDERED_KEYS = [
   "self-identity",
   "self-esteem",
@@ -25,16 +26,15 @@ const ORDERED_KEYS = [
 ];
 
 const OctagonChart = ({ scores, componentNames = {} }: OctagonChartProps) => {
-  // Protect against incomplete data
   const availableKeys = ORDERED_KEYS.filter((key) => scores[key] !== undefined);
   if (availableKeys.length < 3) return null; // avoid broken polygon
 
-  // Sorting for highlight markers
+  // Detect top 2 & lowest
   const sortedEntries = Object.entries(scores).sort((a, b) => b[1] - a[1]);
   const top2 = sortedEntries.slice(0, 2).map(([k]) => k);
   const lowest = sortedEntries[sortedEntries.length - 1]?.[0];
 
-  // Convert data for Recharts
+  // Prepare data for Recharts
   const data = ORDERED_KEYS.map((key) => ({
     key,
     subject: componentNames[key] || key.replace(/-/g, " "),
@@ -52,22 +52,20 @@ const OctagonChart = ({ scores, componentNames = {} }: OctagonChartProps) => {
       <div className="relative h-80 md:h-96">
         <ResponsiveContainer width="100%" height="100%">
           <RadarChart cx="50%" cy="50%" outerRadius="75%" data={data}>
+            {/* Gradients + Glow */}
             <defs>
-              {/* Gradient */}
               <linearGradient id="radarGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                 <stop offset="0%" stopColor="#8B5CF6" stopOpacity={0.65} />
                 <stop offset="50%" stopColor="#06B6D4" stopOpacity={0.45} />
                 <stop offset="100%" stopColor="#10B981" stopOpacity={0.65} />
               </linearGradient>
 
-              {/* Stroke */}
               <linearGradient id="strokeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                 <stop offset="0%" stopColor="#8B5CF6" />
                 <stop offset="50%" stopColor="#06B6D4" />
                 <stop offset="100%" stopColor="#10B981" />
               </linearGradient>
 
-              {/* Glow */}
               <filter id="radarGlow" x="-50%" y="-50%" width="200%" height="200%">
                 <feGaussianBlur stdDeviation="4" result="blur" />
                 <feMerge>
@@ -99,10 +97,10 @@ const OctagonChart = ({ scores, componentNames = {} }: OctagonChartProps) => {
               }}
             />
 
-            {/* Background */}
+            {/* Background radar */}
             <Radar dataKey="fullMark" fill="hsl(var(--muted))" fillOpacity={0.1} stroke="none" />
 
-            {/* Main Radar */}
+            {/* Main radar shape */}
             <Radar
               dataKey="value"
               stroke="url(#strokeGradient)"
@@ -110,39 +108,64 @@ const OctagonChart = ({ scores, componentNames = {} }: OctagonChartProps) => {
               fillOpacity={0.55}
               strokeWidth={2.4}
               filter="url(#radarGlow)"
-              dot={(props: any) => {
-                const { cx, cy, payload } = props;
+              dot={false} // disable default dots
+            />
 
-                // TOP 2 (Green)
-                if (payload.isTop2) {
-                  return (
-                    <g>
-                      <circle cx={cx} cy={cy} r={12} fill="#27D787" opacity={0.25} />
-                      <circle cx={cx} cy={cy} r={7} fill="#27D787" stroke="#fff" strokeWidth={2} />
-                    </g>
-                  );
-                }
+            {/* ⬇️ CUSTOM DOT LAYER — THIS MAKES THE MAGIC WORK */}
+            <Customized
+              component={({ height, width, cx, cy, outerRadius }) => {
+                const radius = outerRadius; // match radar radius
 
-                // LOWEST (Orange)
-                if (payload.isLowest) {
-                  return (
-                    <g>
-                      <circle cx={cx} cy={cy} r={12} fill="#FF8A3D" opacity={0.25} />
-                      <circle cx={cx} cy={cy} r={7} fill="#FF8A3D" stroke="#fff" strokeWidth={2} />
-                    </g>
-                  );
-                }
-
-                // Default dots
                 return (
-                  <circle
-                    cx={cx}
-                    cy={cy}
-                    r={4}
-                    fill="#fff"
-                    stroke="url(#strokeGradient)"
-                    strokeWidth={2}
-                  />
+                  <g>
+                    {data.map((entry, index) => {
+                      // Compute polar position
+                      const angle = (Math.PI * 2 * index) / data.length - Math.PI / 2;
+                      const r = (entry.value / 50) * radius;
+
+                      const x = cx + r * Math.cos(angle);
+                      const y = cy + r * Math.sin(angle);
+
+                      let size = 4;
+                      let fill = "#ffffff";
+                      let stroke = "url(#strokeGradient)";
+                      let glow = null;
+
+                      // Top 2 → Green
+                      if (entry.isTop2) {
+                        size = 10;
+                        fill = "#27D787";
+                        stroke = "#27D787";
+                        glow = (
+                          <circle cx={x} cy={y} r={18} fill="#27D787" opacity={0.25} />
+                        );
+                      }
+
+                      // Lowest → Orange
+                      if (entry.isLowest) {
+                        size = 10;
+                        fill = "#FF8A3D";
+                        stroke = "#FF8A3D";
+                        glow = (
+                          <circle cx={x} cy={y} r={18} fill="#FF8A3D" opacity={0.25} />
+                        );
+                      }
+
+                      return (
+                        <g key={index}>
+                          {glow}
+                          <circle
+                            cx={x}
+                            cy={y}
+                            r={size}
+                            fill={fill}
+                            stroke={stroke}
+                            strokeWidth={2}
+                          />
+                        </g>
+                      );
+                    })}
+                  </g>
                 );
               }}
             />
@@ -150,7 +173,7 @@ const OctagonChart = ({ scores, componentNames = {} }: OctagonChartProps) => {
         </ResponsiveContainer>
       </div>
 
-      {/* Legend */}
+      {/* Legend stays unchanged */}
       <div className="flex justify-center gap-4 mt-4">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <div className="w-3 h-3 bg-[#27D787] rounded-full" /> Top Strengths
