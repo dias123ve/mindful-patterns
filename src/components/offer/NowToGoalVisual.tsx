@@ -138,9 +138,9 @@ const NowToGoalVisual = ({
         opacity: 0;
       }
       2% {
-        opacity: 0.4;
+        opacity: 0.3;
       }
-      5% {
+      10% {
         opacity: 1;
         }
 
@@ -151,9 +151,11 @@ const NowToGoalVisual = ({
       }
 
       /* mulai hilang pelan */
-      71% {
+      72% {
+        opacity: 0.5;
+      }
+      74% {
         opacity: 0;
-      
       }
 
       /* reset posisi tapi tetap invisible */
