@@ -11,7 +11,7 @@ import {
   Download,
 } from "lucide-react";
 import { toast } from "sonner";
-import OctagonChart from "@/components/OctagonChart";
+import OctagonChart from "@/components/charts/OctagonChart";
 
 interface ComponentData {
   id: string;
