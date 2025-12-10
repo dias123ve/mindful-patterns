@@ -60,22 +60,25 @@ const OfferSection = ({ positiveComponents, negativeComponent }: OfferSectionPro
             </div>
           </div>
 
-          <div className="mb-6">
-            <div className="flex items-baseline gap-2 mb-2">
-              <span className="text-3xl font-display font-bold text-foreground">$12</span>
-              <span className="text-lg text-muted-foreground line-through">$30</span>
-            </div>
-            <p className="text-muted-foreground text-sm leading-relaxed">
-              A focused guide to help you improve this key area through clear, gentle improvements.
-            </p>
-            <ul className="space-y-2 text-sm">
-             {negativeComponent && (
-  <div className="flex items-center gap-2 text-orange-500 mt-1">
-    <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
-    <span>Challenge Guide: {negativeComponent.name}</span>
+         <div className="mb-6">
+  <div className="flex items-baseline gap-2 mb-2">
+    <span className="text-3xl font-display font-bold text-foreground">$12</span>
+    <span className="text-lg text-muted-foreground line-through">$30</span>
   </div>
-)}
-          </div>
+  <p className="text-muted-foreground text-sm leading-relaxed">
+    A focused guide to help you improve this key area through clear, gentle improvements.
+  </p>
+
+  <ul className="space-y-2 text-sm">
+    {negativeComponent && (
+      <li className="flex items-center gap-2 text-orange-500 mt-1">
+        <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+        <span>Challenge Guide: {negativeComponent.name}</span>
+      </li>
+    )}
+  </ul>
+</div>
+
 
           <Button 
             onClick={handleSinglePurchase} 
