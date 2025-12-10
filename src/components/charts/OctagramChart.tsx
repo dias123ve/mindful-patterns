@@ -68,7 +68,7 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
   const dx = x - cx;
   const dy = y - cy;
 
-  const scale = 1.25;
+  const scale = 1.05;
   let labelX = cx + dx * scale;
   let labelY = cy + dy * scale;
 
@@ -118,14 +118,22 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
     <div className="octagram-chart-container">
 
       {/* WRAPPER — batasi ukuran chart */}
-      <div className="mx-auto" style={{ width: "480px", maxWidth: "100%" }}>
+      <div 
+  className="mx-auto"
+  style={{
+    width: "480px",
+    maxWidth: "100%",
+    paddingLeft: "40px",
+    paddingRight: "40px"
+  }}
+>
         <ResponsiveContainer width="100%" height={520}>
           <RadarChart
             cx="50%"
             cy="46%"
             outerRadius="68%"
             data={data}
-            margin={{ top: 10, right: 30, bottom: 10, left: 30 }}
+            margin={{ top: 10, right: 60, bottom: 10, left: 60 }}
           >
             <PolarGrid stroke="#e2e8f0" strokeWidth={1} gridType="polygon" />
             <PolarAngleAxis dataKey="label" tick={CustomLabel} tickLine={false} />
