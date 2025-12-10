@@ -11,7 +11,9 @@ import {
   Download,
 } from "lucide-react";
 import { toast } from "sonner";
-import OctagonChart from "@/components/charts/OctagonChart";
+
+// ⭐ FIXED: import chart yang benar
+import OctagramChart from "@/components/charts/OctagramChart";
 
 interface ComponentData {
   id: string;
@@ -33,8 +35,7 @@ const Results = () => {
   const [componentNames, setComponentNames] = useState<Record<string, string>>({});
 
   const [positiveComponents, setPositiveComponents] = useState<ComponentData[]>([]);
-  const [negativeComponent, setNegativeComponent] =
-    useState<ComponentData | null>(null);
+  const [negativeComponent, setNegativeComponent] = useState<ComponentData | null>(null);
 
   useEffect(() => {
     fetchResults();
@@ -58,7 +59,7 @@ const Results = () => {
         scores = JSON.parse(componentScoresStr);
         setComponentScores(scores);
       } else {
-        // Fallback load from database
+        // Fallback from database
         const { data: submission, error: subError } = await supabase
           .from("quiz_submissions")
           .select("component_scores")
@@ -71,7 +72,7 @@ const Results = () => {
         setComponentScores(scores);
       }
 
-      // Load components metadata (names, descriptions, etc.)
+      // Load metadata
       const { data: componentsData, error: compError } = await supabase
         .from("components")
         .select(
@@ -80,16 +81,15 @@ const Results = () => {
 
       if (compError) throw compError;
 
-      // Build readable names map for chart labels
+      // Build readable names for labels
       const namesMap: Record<string, string> = {};
       componentsData?.forEach((c) => {
-        if (c.component_key) {
-          namesMap[c.component_key] = c.name;
-        }
+        if (c.component_key) namesMap[c.component_key] = c.name;
       });
+
       setComponentNames(namesMap);
 
-      // Sort components by score (high → low)
+      // Sort high → low
       const sortedKeys = Object.entries(scores)
         .sort(([, a], [, b]) => b - a)
         .map(([key]) => key);
@@ -98,7 +98,7 @@ const Results = () => {
         .map((key) => componentsData?.find((c) => c.component_key === key))
         .filter(Boolean) as ComponentData[];
 
-      // Pick 2 highest + 1 lowest
+      // Pick top 2 + 1 lowest
       if (sortedComponents.length >= 3) {
         setPositiveComponents(sortedComponents.slice(0, 2));
         setNegativeComponent(sortedComponents[sortedComponents.length - 1]);
@@ -142,29 +142,29 @@ const Results = () => {
         <div className="max-w-3xl mx-auto">
 
           {/* HEADER WITH CHART */}
-            <div className="flex items-center justify-center gap-3 mb-3">
-  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-    <CheckCircle2 className="h-6 w-6 text-primary" />
-  </div>
-
-  <h1 className="text-3xl md:text-4xl font-display font-bold text-foreground">
-    Your Self Profile
-  </h1>
-</div>
-
-<p className="text-muted-foreground max-w-md mx-auto text-center">
-  Based on your responses, here are your patterns.
-</p>
-
-            {/* OCTAGON CHART */}
-            <div className="max-w-md mx-auto mt-10">
-              <OctagonChart
-                scores={componentScores}
-                componentNames={componentNames}
-              />
+          <div className="flex items-center justify-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <CheckCircle2 className="h-6 w-6 text-primary" />
             </div>
 
-          {/* YOUR HIGHEST SCORES */}
+            <h1 className="text-3xl md:text-4xl font-display font-bold text-foreground">
+              Your Self Profile
+            </h1>
+          </div>
+
+          <p className="text-muted-foreground max-w-md mx-auto text-center">
+            Based on your responses, here are your patterns.
+          </p>
+
+          {/* ⭐ FIXED: OCTAGRAM CHART */}
+          <div className="max-w-md mx-auto mt-10">
+            <OctagramChart
+              scores={componentScores}
+              componentNames={componentNames}
+            />
+          </div>
+
+          {/* POSITIVE SECTIONS */}
           {positiveComponents.length > 0 && (
             <section className="mb-12">
               <div className="flex items-center gap-3 mb-6">
@@ -184,7 +184,7 @@ const Results = () => {
                     style={{ animationDelay: `${index * 0.1}s` }}
                   >
                     <div className="flex items-start gap-4">
-                      <div className="flex-shrink-0 w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center text-green-600 font-display font-bold">
+                      <div className="flex-shrink-0 w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center text-green-600">
                         {index + 1}
                       </div>
 
@@ -226,7 +226,7 @@ const Results = () => {
             </section>
           )}
 
-          {/* YOUR LOWEST SCORE */}
+          {/* NEGATIVE SECTION */}
           {negativeComponent && (
             <section className="mb-16">
               <div className="flex items-center gap-3 mb-6">
@@ -284,7 +284,7 @@ const Results = () => {
           )}
 
           {/* CONTINUE BUTTON */}
-          <div className="text-center animate-fade-in-up mt-12">
+          <div className="text-center mt-12">
             <Button
               size="lg"
               className="px-8 py-6 text-lg font-semibold"
