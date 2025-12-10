@@ -41,7 +41,7 @@ const OfferSection = ({ positiveComponents, negativeComponent }: OfferSectionPro
       <div className="grid md:grid-cols-2 gap-6 mb-12">
         
         {/* Single Ebook Offer */}
-        <div className="bg-card rounded-2xl p-6 md:p-8 shadow-soft border border-border fade-up flex flex-col justify-between">
+        <div className="bg-card rounded-2xl p-6 md:p-8 shadow-soft border border-border fade-up flex flex-col h-full">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-12 h-12 rounded-full bg-warning-light flex items-center justify-center">
               <BookOpen className="h-6 w-6 text-warning" />
@@ -55,12 +55,7 @@ const OfferSection = ({ positiveComponents, negativeComponent }: OfferSectionPro
                   Ebook to steady your {negativeComponent.name}
                 </p>
               )}
-              {negativeComponent && (
-  <div className="flex items-center gap-2 text-orange-500 mt-1">
-    <span className="w-2 h-2 rounded-full bg-orange-500" />
-    <span>Challenge Guide: {negativeComponent.name}</span>
-  </div>
-)}
+             
 
             </div>
           </div>
@@ -73,13 +68,20 @@ const OfferSection = ({ positiveComponents, negativeComponent }: OfferSectionPro
             <p className="text-muted-foreground text-sm leading-relaxed">
               A focused guide to help you improve this key area through clear, gentle improvements.
             </p>
+            <ul className="space-y-2 text-sm">
+             {negativeComponent && (
+  <div className="flex items-center gap-2 text-orange-500 mt-1">
+    <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+    <span>Challenge Guide: {negativeComponent.name}</span>
+  </div>
+)}
           </div>
 
           <Button 
             onClick={handleSinglePurchase} 
             variant="outline" 
             size="lg" 
-            className="w-full"
+            className="w-full mt-auto"
           >
             Get the Key Challenge Guide
             <ArrowRight className="h-4 w-4 ml-2" />
