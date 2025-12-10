@@ -128,28 +128,47 @@ const NowToGoalVisual = ({
       width: 90px;
       height: 90px;
       color: #d1d5db; /* gray-300 */
-      animation: slideRight 3.8s ease-in-out infinite;
+      animation: slideSmooth 4s ease-in-out infinite;
     }
 
-    @keyframes slideRight {
+    @keyframes slideSmooth {
+      /* muncul pelan */
       0% {
         transform: translateX(0);
+        opacity: 0;
+      }
+      10% {
         opacity: 1;
       }
+
+      /* gerak ke kanan */
       70% {
         transform: translateX(40px);
         opacity: 1;
       }
-      80% {
-        opacity: 0; /* menghilang supaya reset tak terlihat */
+
+      /* mulai hilang pelan */
+      71% {
+        opacity: 0.7;
       }
+      80% {
+        opacity: 0.2;
+      }
+
+      /* hilang total sebelum reset posisi */
+      90% {
+        opacity: 0;
+      }
+
+      /* reset posisi tapi tetap invisible */
       100% {
         transform: translateX(0);
-        opacity: 0; 
+        opacity: 0;
       }
     }
   `}</style>
 </div>
+
 
 
         {/* RIGHT — FUTURE YOU */}
