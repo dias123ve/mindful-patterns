@@ -45,7 +45,11 @@ const Index = () => {
 
             {/* Male */}
             <button
-              onClick={() => (window.location.href = "/quiz?gender=male")}
+              onClick={() => {
+  sessionStorage.setItem("gender", "male");
+  window.location.href = "/quiz?gender=male";
+}}
+
               className="w-48 h-60 bg-white rounded-2xl border border-slate-200/60 
                          shadow-md shadow-slate-200/40
                          hover:shadow-lg hover:scale-[1.05] transition-all 
@@ -57,7 +61,11 @@ const Index = () => {
 
             {/* Female */}
             <button
-              onClick={() => (window.location.href = "/quiz?gender=female")}
+              onClick={() => {
+  sessionStorage.setItem("gender", "female");
+  window.location.href = "/quiz?gender=female";
+}}
+
               className="w-48 h-60 bg-white rounded-2xl border border-slate-200/60 
                          shadow-md shadow-slate-200/40
                          hover:shadow-lg hover:scale-[1.05] transition-all 
