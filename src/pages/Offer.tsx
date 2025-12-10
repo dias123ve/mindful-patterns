@@ -175,4 +175,65 @@ const Offer = () => {
             </span>
 
             <button
-              o
+              onClick={() => {
+                const el = document.getElementById("offer-block");
+                el?.scrollIntoView({ behavior: "smooth" });
+              }}
+              className="bg-primary text-white px-4 py-2 rounded-full text-sm font-medium shadow"
+            >
+              Get Started Now
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* MAIN */}
+      <main className="container mx-auto px-4 py-24 pb-16">
+        <div className="max-w-4xl mx-auto space-y-12">
+
+          <NowToGoalVisual
+            positiveComponents={positiveComponents}
+            negativeComponent={negativeComponent}
+            componentScores={componentScores}
+          />
+
+          <div className="text-center fade-up" style={{ animationDelay: "0.08s" }}>
+            <h1 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-3">
+              Your personalized plan is ready.
+            </h1>
+            <p className="text-muted-foreground max-w-md mx-auto">
+              Built from your strongest patterns and your key challenge.
+            </p>
+          </div>
+
+          {/* FIRST OFFER */}
+          <div id="offer-block">
+            <OfferSection
+              positiveComponents={positiveComponents}
+              negativeComponent={negativeComponent}
+            />
+          </div>
+
+          <AboutYourPlan />
+          <HolisticExplanation />
+          <ExplanationSections />
+
+          {/* SECOND OFFER */}
+          <OfferSection
+            positiveComponents={positiveComponents}
+            negativeComponent={negativeComponent}
+          />
+
+        </div>
+      </main>
+
+      <footer className="container mx-auto px-4 py-8 border-t border-border">
+        <div className="text-center text-sm text-muted-foreground">
+          <p>© {new Date().getFullYear()} MindProfile. All rights reserved.</p>
+        </div>
+      </footer>
+    </div>
+  );
+};
+
+export default Offer;
