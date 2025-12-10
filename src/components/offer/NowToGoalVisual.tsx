@@ -101,9 +101,7 @@ const NowToGoalVisual = ({
         </div>
 
         {/* CENTER ARROW */}
-  <div 
-    className="arrow-container absolute top-[45%] left-1/2 -translate-x-1/2"
-  >
+  <div className="arrow-container"style={{ transform: "translateX(-20px)" }}>
   <svg 
     className="arrow-icon"
     viewBox="0 0 24 24"
