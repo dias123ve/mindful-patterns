@@ -157,7 +157,7 @@ const Results = () => {
           </p>
 
           {/* ⭐ FIXED: OCTAGRAM CHART */}
-          <div className="max-w-2xl mx-auto mt-10">
+          <div className="max-w-3xl mx-auto mt-10">
             <OctagramChart
               scores={componentScores}
               componentNames={componentNames}
