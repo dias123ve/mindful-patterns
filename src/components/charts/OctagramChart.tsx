@@ -73,44 +73,54 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
 
   // AUTO-positioning label (tidak terpotong)
   const CustomLabel = ({ cx, cy, x, y, payload }: any) => {
-    if (!x || !y || !payload) return null;
+  if (!x || !y || !payload) return null;
 
-    const dx = x - cx;
-    const dy = y - cy;
+  const dx = x - cx;
+  const dy = y - cy;
 
-    // scale outward, like Lovable
-    const scale = 1.18;
+  // scale outward from center
+  const scale = 1.22; // sedikit lebih besar untuk ruang label kiri-kanan
 
-    const labelX = cx + dx * scale;
-    const labelY = cy + dy * scale;
+  let labelX = cx + dx * scale;
+  let labelY = cy + dy * scale;
 
-    const anchor =
-      dx > 20 ? "start" : dx < -20 ? "end" : "middle";
+  // Tambahan offset khusus untuk kiri-kanan
+  if (Math.abs(dx) > Math.abs(dy)) {
+    // titik kiri atau kanan
+    labelX += dx > 0 ? 18 : -18; // kanan geser kanan, kiri geser kiri
+  } else {
+    // titik atas atau bawah
+    labelY += dy > 0 ? 10 : -6;
+  }
 
-    return (
-      <text
-        x={labelX}
-        y={labelY}
-        textAnchor={anchor}
-        fill="#64748b"
-        fontSize={14}
-        fontWeight={500}
-        fontFamily="system-ui, sans-serif"
-      >
-        {payload.value}
-      </text>
-    );
-  };
+  const anchor =
+    dx > 20 ? "start" : dx < -20 ? "end" : "middle";
+
+  return (
+    <text
+      x={labelX}
+      y={labelY}
+      textAnchor={anchor}
+      fill="#64748b"
+      fontSize={14}
+      fontWeight={500}
+      fontFamily="system-ui, sans-serif"
+    >
+      {payload.value}
+    </text>
+  );
+};
+
 
   return (
     <div className="octagram-chart-container">
       <ResponsiveContainer width="100%" height={520}>
         <RadarChart
           cx="50%"
-          cy="48%"
+          cy="25%"
           outerRadius="82%"
           data={data}
-          margin={{ top: 10, right: 40, bottom: 10, left: 40 }}
+          margin={{ top: 5, right: 20, bottom: 5, left: 20 }}
         >
           <PolarGrid stroke="#e2e8f0" strokeWidth={1} gridType="polygon" />
 
