@@ -101,9 +101,9 @@ const NowToGoalVisual = ({
         </div>
 
         {/* CENTER ARROW */}
-      <div className="flex justify-center items-center pt-20">
+      <div className="flex justify-center items-center pt-16 pb-8">
   <svg
-    className="w-20 h-20 text-gray-400"
+    className="w-24 h-24 text-gray-300"
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
@@ -111,7 +111,7 @@ const NowToGoalVisual = ({
     strokeLinecap="round"
     strokeLinejoin="round"
     style={{
-      animation: "arrow-slide 3.2s ease-in-out infinite"
+      animation: "arrowSmooth 3.6s cubic-bezier(0.4, 0, 0.2, 1) infinite"
     }}
   >
     <polyline points="9 18 15 12 9 6"></polyline>
@@ -119,15 +119,31 @@ const NowToGoalVisual = ({
   </svg>
 
   <style>{`
-    @keyframes arrow-slide {
-      0%   { transform: translateX(-15px); opacity: 0; }
-      15%  { transform: translateX(-10px); opacity: 0.5; }
-      35%  { transform: translateX(0); opacity: 1; }
-      70%  { transform: translateX(20px); opacity: 0.4; }
-      100% { transform: translateX(25px); opacity: 0; }
+    @keyframes arrowSmooth {
+      0% {
+        transform: translateX(-22px);
+        opacity: 0;
+      }
+      20% {
+        transform: translateX(-10px);
+        opacity: 0.6;
+      }
+      50% {
+        transform: translateX(0px);
+        opacity: 1;
+      }
+      80% {
+        transform: translateX(22px);
+        opacity: 0.6;
+      }
+      100% {
+        transform: translateX(32px);
+        opacity: 0;
+      }
     }
   `}</style>
 </div>
+
 
 
 
