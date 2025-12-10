@@ -2,43 +2,58 @@ import React from "react";
 
 interface OctagonChartProps {
   scores: Record<string, number>;
-  componentNames: Record<string, string>;
+  componentNames: Record<string, string>; // maps component_key → readable label
 }
 
-const OctagonChart: React.FC<OctagonChartProps> = ({ scores, componentNames }) => {
-  const maxScore = 50; // max per component
-  const keys = Object.keys(scores);
+// FIXED ORDER — MUST MATCH Supabase component_scores EXACTLY
+const ORDERED_KEYS = [
+  "self-identity",
+  "self-esteem",
+  "self-agency",
+  "self-awareness",
+  "self-connection",
+  "self-motivation",
+  "self-regulation",
+  "self-protection",
+];
 
-  // Convert polar coordinates to x,y positions
-  const points = keys.map((key, i) => {
-    const angle = (Math.PI * 2 * i) / keys.length - Math.PI / 2; // start at top
-    const radius = 120 * (scores[key] / maxScore); // scale radius by score
+const OctagonChart: React.FC<OctagonChartProps> = ({ scores, componentNames }) => {
+  const maxScore = 50;
+
+  // Check if data exists
+  const hasData = ORDERED_KEYS.some((key) => scores[key] !== undefined);
+  if (!hasData) return null;
+
+  // Create polygon points for the score shape
+  const points = ORDERED_KEYS.map((key, i) => {
+    const value = scores[key] ?? 0;
+    const angle = (Math.PI * 2 * i) / ORDERED_KEYS.length - Math.PI / 2;
+    const radius = 120 * (value / maxScore);
     const x = radius * Math.cos(angle);
     const y = radius * Math.sin(angle);
     return `${x},${y}`;
   });
 
-  // Outer perfect octagon (for reference grid)
-  const outerPoints = keys.map((_, i) => {
-    const angle = (Math.PI * 2 * i) / keys.length - Math.PI / 2;
-    const radius = 120; // full radius
-    const x = radius * Math.cos(angle);
-    const y = radius * Math.sin(angle);
-    return `${x},${y}`;
+  // Outer reference polygon
+  const outerPoints = ORDERED_KEYS.map((_, i) => {
+    const angle = (Math.PI * 2 * i) / ORDERED_KEYS.length - Math.PI / 2;
+    const radius = 120;
+    return `${radius * Math.cos(angle)},${radius * Math.sin(angle)}`;
   });
 
   return (
     <div className="w-full flex justify-center">
       <svg width="320" height="320" viewBox="-160 -160 320 320">
-        {/* Outer octagon */}
+
+        {/* Outer octagon grid */}
         <polygon
           points={outerPoints.join(" ")}
           fill="none"
-          stroke="rgba(0,0,0,0.15)"
+          stroke="rgba(0,0,0,0.18)"
           strokeWidth="1.5"
         />
 
-        {/* Filled score shape */}
+        {/* Score Fill */}
         <polygon
           points={points.join(" ")}
           fill="rgba(99,102,241,0.35)"
@@ -46,12 +61,12 @@ const OctagonChart: React.FC<OctagonChartProps> = ({ scores, componentNames }) =
           strokeWidth="2"
         />
 
-        {/* Labels around the octagon */}
-        {keys.map((key, i) => {
-          const angle = (Math.PI * 2 * i) / keys.length - Math.PI / 2;
-          const labelRadius = 150;
-          const x = labelRadius * Math.cos(angle);
-          const y = labelRadius * Math.sin(angle);
+        {/* Labels */}
+        {ORDERED_KEYS.map((key, i) => {
+          const angle = (Math.PI * 2 * i) / ORDERED_KEYS.length - Math.PI / 2;
+          const distance = 150;
+          const x = distance * Math.cos(angle);
+          const y = distance * Math.sin(angle);
 
           return (
             <text
