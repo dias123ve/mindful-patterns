@@ -28,12 +28,11 @@ interface ComponentData {
 const Results = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [componentScores, setComponentScores] = useState<
-    Record<string, number>
-  >({});
-  const [positiveComponents, setPositiveComponents] = useState<ComponentData[]>(
-    []
-  );
+
+  const [componentScores, setComponentScores] = useState<Record<string, number>>({});
+  const [componentNames, setComponentNames] = useState<Record<string, string>>({});
+
+  const [positiveComponents, setPositiveComponents] = useState<ComponentData[]>([]);
   const [negativeComponent, setNegativeComponent] =
     useState<ComponentData | null>(null);
 
@@ -54,12 +53,12 @@ const Results = () => {
     try {
       let scores: Record<string, number> = {};
 
-      // Try loading from sessionStorage
+      // Load scores from sessionStorage
       if (componentScoresStr) {
         scores = JSON.parse(componentScoresStr);
         setComponentScores(scores);
       } else {
-        // Fallback to database
+        // Fallback load from database
         const { data: submission, error: subError } = await supabase
           .from("quiz_submissions")
           .select("component_scores")
@@ -68,11 +67,11 @@ const Results = () => {
 
         if (subError) throw subError;
 
-        scores = (submission?.component_scores ||
-          {}) as Record<string, number>;
+        scores = (submission?.component_scores || {}) as Record<string, number>;
         setComponentScores(scores);
       }
 
+      // Load components metadata (names, descriptions, etc.)
       const { data: componentsData, error: compError } = await supabase
         .from("components")
         .select(
@@ -81,6 +80,16 @@ const Results = () => {
 
       if (compError) throw compError;
 
+      // Build readable names map for chart labels
+      const namesMap: Record<string, string> = {};
+      componentsData?.forEach((c) => {
+        if (c.component_key) {
+          namesMap[c.component_key] = c.name;
+        }
+      });
+      setComponentNames(namesMap);
+
+      // Sort components by score (high → low)
       const sortedKeys = Object.entries(scores)
         .sort(([, a], [, b]) => b - a)
         .map(([key]) => key);
@@ -89,11 +98,10 @@ const Results = () => {
         .map((key) => componentsData?.find((c) => c.component_key === key))
         .filter(Boolean) as ComponentData[];
 
+      // Pick 2 highest + 1 lowest
       if (sortedComponents.length >= 3) {
         setPositiveComponents(sortedComponents.slice(0, 2));
-        setNegativeComponent(
-          sortedComponents[sortedComponents.length - 1]
-        );
+        setNegativeComponent(sortedComponents[sortedComponents.length - 1]);
       } else if (sortedComponents.length === 2) {
         setPositiveComponents([sortedComponents[0]]);
         setNegativeComponent(sortedComponents[1]);
@@ -133,7 +141,7 @@ const Results = () => {
       <main className="container mx-auto px-4 py-8 pb-16">
         <div className="max-w-3xl mx-auto">
 
-          {/* NEW HEADER WITH CHART */}
+          {/* HEADER WITH CHART */}
           <div className="text-center mb-12 animate-fade-in-up">
             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6">
               <CheckCircle2 className="h-8 w-8 text-primary" />
@@ -151,21 +159,12 @@ const Results = () => {
             <div className="max-w-md mx-auto mt-10">
               <OctagonChart
                 scores={componentScores}
-                labels={[
-                  "self_identity",
-                  "self_esteem",
-                  "self_compassion",
-                  "emotional_sensitivity",
-                  "motivation",
-                  "self_awareness",
-                  "values_clarity",
-                  "direction_focus",
-                ]}
+                componentNames={componentNames}
               />
             </div>
           </div>
 
-          {/* HIGHEST SCORES */}
+          {/* YOUR HIGHEST SCORES */}
           {positiveComponents.length > 0 && (
             <section className="mb-12">
               <div className="flex items-center gap-3 mb-6">
@@ -195,8 +194,7 @@ const Results = () => {
                         </h3>
 
                         <p className="text-muted-foreground mb-4 leading-relaxed">
-                          {component.description_positive ||
-                            "No description provided."}
+                          {component.description_positive || "No description provided."}
                         </p>
 
                         <div className="bg-green-50 dark:bg-green-950/30 rounded-xl p-4 mb-4">
@@ -205,8 +203,7 @@ const Results = () => {
                             Examples in Daily Life
                           </h4>
                           <p className="text-sm text-muted-foreground">
-                            {component.example_positive ||
-                              "No examples provided."}
+                            {component.example_positive || "No examples provided."}
                           </p>
                         </div>
 
@@ -229,7 +226,7 @@ const Results = () => {
             </section>
           )}
 
-          {/* LOWEST SCORE */}
+          {/* YOUR LOWEST SCORE */}
           {negativeComponent && (
             <section className="mb-16">
               <div className="flex items-center gap-3 mb-6">
@@ -256,8 +253,7 @@ const Results = () => {
                     </h3>
 
                     <p className="text-muted-foreground mb-4 leading-relaxed">
-                      {negativeComponent.description_negative ||
-                        "No description provided."}
+                      {negativeComponent.description_negative || "No description provided."}
                     </p>
 
                     <div className="bg-amber-50 dark:bg-amber-950/30 rounded-xl p-4 mb-4">
@@ -266,8 +262,7 @@ const Results = () => {
                         How This Shows Up
                       </h4>
                       <p className="text-sm text-muted-foreground">
-                        {negativeComponent.example_negative ||
-                          "No examples provided."}
+                        {negativeComponent.example_negative || "No examples provided."}
                       </p>
                     </div>
 
