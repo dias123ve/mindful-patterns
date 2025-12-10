@@ -35,16 +35,6 @@ const OfferSection = ({ positiveComponents, negativeComponent }: OfferSectionPro
           <Sparkles className="h-4 w-4" />
           <span>Personalized For You</span>
         </div>
-
-        <h1 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-4">
-          Your Personalized Growth Blueprint
-        </h1>
-
-        <p className="text-muted-foreground max-w-lg mx-auto leading-relaxed">
-          Your assessment reveals a clear pattern of strengths and one core challenge. 
-          Choose the path below to deepen what’s already strong and improve the area 
-          that limits your overall growth.
-        </p>
       </div>
 
       {/* Offer Cards */}
@@ -62,7 +52,7 @@ const OfferSection = ({ positiveComponents, negativeComponent }: OfferSectionPro
               </h3>
               {negativeComponent && (
                 <p className="text-sm text-muted-foreground">
-                  {negativeComponent.name}
+                  Ebook to steady your {negativeComponent.name}
                 </p>
               )}
             </div>
@@ -74,9 +64,7 @@ const OfferSection = ({ positiveComponents, negativeComponent }: OfferSectionPro
               <span className="text-lg text-muted-foreground line-through">$30</span>
             </div>
             <p className="text-muted-foreground text-sm leading-relaxed">
-              A focused guide designed specifically for your lowest-scoring component. 
-              Learn practical strategies and small daily shifts to upgrade this area 
-              into a more stable and supportive part of your internal system.
+              A focused guide to help you improve this key area through clear, gentle improvements.
             </p>
           </div>
 
@@ -138,8 +126,8 @@ const OfferSection = ({ positiveComponents, negativeComponent }: OfferSectionPro
               ))}
 
               {negativeComponent && (
-                <li className="flex items-center gap-2 text-warning">
-                  <span className="w-1.5 h-1.5 rounded-full bg-warning" />
+                <li className="flex items-center gap-2 text-yellow-500">
+                  <span className="w-1.5 h-1.5 rounded-full bg-yellow-500" />
                   <span>Challenge Guide: {negativeComponent.name}</span>
                 </li>
               )}
