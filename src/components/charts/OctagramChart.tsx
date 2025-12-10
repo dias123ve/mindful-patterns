@@ -11,6 +11,7 @@ interface OctagramChartProps {
   scores: Record<string, number>;
 }
 
+// Order of components for consistent shape
 const ORDER = [
   "self-identity",
   "self-esteem",
@@ -22,7 +23,7 @@ const ORDER = [
   "self-compassion",
 ];
 
-// Format Supabase → chart data
+// Format scores into chart data
 const formatData = (scores: Record<string, number>) =>
   ORDER.map((key) => ({
     key,
@@ -33,7 +34,7 @@ const formatData = (scores: Record<string, number>) =>
     value: scores[key] ?? 0,
   }));
 
-// Attach dotType (high, low, normal)
+// Add dot type (high, low, normal)
 const addDotTypes = (data: any[]) => {
   const values = data.map((d) => d.value);
   const sorted = [...values].sort((a, b) => b - a);
@@ -44,14 +45,20 @@ const addDotTypes = (data: any[]) => {
   return data.map((d) => ({
     ...d,
     dotType:
-      d.value === lowest ? "low" : highestTwo.includes(d.value) ? "high" : "normal",
+      d.value === lowest
+        ? "low"
+        : highestTwo.includes(d.value)
+        ? "high"
+        : "normal",
   }));
 };
 
-// Label
+// Custom label
 const CustomLabel = ({ x, y, payload, index }: any) => {
   if (!x || !y) return null;
+
   const dyAdjust = index === 0 ? -6 : index === 4 ? 12 : 4;
+
   return (
     <text
       x={x}
@@ -76,7 +83,12 @@ const OctagramChart = ({ scores }: OctagramChartProps) => {
         <ResponsiveContainer width="100%" height={430}>
           <RadarChart cx="50%" cy="50%" outerRadius="75%" data={data}>
             <PolarGrid stroke="#d7e2eb" strokeWidth={1} gridType="polygon" />
-            <PolarAngleAxis dataKey="label" tick={CustomLabel} tickLine={false} />
+
+            <PolarAngleAxis
+              dataKey="label"
+              tick={CustomLabel}
+              tickLine={false}
+            />
 
             <Radar
               dataKey="value"
@@ -84,19 +96,10 @@ const OctagramChart = ({ scores }: OctagramChartProps) => {
               strokeWidth={2}
               fill="#4DD4AC"
               fillOpacity={0.35}
-              {/* Disable default Radar dots */}
-<Radar
-  dataKey="value"
-  stroke="#14B8A6"
-  strokeWidth={2}
-  fill="#4DD4AC"
-  fillOpacity={0.35}
-  dot={false}
-/>
-
+              dot={false}
             />
 
-            {/* ⭐ MANUAL DOT DRAWING (WORKS 100%) */}
+            {/* Custom rendered dots */}
             <Customized
               component={({ cx, cy, radius }) => {
                 const total = data.length;
@@ -104,7 +107,8 @@ const OctagramChart = ({ scores }: OctagramChartProps) => {
                 return (
                   <g>
                     {data.map((entry, i) => {
-                      const angle = (Math.PI * 2 * i) / total - Math.PI / 2;
+                      const angle =
+                        (Math.PI * 2 * i) / total - Math.PI / 2;
                       const r = (entry.value / 100) * radius;
 
                       const x = cx + r * Math.cos(angle);
