@@ -63,7 +63,9 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
 
   // FINAL LABEL FIX
  const CustomLabel = ({ cx, cy, x, y, payload }: any) => {
-  if (!x || !y || !payload) return null;
+  if (!x || !y || !payload || !payload.payload || !payload.payload.label) {
+    return null;
+  }
 
   const dx = x - cx;
   const dy = y - cy;
@@ -74,9 +76,8 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
 
   const anchor = dx > 15 ? "start" : dx < -15 ? "end" : "middle";
 
-  // ---- AUTO WRAP TEKS ----
-  const maxChars = 10; // batas sebelum dipotong menjadi 2 baris
-  const text = payload.payload.label;
+  const maxChars = 10;
+  const text = payload.payload.label; // aman karena sudah dicek di atas
 
   const words = text.split(" ");
   let line1 = "";
@@ -90,7 +91,6 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
     }
   }
 
-  // Tambah offset sedikit untuk estetika
   if (Math.abs(dx) > Math.abs(dy)) {
     labelX += dx > 0 ? 10 : -10;
   } else {
@@ -105,13 +105,13 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
       fill="#64748b"
       fontSize={13}
       fontWeight={500}
-      fontFamily="system-ui, sans-serif"
     >
       <tspan x={labelX} dy="-0.2em">{line1}</tspan>
       {line2 && <tspan x={labelX} dy="1.2em">{line2}</tspan>}
     </text>
   );
 };
+
 
 
   return (
