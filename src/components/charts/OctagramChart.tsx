@@ -21,18 +21,19 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
   }, [scores, componentNames]);
 
   const values = data.map((d) => d.value);
-  const sortedValues = [...values].sort((a, b) => b - a);
-  const highestTwo = [sortedValues[0], sortedValues[1]];
-  const lowest = sortedValues[sortedValues.length - 1];
+  const sorted = [...values].sort((a, b) => b - a);
+  const highestTwo = [sorted[0], sorted[1]];
+  const lowest = sorted[sorted.length - 1];
 
-  const getHighlightType = (value: number): "high" | "low" | "normal" => {
-    if (highestTwo.includes(value)) return "high";
-    if (value === lowest) return "low";
+  const getHighlightType = (v: number) => {
+    if (highestTwo.includes(v)) return "high";
+    if (v === lowest) return "low";
     return "normal";
   };
 
+  // Custom DOTS
   const CustomDot = ({ cx, cy, payload }: any) => {
-    if (!cx || !cy || !payload) return null;
+    if (!cx || !cy) return null;
 
     const type = getHighlightType(payload.value);
 
@@ -61,82 +62,46 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
     );
   };
 
-  // FINAL LABEL FIX
- const CustomLabel = ({ cx, cy, x, y, payload }: any) => {
-  if (!x || !y || !payload || !payload.payload || !payload.payload.label) {
-    return null;
-  }
+  // WRAP LABEL
+  const wrapLabel = (label: string, maxChars = 12) => {
+    const words = label.split(" ");
+    let line1 = "";
+    let line2 = "";
 
-  const dx = x - cx;
-  const dy = y - cy;
-
-  const scale = 1.05;
-  let labelX = cx + dx * scale;
-  let labelY = cy + dy * scale;
-
-  const anchor = dx > 15 ? "start" : dx < -15 ? "end" : "middle";
-
-  const maxChars = 10;
-  const text = payload.payload.label; // aman karena sudah dicek di atas
-
-  const words = text.split(" ");
-  let line1 = "";
-  let line2 = "";
-
-  for (let w of words) {
-    if ((line1 + " " + w).trim().length <= maxChars) {
-      line1 = (line1 + " " + w).trim();
-    } else {
-      line2 = (line2 + " " + w).trim();
+    for (let w of words) {
+      if ((line1 + " " + w).trim().length <= maxChars) {
+        line1 = (line1 + " " + w).trim();
+      } else {
+        line2 = (line2 + " " + w).trim();
+      }
     }
-  }
 
-  if (Math.abs(dx) > Math.abs(dy)) {
-    labelX += dx > 0 ? 10 : -10;
-  } else {
-    labelY += dy > 0 ? 6 : -6;
-  }
-
-  return (
-    <text
-      x={labelX}
-      y={labelY}
-      textAnchor={anchor}
-      fill="#64748b"
-      fontSize={13}
-      fontWeight={500}
-    >
-      <tspan x={labelX} dy="-0.2em">{line1}</tspan>
-      {line2 && <tspan x={labelX} dy="1.2em">{line2}</tspan>}
-    </text>
-  );
-};
-
-
+    return { line1, line2 };
+  };
 
   return (
     <div className="octagram-chart-container">
-
-      {/* WRAPPER — batasi ukuran chart */}
-      <div 
-  className="mx-auto"
-  style={{
-    width: "480px",
-    maxWidth: "100%",
-    paddingLeft: "40px",
-    paddingRight: "40px"
-  }}
->
+      <div
+        className="mx-auto"
+        style={{
+          width: "480px",
+          maxWidth: "100%",
+          paddingLeft: "40px",
+          paddingRight: "40px",
+        }}
+      >
         <ResponsiveContainer width="100%" height={520}>
           <RadarChart
             cx="50%"
-            cy="50%"
+            cy="52%"        // chart sedikit turun → lebih center
             outerRadius="68%"
             data={data}
-            margin={{ top: 10, right: 60, bottom: 10, left: 60 }}
           >
             <PolarGrid stroke="#e2e8f0" strokeWidth={1} gridType="polygon" />
-            <PolarAngleAxis dataKey="label" tick={CustomLabel} tickLine={false} />
+
+            {/* MATIKAN LABEL DEFAULT */}
+            <PolarAngleAxis dataKey="label" tick={false} tickLine={false} />
+
             <Radar
               name="Values"
               dataKey="value"
@@ -146,11 +111,40 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
               fill="#4DD4AC"
               dot={<CustomDot />}
             />
+
+            {/* === MANUAL LABELS (NON-BUG, STABLE) === */}
+            {data.map((entry, i) => {
+              const angle =
+                (Math.PI * 2 * i) / data.length - Math.PI / 2;
+              const radius = 190; // atur jarak label dari center
+              const centerX = 240;
+              const centerY = 250;
+
+              const x = centerX + radius * Math.cos(angle);
+              const y = centerY + radius * Math.sin(angle);
+
+              const { line1, line2 } = wrapLabel(entry.label, 12);
+
+              return (
+                <text
+                  key={i}
+                  x={x}
+                  y={y}
+                  textAnchor="middle"
+                  fill="#64748b"
+                  fontSize={13}
+                  fontWeight={500}
+                >
+                  <tspan x={x} dy="-0.2em">{line1}</tspan>
+                  {line2 && <tspan x={x} dy="1.2em">{line2}</tspan>}
+                </text>
+              );
+            })}
           </RadarChart>
         </ResponsiveContainer>
       </div>
 
-      {/* SINGLE LEGEND (tidak duplikat) */}
+      {/* LEGEND */}
       <div className="flex justify-center gap-8 mt-6 text-sm text-gray-600">
         <div className="flex items-center gap-2">
           <span className="w-3 h-3 rounded-full bg-[#27D787]"></span>
@@ -162,7 +156,6 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
           <span>Grow Area</span>
         </div>
       </div>
-
     </div>
   );
 };
