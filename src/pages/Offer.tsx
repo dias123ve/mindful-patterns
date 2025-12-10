@@ -1,14 +1,4 @@
-import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { Brain, Loader2 } from "lucide-react";
-import { toast } from "sonner";
-
-import NowToGoalVisual from "@/components/offer/NowToGoalVisual";
-import AboutYourPlan from "@/components/offer/AboutYourPlan";
-import OfferSection from "@/components/offer/OfferSection";
-import ExplanationSections from "@/components/offer/ExplanationSections";
-import HolisticExplanation from "@/components/offer/HolisticExplanation";
+import { ArrowRight } from "lucide-react";
 
 interface ComponentData {
   id: string;
@@ -16,164 +6,171 @@ interface ComponentData {
   component_key: string;
 }
 
-const Offer = () => {
-  const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
+interface NowToGoalVisualProps {
+  positiveComponents: ComponentData[];
+  negativeComponent: ComponentData | null;
+  componentScores: Record<string, number>;
+}
 
-  const [positiveComponents, setPositiveComponents] = useState<ComponentData[]>([]);
-  const [negativeComponent, setNegativeComponent] = useState<ComponentData | null>(null);
+const MAX_SCORE = 50;
 
-  // raw normalized scores
-  const [componentScores, setComponentScores] = useState<Record<string, number>>({});
+const NowToGoalVisual = ({
+  positiveComponents,
+  negativeComponent,
+  componentScores
+}: NowToGoalVisualProps) => {
 
-  useEffect(() => {
-    fetchResults();
-  }, []);
+  const gender = sessionStorage.getItem("gender") === "male" ? "male" : "female";
 
-  const fetchResults = async () => {
-    const submissionId = sessionStorage.getItem("quiz_submission_id");
-    const componentScoresStr = sessionStorage.getItem("component_scores");
+  const personNowSrc = `/images/${gender}_now.png`;
+  const personGoalSrc = `/images/${gender}_goal.png`;
 
-    if (!submissionId) {
-      toast.error("No quiz results found. Please take the quiz first.");
-      navigate("/quiz");
-      return;
-    }
-
-    try {
-      let scores: Record<string, number> = {};
-
-      // Load from sessionStorage first
-      if (componentScoresStr) {
-        scores = JSON.parse(componentScoresStr);
-      } else {
-        // Load from Supabase fallback
-        const { data: submission, error: subError } = await supabase
-          .from("quiz_submissions")
-          .select("component_scores")
-          .eq("id", submissionId)
-          .single();
-
-        if (subError) throw subError;
-        scores = (submission?.component_scores as Record<string, number>) || {};
-      }
-
-      // 🔥 Normalize underscore → hyphen
-      const normalizedScores: Record<string, number> = {};
-      Object.entries(scores).forEach(([key, value]) => {
-        const normalizedKey = key.replace(/_/g, "-"); // MATCH Supabase keys
-        normalizedScores[normalizedKey] = value;
-      });
-
-      setComponentScores(normalizedScores);
-
-      // Load component metadata
-      const { data: componentsData, error: compError } = await supabase
-        .from("components")
-        .select("id, name, component_key");
-
-      if (compError) throw compError;
-
-      // Sort based on normalized scores
-      const sortedKeys = Object.entries(normalizedScores)
-        .sort(([, a], [, b]) => b - a)
-        .map(([key]) => key);
-
-      const sortedComponents = sortedKeys
-        .map((key) => componentsData?.find((c) => c.component_key === key))
-        .filter(Boolean) as ComponentData[];
-
-      // Pick strengths & weakest
-      if (sortedComponents.length >= 3) {
-        setPositiveComponents(sortedComponents.slice(0, 2));
-        setNegativeComponent(sortedComponents[sortedComponents.length - 1]);
-      } else if (sortedComponents.length === 2) {
-        setPositiveComponents([sortedComponents[0]]);
-        setNegativeComponent(sortedComponents[1]);
-      } else if (sortedComponents.length === 1) {
-        setPositiveComponents([sortedComponents[0]]);
-        setNegativeComponent(null);
-      }
-
-    } catch (error) {
-      console.error("Error fetching results:", error);
-      toast.error("Failed to load offer.");
-      navigate("/quiz");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-hero flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
+  // posisi bar
+  const getStrongPos = (score: number) => Math.max((score / MAX_SCORE) * 78, 30);
+  const getLowPos = (score: number) => Math.max((score / MAX_SCORE) * 45, 18);
 
   return (
-    <div className="min-h-screen bg-gradient-hero">
-      <header className="container mx-auto px-4 py-6">
-        <Link to="/" className="flex items-center gap-2">
-          <Brain className="h-7 w-7 text-primary" />
-          <span className="text-lg font-display font-semibold text-foreground">
-            MindProfile
-          </span>
-        </Link>
-      </header>
+    <div className="bg-card rounded-2xl p-6 md:p-8 shadow-soft border border-border fade-up max-w-[760px] mx-auto">
 
-      <main className="container mx-auto px-4 py-8 pb-16">
-        <div className="max-w-4xl mx-auto space-y-12">
+      <div className="grid md:grid-cols-[1fr_auto_1fr] gap-4 items-start">
 
-          {/* NOW → GOAL VISUAL */}
-          <NowToGoalVisual
-            positiveComponents={positiveComponents}
-            negativeComponent={negativeComponent}
-            componentScores={componentScores} // 🔥 FIXED: always normalized scores
-          />
+        {/* LEFT — NOW */}
+        <div className="text-center">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+            Now
+          </h3>
 
-          {/* HEADLINE */}
-          <div className="text-center fade-up" style={{ animationDelay: "0.08s" }}>
-            <h1 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-3">
-              Your personalized plan is ready.
-            </h1>
-            <p className="text-muted-foreground max-w-md mx-auto">
-              Built from your strongest patterns and your key challenge.
-            </p>
+          <img src={personNowSrc} className="w-[200px] h-auto object-contain mx-auto mb-2" />
+
+          <div className="space-y-5">
+            {positiveComponents.map((comp) => {
+              const score = componentScores[comp.component_key] || 0;
+              const pos = getStrongPos(score);
+
+              return (
+                <div key={comp.id} className="space-y-1">
+
+                  {/* Title + Status */}
+                  <div className="flex justify-between px-1 w-[70%] mx-auto">
+                    <span className="text-[15px] font-semibold">{comp.name}</span>
+                    <span className="text-[13px] opacity-60">(Strong)</span>
+                  </div>
+
+                  {/* TRACK */}
+                  <div className="relative h-2 bg-[#D5D7DB] rounded-full w-[70%] mx-auto">
+
+                    {/* BAR */}
+                    <div
+                      className="absolute h-2 rounded-full"
+                      style={{ width: `${pos}%`, backgroundColor: "#FFB74D" }}
+                    />
+
+                    {/* DOT */}
+                    <div
+                      className="absolute -top-[4px] h-3 w-3 rounded-full shadow"
+                      style={{ backgroundColor: "#F57C00", left: `${pos}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* LOW COMPONENT */}
+            {negativeComponent && (() => {
+              const score = componentScores[negativeComponent.component_key] || 0;
+              const pos = getLowPos(score);
+
+              return (
+                <div className="space-y-1">
+                  <div className="flex justify-between px-1 w-[70%] mx-auto">
+                    <span className="text-[15px] font-semibold">{negativeComponent.name}</span>
+                    <span className="text-[13px] opacity-60">(Low)</span>
+                  </div>
+
+                  <div className="relative h-2 bg-[#D5D7DB] rounded-full w-[70%] mx-auto">
+                    <div
+                      className="absolute h-2 rounded-full"
+                      style={{ width: `${pos}%`, backgroundColor: "#E57373" }}
+                    />
+                    <div
+                      className="absolute -top-[4px] h-3 w-3 rounded-full shadow"
+                      style={{ backgroundColor: "#C62828", left: `${pos}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })()}
           </div>
-
-          {/* FIRST OFFER */}
-          <OfferSection
-            positiveComponents={positiveComponents}
-            negativeComponent={negativeComponent}
-          />
-
-          {/* OUR GOAL */}
-          <AboutYourPlan />
-
-          {/* HOLISTIC EXPLANATIONS */}
-          <HolisticExplanation />
-
-          {/* STANDARD EXPLANATIONS */}
-          <ExplanationSections />
-
-          {/* SECOND OFFER */}
-          <OfferSection
-            positiveComponents={positiveComponents}
-            negativeComponent={negativeComponent}
-          />
-
         </div>
-      </main>
 
-      <footer className="container mx-auto px-4 py-8 border-t border-border">
-        <div className="text-center text-sm text-muted-foreground">
-          <p>© {new Date().getFullYear()} MindProfile. All rights reserved.</p>
+        {/* MIDDLE — BIG ARROW */}
+        <div className="flex justify-center items-center pt-14">
+          <div className="text-gray-400 text-4xl font-light select-none">
+            &gt;&gt;
+          </div>
         </div>
-      </footer>
+
+        {/* RIGHT — FUTURE YOU */}
+        <div className="text-center">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-success mb-3">
+            Future You
+          </h3>
+
+          <img src={personGoalSrc} className="w-[200px] h-auto object-contain mx-auto mb-2" />
+
+          <div className="space-y-5">
+
+            {/* Elevated components */}
+            {positiveComponents.map((comp) => (
+              <div key={comp.id} className="space-y-1">
+
+                <div className="flex justify-between px-1 w-[70%] mx-auto">
+                  <span className="text-[15px] font-semibold">{comp.name}</span>
+                  <span className="text-[13px] opacity-60">(Elevated)</span>
+                </div>
+
+                <div className="relative h-2 bg-[#D0E3D5] rounded-full w-[70%] mx-auto">
+
+                  <div className="absolute h-2 bg-emerald-500 rounded-full" style={{ width: "100%" }} />
+
+                  <div
+                    className="absolute -top-[4px] h-3 w-3 bg-emerald-600 rounded-full shadow"
+                    style={{ left: "92%" }}
+                  />
+                </div>
+              </div>
+            ))}
+
+            {/* Steady */}
+            {negativeComponent && (
+              <div className="space-y-1">
+
+                <div className="flex justify-between px-1 w-[70%] mx-auto">
+                  <span className="text-[15px] font-semibold">{negativeComponent.name}</span>
+                  <span className="text-[13px] opacity-60">(Steady)</span>
+                </div>
+
+                <div className="relative h-2 bg-[#F0E6B8] rounded-full w-[70%] mx-auto">
+
+                  <div
+                    className="absolute h-2 rounded-full"
+                    style={{ backgroundColor: "#FFD54F", width: "100%" }}
+                  />
+
+                  <div
+                    className="absolute -top-[4px] h-3 w-3 rounded-full shadow"
+                    style={{ backgroundColor: "#FBC02D", left: "82%" }}
+                  />
+                </div>
+              </div>
+            )}
+
+          </div>
+        </div>
+
+      </div>
     </div>
   );
 };
 
-export default Offer;
+export default NowToGoalVisual;
