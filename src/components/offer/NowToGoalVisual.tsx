@@ -25,28 +25,25 @@ const NowToGoalVisual = ({
   const personNowSrc = `/images/${gender}_now.png`;
   const personGoalSrc = `/images/${gender}_goal.png`;
 
-  const getStrongWidth = (score: number) => Math.max((score / MAX_SCORE) * 78, 30);
-  const getLowWidth = (score: number) => Math.max((score / MAX_SCORE) * 45, 18);
+  // Width calculation
+  const getStrongWidth = (score: number) => Math.max((score / MAX_SCORE) * 90, 45);
+  const getLowWidth = (score: number) => Math.max((score / MAX_SCORE) * 55, 22);
 
   return (
-    <div className="bg-card rounded-2xl p-6 md:p-8 shadow-soft border border-border fade-up max-w-[900px] mx-auto">
-      
-      <div className="grid md:grid-cols-2 gap-6 items-start">
+    <div className="bg-card rounded-2xl p-6 md:p-8 shadow-soft border border-border fade-up max-w-[880px] mx-auto">
 
-        {/* LEFT — NOW */}
-        <div>
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-4">
+      <div className="grid md:grid-cols-2 gap-4 items-start">
+
+        {/* LEFT – NOW */}
+        <div className="flex flex-col items-center">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3 self-start">
             Now
           </h3>
 
-          <div className="flex justify-center mb-4">
-            <img
-              src={personNowSrc}
-              className="w-[220px] h-auto object-contain"
-            />
-          </div>
+          {/* Image */}
+          <img src={personNowSrc} className="w-[230px] mb-4" />
 
-          <div className="space-y-7">
+          <div className="w-full space-y-6">
 
             {/* STRONG COMPONENTS */}
             {positiveComponents.map((comp) => {
@@ -54,16 +51,16 @@ const NowToGoalVisual = ({
               const w = getStrongWidth(score);
 
               return (
-                <div key={comp.id} className="space-y-2">
-                  
-                  {/* LABEL ABOVE BAR */}
-                  <div className="flex justify-between px-1">
-                    <span className="text-[15px] font-semibold text-black">{comp.name}</span>
-                    <span className="text-[15px] font-semibold text-black">Strong</span>
+                <div key={comp.id} className="space-y-1">
+
+                  {/* LABEL */}
+                  <div className="flex justify-between text-gray-600 text-[14px] px-2">
+                    <span>{comp.name}</span>
+                    <span>Strong</span>
                   </div>
 
                   {/* BAR */}
-                  <div className="relative h-2 bg-slate-200 rounded-full w-[65%] mx-auto">
+                  <div className="relative h-2 rounded-full bg-gray-200 w-[75%] mx-auto">
                     <div
                       className="h-full rounded-full"
                       style={{ backgroundColor: "#FFB74D", width: `${w}%` }}
@@ -83,16 +80,13 @@ const NowToGoalVisual = ({
               const w = getLowWidth(score);
 
               return (
-                <div className="space-y-2">
-                  
-                  <div className="flex justify-between px-1">
-                    <span className="text-[15px] font-semibold text-black">
-                      {negativeComponent.name}
-                    </span>
-                    <span className="text-[15px] font-semibold text-black">Low</span>
+                <div className="space-y-1">
+                  <div className="flex justify-between text-gray-600 text-[14px] px-2">
+                    <span>{negativeComponent.name}</span>
+                    <span>Low</span>
                   </div>
 
-                  <div className="relative h-2 bg-slate-200 rounded-full w-[65%] mx-auto">
+                  <div className="relative h-2 rounded-full bg-gray-200 w-[75%] mx-auto">
                     <div
                       className="h-full rounded-full"
                       style={{ backgroundColor: "#E57373", width: `${w}%` }}
@@ -109,35 +103,30 @@ const NowToGoalVisual = ({
           </div>
         </div>
 
-        {/* RIGHT — FUTURE YOU */}
-        <div>
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-success mb-4">
+        {/* RIGHT – FUTURE YOU */}
+        <div className="flex flex-col items-center">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-success mb-3 self-start">
             Future You
           </h3>
 
-          <div className="flex justify-center mb-4">
-            <img
-              src={personGoalSrc}
-              className="w-[220px] h-auto object-contain"
-            />
-          </div>
+          <img src={personGoalSrc} className="w-[230px] mb-4" />
 
-          <div className="space-y-7">
+          <div className="w-full space-y-6">
 
             {/* ELEVATED */}
             {positiveComponents.map((comp) => (
-              <div key={comp.id} className="space-y-2">
-                
-                <div className="flex justify-between px-1">
-                  <span className="text-[15px] font-semibold text-black">{comp.name}</span>
-                  <span className="text-[15px] font-semibold text-black">Elevated</span>
+              <div key={comp.id} className="space-y-1">
+
+                <div className="flex justify-between text-gray-600 text-[14px] px-2">
+                  <span>{comp.name}</span>
+                  <span>Elevated</span>
                 </div>
 
-                <div className="relative h-2 bg-emerald-100 rounded-full w-[65%] mx-auto">
-                  <div className="h-full bg-emerald-500 rounded-full" style={{ width: "90%" }} />
+                <div className="relative h-2 bg-emerald-100 rounded-full w-[75%] mx-auto">
+                  <div className="h-full bg-emerald-500 rounded-full" style={{ width: "92%" }} />
                   <div
                     className="absolute -top-[4px] h-3.5 w-3.5 bg-emerald-600 rounded-full shadow"
-                    style={{ left: "90%" }}
+                    style={{ left: "92%" }}
                   />
                 </div>
               </div>
@@ -145,14 +134,13 @@ const NowToGoalVisual = ({
 
             {/* STEADY */}
             {negativeComponent && (
-              <div className="space-y-2">
-                
-                <div className="flex justify-between px-1">
-                  <span className="text-[15px] font-semibold text-black">{negativeComponent.name}</span>
-                  <span className="text-[15px] font-semibold text-black">Steady</span>
+              <div className="space-y-1">
+                <div className="flex justify-between text-gray-600 text-[14px] px-2">
+                  <span>{negativeComponent.name}</span>
+                  <span>Steady</span>
                 </div>
 
-                <div className="relative h-2 bg-yellow-100 rounded-full w-[65%] mx-auto">
+                <div className="relative h-2 bg-yellow-100 rounded-full w-[75%] mx-auto">
                   <div
                     className="h-full rounded-full"
                     style={{ backgroundColor: "#FFD54F", width: "82%" }}
@@ -166,6 +154,7 @@ const NowToGoalVisual = ({
             )}
 
           </div>
+
         </div>
 
       </div>
