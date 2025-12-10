@@ -138,22 +138,23 @@ const Results = () => {
         </Link>
       </header>
 
-      <main className="container mx-auto px-4 py-8 pb-16">
+      <main className="container mx-auto px-4 py-5 pb-16">
         <div className="max-w-3xl mx-auto">
 
           {/* HEADER WITH CHART */}
-          <div className="text-center mb-12 animate-fade-in-up">
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6">
-              <CheckCircle2 className="h-8 w-8 text-primary" />
-            </div>
+            <div className="flex items-center justify-center gap-3 mb-3">
+  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+    <CheckCircle2 className="h-6 w-6 text-primary" />
+  </div>
 
-            <h1 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-4">
-              Your Self Profile
-            </h1>
+  <h1 className="text-3xl md:text-4xl font-display font-bold text-foreground">
+    Your Self Profile
+  </h1>
+</div>
 
-            <p className="text-muted-foreground max-w-md mx-auto">
-              Based on your responses, here are your patterns.
-            </p>
+<p className="text-muted-foreground max-w-md mx-auto text-center">
+  Based on your responses, here are your patterns.
+</p>
 
             {/* OCTAGON CHART */}
             <div className="max-w-md mx-auto mt-10">
