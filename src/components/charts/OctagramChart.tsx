@@ -76,7 +76,7 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
 
   // ---- AUTO WRAP TEKS ----
   const maxChars = 10; // batas sebelum dipotong menjadi 2 baris
-  const text = payload.value;
+  const text = payload.payload.label;
 
   const words = text.split(" ");
   let line1 = "";
@@ -130,10 +130,10 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
         <ResponsiveContainer width="100%" height={520}>
           <RadarChart
             cx="50%"
-            cy="46%"
+            cy="50%"
             outerRadius="68%"
             data={data}
-            margin={{ top: 10, right: 40, bottom: 10, left: 40 }}
+            margin={{ top: 10, right: 60, bottom: 10, left: 60 }}
           >
             <PolarGrid stroke="#e2e8f0" strokeWidth={1} gridType="polygon" />
             <PolarAngleAxis dataKey="label" tick={CustomLabel} tickLine={false} />
