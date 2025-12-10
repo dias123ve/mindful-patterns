@@ -11,9 +11,11 @@ interface ComponentData {
 interface OfferSectionProps {
   positiveComponents: ComponentData[];
   negativeComponent: ComponentData | null;
+  discountExpired: boolean;
+  timeLeft?: number; // optional mini timer
 }
 
-const OfferSection = ({ positiveComponents, negativeComponent }: OfferSectionProps) => {
+const OfferSection = ({ positiveComponents, negativeComponent, discountExpired, timeLeft }: OfferSectionProps) => {
   const navigate = useNavigate();
 
   const handleSinglePurchase = () => {
@@ -26,9 +28,15 @@ const OfferSection = ({ positiveComponents, negativeComponent }: OfferSectionPro
     navigate("/checkout");
   };
 
+  const formatTime = (sec: number) => {
+    const m = String(Math.floor(sec / 60)).padStart(2, "0");
+    const s = String(sec % 60).padStart(2, "0");
+    return `${m}:${s}`;
+  };
+
   return (
     <div className="space-y-12">
-      
+
       {/* Header */}
       <div className="text-center mb-12 fade-up">
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6">
@@ -39,7 +47,7 @@ const OfferSection = ({ positiveComponents, negativeComponent }: OfferSectionPro
 
       {/* Offer Cards */}
       <div className="grid md:grid-cols-2 gap-6 mb-12">
-        
+
         {/* Single Ebook Offer */}
         <div className="bg-card rounded-2xl p-6 md:p-8 shadow-soft border border-border fade-up flex flex-col h-full">
           <div className="flex items-center gap-3 mb-4">
@@ -50,35 +58,48 @@ const OfferSection = ({ positiveComponents, negativeComponent }: OfferSectionPro
               <h3 className="text-lg font-display font-bold text-foreground">
                 Fix Your Key Challenge
               </h3>
+
               {negativeComponent && (
                 <p className="text-sm text-muted-foreground">
                   Ebook to steady your {negativeComponent.name}
                 </p>
               )}
-             
-
             </div>
           </div>
 
-         <div className="mb-6">
-  <div className="flex items-baseline gap-2 mb-2">
-    <span className="text-3xl font-display font-bold text-foreground">$12</span>
-    <span className="text-lg text-muted-foreground line-through">$30</span>
-  </div>
-  <p className="text-muted-foreground text-sm leading-relaxed">
-    A focused guide to help you improve this key area through clear, gentle improvements.
-  </p>
+          <div className="mb-6">
+            {/* PRICE */}
+            <div className="flex items-baseline gap-2 mb-2">
+              <span className="text-3xl font-display font-bold text-foreground">
+                {discountExpired ? "$20" : "$12"}
+              </span>
 
-  <ul className="space-y-2 text-sm">
-    {negativeComponent && (
-      <li className="flex items-center gap-2 text-orange-500 mt-1">
-        <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
-        <span>Challenge Guide: {negativeComponent.name}</span>
-      </li>
-    )}
-  </ul>
-</div>
+              {!discountExpired && (
+                <span className="text-lg text-muted-foreground line-through">$20</span>
+              )}
+            </div>
 
+            <p className="text-muted-foreground text-sm leading-relaxed">
+              A focused guide to help you improve this key area through clear, gentle improvements.
+            </p>
+
+            {/* Challenge tag */}
+            <ul className="space-y-2 text-sm">
+              {negativeComponent && (
+                <li className="flex items-center gap-2 text-orange-500 mt-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+                  <span>Challenge Guide: {negativeComponent.name}</span>
+                </li>
+              )}
+            </ul>
+          </div>
+
+          {/* Mini Timer */}
+          {!discountExpired && timeLeft !== undefined && (
+            <p className="text-xs text-green-600 font-medium mb-3">
+              You have {formatTime(timeLeft)} left at this price.
+            </p>
+          )}
 
           <Button 
             onClick={handleSinglePurchase} 
@@ -119,9 +140,15 @@ const OfferSection = ({ positiveComponents, negativeComponent }: OfferSectionPro
           </div>
 
           <div className="mb-6">
+            {/* PRICE */}
             <div className="flex items-baseline gap-2 mb-2">
-              <span className="text-3xl font-display font-bold text-foreground">$17</span>
-              <span className="text-lg text-muted-foreground line-through">$50</span>
+              <span className="text-3xl font-display font-bold text-foreground">
+                {discountExpired ? "$29" : "$17"}
+              </span>
+
+              {!discountExpired && (
+                <span className="text-lg text-muted-foreground line-through">$29</span>
+              )}
             </div>
 
             <p className="text-muted-foreground text-sm leading-relaxed mb-4">
@@ -129,6 +156,7 @@ const OfferSection = ({ positiveComponents, negativeComponent }: OfferSectionPro
               strengthening your key challenge for holistic personal growth.
             </p>
 
+            {/* Strength + Challenge guides */}
             <ul className="space-y-2 text-sm">
               {positiveComponents.map((comp) => (
                 <li key={comp.id} className="flex items-center gap-2 text-success">
@@ -145,6 +173,13 @@ const OfferSection = ({ positiveComponents, negativeComponent }: OfferSectionPro
               )}
             </ul>
           </div>
+
+          {/* Mini Timer */}
+          {!discountExpired && timeLeft !== undefined && (
+            <p className="text-xs text-green-600 font-medium mb-3">
+              You have {formatTime(timeLeft)} left at this price.
+            </p>
+          )}
 
           <Button 
             onClick={handleBundlePurchase} 
