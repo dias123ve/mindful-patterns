@@ -84,7 +84,16 @@ const OctagramChart = ({ scores }: OctagramChartProps) => {
               strokeWidth={2}
               fill="#4DD4AC"
               fillOpacity={0.35}
-              dot={false}        {/* IMPORTANT */}
+              {/* Disable default Radar dots */}
+<Radar
+  dataKey="value"
+  stroke="#14B8A6"
+  strokeWidth={2}
+  fill="#4DD4AC"
+  fillOpacity={0.35}
+  dot={false}
+/>
+
             />
 
             {/* ⭐ MANUAL DOT DRAWING (WORKS 100%) */}
