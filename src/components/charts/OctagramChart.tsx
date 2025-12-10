@@ -117,10 +117,10 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
       <ResponsiveContainer width="100%" height={520}>
         <RadarChart
           cx="50%"
-          cy="25%"
+          cy="46%"
           outerRadius="82%"
           data={data}
-          margin={{ top: 5, right: 20, bottom: 5, left: 20 }}
+          margin={{ top: 10, right: 40, bottom: 10, left: 40 }}
         >
           <PolarGrid stroke="#e2e8f0" strokeWidth={1} gridType="polygon" />
 
