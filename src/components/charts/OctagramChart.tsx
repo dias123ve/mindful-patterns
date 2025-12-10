@@ -72,25 +72,24 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
   };
 
   // AUTO-positioning label (tidak terpotong)
-  const CustomLabel = ({ cx, cy, x, y, payload }: any) => {
+ const CustomLabel = ({ cx, cy, x, y, payload }: any) => {
   if (!x || !y || !payload) return null;
 
   const dx = x - cx;
   const dy = y - cy;
 
-  // scale outward from center
-  const scale = 1.22; // sedikit lebih besar untuk ruang label kiri-kanan
+  // Lebih dekat ke chart
+  const scale = 1.14;
 
   let labelX = cx + dx * scale;
   let labelY = cy + dy * scale;
 
-  // Tambahan offset khusus untuk kiri-kanan
+  // Offset khusus kiri-kanan → dikurangi supaya lebih dekat
   if (Math.abs(dx) > Math.abs(dy)) {
-    // titik kiri atau kanan
-    labelX += dx > 0 ? 18 : -18; // kanan geser kanan, kiri geser kiri
+    labelX += dx > 0 ? 16 : -16;
   } else {
-    // titik atas atau bawah
-    labelY += dy > 0 ? 10 : -6;
+    // Atas bawah → offset dikurangi
+    labelY += dy > 0 ? 8 : -4;
   }
 
   const anchor =
@@ -112,13 +111,14 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
 };
 
 
+
   return (
     <div className="octagram-chart-container">
       <ResponsiveContainer width="100%" height={520}>
         <RadarChart
           cx="50%"
           cy="46%"
-          outerRadius="82%"
+          outerRadius="74%"
           data={data}
           margin={{ top: 10, right: 40, bottom: 10, left: 40 }}
         >
