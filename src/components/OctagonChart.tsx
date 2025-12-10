@@ -15,7 +15,7 @@ const data = [
   { label: "Self-Confidence", value: 48 },
   { label: "Self-Agency", value: 68 },
   { label: "Self-Assertiveness", value: 40 },
-  { label: "Self-Regulation", value: 35 }, // ← lowest
+  { label: "Self-Regulation", value: 35 }, // lowest
   { label: "Self-Motivation", value: 60 },
   { label: "Self-Compassion", value: 45 },
 ];
@@ -63,26 +63,32 @@ const CustomDot = ({ cx, cy, payload }: any) => {
     );
   }
 
-  return (
-    <circle cx={cx} cy={cy} r={5} fill="white" stroke="#14B8A6" strokeWidth={2} />
-  );
+  return <circle cx={cx} cy={cy} r={5} fill="white" stroke="#14B8A6" strokeWidth={2} />;
 };
 
 // ---------------------
-// CUSTOM LABEL (FIXED CLIPPING)
+// CUSTOM LABEL (NO CUTTING)
 // ---------------------
-const CustomLabel = ({ x, y, payload }: any) => {
+const CustomLabel = ({ x, y, payload, index }: any) => {
   if (!x || !y || !payload) return null;
+
+  // Adjust vertical space based on angle
+  const dyAdjust =
+    index === 0
+      ? -6 // top
+      : index === 4
+      ? 12 // bottom
+      : 4; // others
 
   return (
     <text
       x={x}
-      y={y}
+      y={y + dyAdjust}
       textAnchor="middle"
       fill="#64748b"
       fontSize={13}
       fontWeight={500}
-      dy={4}
+      dy={3}
     >
       {payload.value}
     </text>
@@ -94,17 +100,20 @@ const CustomLabel = ({ x, y, payload }: any) => {
 // ---------------------
 const OctagramChart = () => {
   return (
-    <div className="flex flex-col items-center mt-4">
+    <div className="flex flex-col items-center mt-1"> {/* tightened chart to header */}
+      
       {/* RADAR CHART */}
-      <div className="w-full max-w-xl -mt-2"> 
-        <ResponsiveContainer width="100%" height={450}>
-          <RadarChart cx="50%" cy="50%" outerRadius="72%" data={data}>
+      <div className="w-full max-w-xl">
+        <ResponsiveContainer width="100%" height={430}> {/* shorter height */}
+          <RadarChart cx="50%" cy="50%" outerRadius="78%" data={data}>
             <PolarGrid stroke="#d7e2eb" strokeWidth={1} gridType="polygon" />
+
             <PolarAngleAxis
               dataKey="label"
               tick={CustomLabel}
               tickLine={false}
             />
+
             <Radar
               dataKey="value"
               stroke="#14B8A6"
@@ -117,8 +126,8 @@ const OctagramChart = () => {
         </ResponsiveContainer>
       </div>
 
-      {/* LEGENDS */}
-      <div className="flex gap-6 mt-3 text-sm text-gray-600">
+      {/* LEGEND — moved closer */}
+      <div className="flex gap-6 mt-1 text-sm text-gray-600">
         <div className="flex items-center gap-2">
           <span className="w-3 h-3 rounded-full bg-[#27D787]" />
           Top Scores
