@@ -13,10 +13,11 @@ interface OctagramChartProps {
 }
 
 const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
+  // Convert scores → recharts format
   const data = useMemo(() => {
     return Object.entries(scores).map(([key, value]) => ({
       label: componentNames[key] || key,
-      value: value,
+      value,
     }));
   }, [scores, componentNames]);
 
@@ -32,8 +33,10 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
     return "normal";
   };
 
+  // Dot design
   const CustomDot = ({ cx, cy, payload }: any) => {
     if (!cx || !cy || !payload) return null;
+
     const type = getHighlightType(payload.value);
 
     if (type === "high") {
@@ -56,20 +59,39 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
       );
     }
 
-    return <circle cx={cx} cy={cy} r={6} fill="white" stroke="#4DD4AC" strokeWidth={2} />;
+    return (
+      <circle
+        cx={cx}
+        cy={cy}
+        r={6}
+        fill="white"
+        stroke="#4DD4AC"
+        strokeWidth={2}
+      />
+    );
   };
 
-  const CustomLabel = ({ x, y, payload }: any) => {
+  // AUTO-positioning label (tidak terpotong)
+  const CustomLabel = ({ cx, cy, x, y, payload }: any) => {
     if (!x || !y || !payload) return null;
 
-    const offsetX = x > 250 ? 10 : x < 250 ? -10 : 0;
-    const offsetY = y > 250 ? 15 : y < 250 ? -10 : 0;
+    const dx = x - cx;
+    const dy = y - cy;
+
+    // scale outward, like Lovable
+    const scale = 1.18;
+
+    const labelX = cx + dx * scale;
+    const labelY = cy + dy * scale;
+
+    const anchor =
+      dx > 20 ? "start" : dx < -20 ? "end" : "middle";
 
     return (
       <text
-        x={x + offsetX}
-        y={y + offsetY}
-        textAnchor={x > 260 ? "start" : x < 240 ? "end" : "middle"}
+        x={labelX}
+        y={labelY}
+        textAnchor={anchor}
         fill="#64748b"
         fontSize={14}
         fontWeight={500}
@@ -82,17 +104,21 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
 
   return (
     <div className="octagram-chart-container">
-      <ResponsiveContainer width="100%" height={600}>
+      <ResponsiveContainer width="100%" height={520}>
         <RadarChart
           cx="50%"
-          cy="50%"
-          outerRadius="75%"
+          cy="48%"
+          outerRadius="82%"
           data={data}
-          margin={{ top: 60, right: 60, bottom: 60, left: 60 }}
+          margin={{ top: 10, right: 40, bottom: 10, left: 40 }}
         >
           <PolarGrid stroke="#e2e8f0" strokeWidth={1} gridType="polygon" />
 
-          <PolarAngleAxis dataKey="label" tick={CustomLabel} tickLine={false} />
+          <PolarAngleAxis
+            dataKey="label"
+            tick={CustomLabel}
+            tickLine={false}
+          />
 
           <Radar
             name="Values"
@@ -106,8 +132,8 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
         </RadarChart>
       </ResponsiveContainer>
 
-      {/* ⭐ Legend (HARUS di luar chart) */}
-      <div className="flex justify-center gap-6 mt-4 text-sm text-gray-600">
+      {/* Legend */}
+      <div className="flex justify-center gap-8 mt-6 text-sm text-gray-600">
         <div className="flex items-center gap-2">
           <span className="w-3 h-3 rounded-full bg-[#27D787]"></span>
           <span>Top Score</span>
