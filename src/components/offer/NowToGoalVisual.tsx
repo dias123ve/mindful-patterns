@@ -25,49 +25,56 @@ const NowToGoalVisual = ({
   const personNowSrc = `/images/${gender}_now.png`;
   const personGoalSrc = `/images/${gender}_goal.png`;
 
-  // Width calculation
-  const getStrongWidth = (score: number) => Math.max((score / MAX_SCORE) * 90, 45);
-  const getLowWidth = (score: number) => Math.max((score / MAX_SCORE) * 55, 22);
+  // posisi indikator dot
+  const getStrongPos = (score: number) => Math.max((score / MAX_SCORE) * 78, 30);
+  const getLowPos = (score: number) => Math.max((score / MAX_SCORE) * 45, 18);
 
   return (
     <div className="bg-card rounded-2xl p-6 md:p-8 shadow-soft border border-border fade-up max-w-[880px] mx-auto">
 
       <div className="grid md:grid-cols-2 gap-4 items-start">
 
-        {/* LEFT – NOW */}
-        <div className="flex flex-col items-center">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3 self-start">
+        {/* LEFT — NOW */}
+        <div className="text-center">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">
             Now
           </h3>
 
-          {/* Image */}
-          <img src={personNowSrc} className="w-[230px] mb-4" />
+          <div className="flex justify-center mb-4">
+            <img src={personNowSrc} className="w-[240px] h-auto object-contain" />
+          </div>
 
-          <div className="w-full space-y-6">
+          <div className="space-y-7">
 
             {/* STRONG COMPONENTS */}
             {positiveComponents.map((comp) => {
               const score = componentScores[comp.component_key] || 0;
-              const w = getStrongWidth(score);
+              const pos = getStrongPos(score);
 
               return (
-                <div key={comp.id} className="space-y-1">
+                <div key={comp.id} className="space-y-1.5">
 
                   {/* LABEL */}
-                  <div className="flex justify-between text-gray-600 text-[14px] px-2">
-                    <span>{comp.name}</span>
-                    <span>Strong</span>
+                  <div className="flex justify-between px-1 w-[55%] mx-auto">
+                    <span className="font-semibold text-black text-[15px]">
+                      {comp.name}
+                    </span>
+                    <span className="font-semibold text-black text-[15px]">
+                      Strong
+                    </span>
                   </div>
 
                   {/* BAR */}
-                  <div className="relative h-2 rounded-full bg-gray-200 w-[75%] mx-auto">
+                  <div className="relative h-2 rounded-full bg-slate-200 w-[55%] mx-auto">
+
                     <div
                       className="h-full rounded-full"
-                      style={{ backgroundColor: "#FFB74D", width: `${w}%` }}
+                      style={{ backgroundColor: "#FFB74D", width: "100%" }}
                     />
+
                     <div
                       className="absolute -top-[4px] h-3.5 w-3.5 rounded-full shadow"
-                      style={{ backgroundColor: "#F57C00", left: `${w}%` }}
+                      style={{ backgroundColor: "#F57C00", left: `${pos}%` }}
                     />
                   </div>
                 </div>
@@ -77,23 +84,30 @@ const NowToGoalVisual = ({
             {/* LOW COMPONENT */}
             {negativeComponent && (() => {
               const score = componentScores[negativeComponent.component_key] || 0;
-              const w = getLowWidth(score);
+              const pos = getLowPos(score);
 
               return (
-                <div className="space-y-1">
-                  <div className="flex justify-between text-gray-600 text-[14px] px-2">
-                    <span>{negativeComponent.name}</span>
-                    <span>Low</span>
+                <div className="space-y-1.5">
+
+                  <div className="flex justify-between px-1 w-[55%] mx-auto">
+                    <span className="font-semibold text-black text-[15px]">
+                      {negativeComponent.name}
+                    </span>
+                    <span className="font-semibold text-black text-[15px]">
+                      Low
+                    </span>
                   </div>
 
-                  <div className="relative h-2 rounded-full bg-gray-200 w-[75%] mx-auto">
+                  <div className="relative h-2 bg-slate-200 rounded-full w-[55%] mx-auto">
+
                     <div
                       className="h-full rounded-full"
-                      style={{ backgroundColor: "#E57373", width: `${w}%` }}
+                      style={{ backgroundColor: "#E57373", width: "100%" }}
                     />
+
                     <div
                       className="absolute -top-[4px] h-3.5 w-3.5 rounded-full shadow"
-                      style={{ backgroundColor: "#D32F2F", left: `${w}%` }}
+                      style={{ backgroundColor: "#D32F2F", left: `${pos}%` }}
                     />
                   </div>
                 </div>
@@ -103,58 +117,62 @@ const NowToGoalVisual = ({
           </div>
         </div>
 
-        {/* RIGHT – FUTURE YOU */}
-        <div className="flex flex-col items-center">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-success mb-3 self-start">
+        {/* RIGHT — FUTURE YOU */}
+        <div className="text-center">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-success mb-3">
             Future You
           </h3>
 
-          <img src={personGoalSrc} className="w-[230px] mb-4" />
+          <div className="flex justify-center mb-4">
+            <img src={personGoalSrc} className="w-[240px] h-auto object-contain" />
+          </div>
 
-          <div className="w-full space-y-6">
+          <div className="space-y-7">
 
             {/* ELEVATED */}
             {positiveComponents.map((comp) => (
-              <div key={comp.id} className="space-y-1">
+              <div key={comp.id} className="space-y-1.5">
 
-                <div className="flex justify-between text-gray-600 text-[14px] px-2">
-                  <span>{comp.name}</span>
-                  <span>Elevated</span>
+                <div className="flex justify-between px-1 w-[55%] mx-auto">
+                  <span className="font-semibold text-black text-[15px]">{comp.name}</span>
+                  <span className="font-semibold text-black text-[15px]">Elevated</span>
                 </div>
 
-                <div className="relative h-2 bg-emerald-100 rounded-full w-[75%] mx-auto">
-                  <div className="h-full bg-emerald-500 rounded-full" style={{ width: "92%" }} />
+                <div className="relative h-2 bg-emerald-100 rounded-full w-[55%] mx-auto">
+                  <div className="h-full bg-emerald-500 rounded-full" style={{ width: "100%" }} />
                   <div
                     className="absolute -top-[4px] h-3.5 w-3.5 bg-emerald-600 rounded-full shadow"
                     style={{ left: "92%" }}
                   />
                 </div>
+
               </div>
             ))}
 
             {/* STEADY */}
             {negativeComponent && (
-              <div className="space-y-1">
-                <div className="flex justify-between text-gray-600 text-[14px] px-2">
-                  <span>{negativeComponent.name}</span>
-                  <span>Steady</span>
+              <div className="space-y-1.5">
+
+                <div className="flex justify-between px-1 w-[55%] mx-auto">
+                  <span className="font-semibold text-black text-[15px]">{negativeComponent.name}</span>
+                  <span className="font-semibold text-black text-[15px]">Steady</span>
                 </div>
 
-                <div className="relative h-2 bg-yellow-100 rounded-full w-[75%] mx-auto">
+                <div className="relative h-2 bg-yellow-100 rounded-full w-[55%] mx-auto">
                   <div
                     className="h-full rounded-full"
-                    style={{ backgroundColor: "#FFD54F", width: "82%" }}
+                    style={{ backgroundColor: "#FFD54F", width: "100%" }}
                   />
                   <div
                     className="absolute -top-[4px] h-3.5 w-3.5 rounded-full shadow"
                     style={{ backgroundColor: "#FBC02D", left: "82%" }}
                   />
                 </div>
+
               </div>
             )}
 
           </div>
-
         </div>
 
       </div>
