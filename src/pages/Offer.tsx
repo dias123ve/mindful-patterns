@@ -8,7 +8,6 @@ import NowToGoalVisual from "@/components/offer/NowToGoalVisual";
 import AboutYourPlan from "@/components/offer/AboutYourPlan";
 import OfferSection from "@/components/offer/OfferSection";
 import ExplanationSections from "@/components/offer/ExplanationSections";
-import HolisticExplanation from "@/components/offer/HolisticExplanation";
 
 interface ComponentData {
   id: string;
@@ -22,18 +21,15 @@ const Offer = () => {
 
   const [positiveComponents, setPositiveComponents] = useState<ComponentData[]>([]);
   const [negativeComponent, setNegativeComponent] = useState<ComponentData | null>(null);
-
   const [componentScores, setComponentScores] = useState<Record<string, number>>({});
 
   // ----------------------------------------------------
-  // 🔥 DISCOUNT TIMER LOGIC
+  // DISCOUNT TIMER (10 minutes)
   // ----------------------------------------------------
-
-  const [timeLeft, setTimeLeft] = useState(600); // 10 minutes
+  const [timeLeft, setTimeLeft] = useState(600); // seconds
 
   useEffect(() => {
     let start = sessionStorage.getItem("offer_start_time");
-
     if (!start) {
       start = Date.now().toString();
       sessionStorage.setItem("offer_start_time", start);
@@ -50,6 +46,8 @@ const Offer = () => {
     return () => clearInterval(interval);
   }, []);
 
+  const discountExpired = timeLeft <= 0;
+
   const formatTime = (sec: number) => {
     const m = String(Math.floor(sec / 60)).padStart(2, "0");
     const s = String(sec % 60).padStart(2, "0");
@@ -57,9 +55,8 @@ const Offer = () => {
   };
 
   // ----------------------------------------------------
-  // 🔥 FETCH RESULTS FROM DB / SESSION
+  // FETCH RESULTS
   // ----------------------------------------------------
-
   useEffect(() => {
     fetchResults();
   }, []);
@@ -77,20 +74,20 @@ const Offer = () => {
     try {
       let scores: Record<string, number> = {};
 
+      // Prefer sessionStorage
       if (componentScoresStr) {
         scores = JSON.parse(componentScoresStr);
       } else {
-        const { data: submission, error: subError } = await supabase
+        const { data: submission } = await supabase
           .from("quiz_submissions")
           .select("component_scores")
           .eq("id", submissionId)
           .single();
 
-        if (subError) throw subError;
-        scores = (submission?.component_scores as Record<string, number>) || {};
+        scores = submission?.component_scores || {};
       }
 
-      // Normalize underscore → hyphen
+      // Normalize keys
       const normalizedScores: Record<string, number> = {};
       Object.entries(scores).forEach(([key, value]) => {
         normalizedScores[key.replace(/_/g, "-")] = value;
@@ -99,11 +96,9 @@ const Offer = () => {
       setComponentScores(normalizedScores);
 
       // Load metadata
-      const { data: componentsData, error: compError } = await supabase
+      const { data: componentsData } = await supabase
         .from("components")
         .select("id, name, component_key");
-
-      if (compError) throw compError;
 
       const sortedKeys = Object.entries(normalizedScores)
         .sort(([, a], [, b]) => b - a)
@@ -124,8 +119,7 @@ const Offer = () => {
         setNegativeComponent(null);
       }
 
-    } catch (error) {
-      console.error("Error fetching results:", error);
+    } catch (err) {
       toast.error("Failed to load offer.");
       navigate("/quiz");
     } finally {
@@ -142,9 +136,8 @@ const Offer = () => {
   }
 
   // ----------------------------------------------------
-  // 🔥 PAGE RENDER
+  // PAGE RENDER
   // ----------------------------------------------------
-
   return (
     <div className="min-h-screen bg-gradient-hero">
 
@@ -158,14 +151,9 @@ const Offer = () => {
         </Link>
       </header>
 
-      {/* 🔥 FLOATING DISCOUNT BAR */}
-      {timeLeft > 0 && (
-        <div className="
-          fixed top-0 left-0 w-full z-50 
-          bg-white/95 backdrop-blur 
-          border-b border-border 
-          px-4 py-3
-        ">
+      {/* FLOATING DISCOUNT BAR */}
+      {!discountExpired && (
+        <div className="fixed top-0 left-0 w-full z-50 bg-white/95 backdrop-blur border-b border-border px-4 py-3">
           <div className="max-w-4xl mx-auto flex items-center justify-between">
             <span className="text-sm font-medium text-foreground">
               Discount is reserved for:{" "}
@@ -176,8 +164,7 @@ const Offer = () => {
 
             <button
               onClick={() => {
-                const el = document.getElementById("offer-block");
-                el?.scrollIntoView({ behavior: "smooth" });
+                document.getElementById("offer-block")?.scrollIntoView({ behavior: "smooth" });
               }}
               className="bg-primary text-white px-4 py-2 rounded-full text-sm font-medium shadow"
             >
@@ -188,7 +175,7 @@ const Offer = () => {
       )}
 
       {/* MAIN */}
-      <main className="container mx-auto px-4 py-24 pb-16">
+      <main className="container mx-auto px-4 py-12 pb-16">
         <div className="max-w-4xl mx-auto space-y-12">
 
           <NowToGoalVisual
@@ -197,7 +184,7 @@ const Offer = () => {
             componentScores={componentScores}
           />
 
-          <div className="text-center fade-up" style={{ animationDelay: "0.08s" }}>
+          <div className="text-center fade-up">
             <h1 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-3">
               Your personalized plan is ready.
             </h1>
@@ -211,17 +198,20 @@ const Offer = () => {
             <OfferSection
               positiveComponents={positiveComponents}
               negativeComponent={negativeComponent}
+              discountExpired={discountExpired}
+              timeLeft={timeLeft}
             />
           </div>
 
           <AboutYourPlan />
-          <HolisticExplanation />
           <ExplanationSections />
 
           {/* SECOND OFFER */}
           <OfferSection
             positiveComponents={positiveComponents}
             negativeComponent={negativeComponent}
+            discountExpired={discountExpired}
+            timeLeft={timeLeft}
           />
 
         </div>
