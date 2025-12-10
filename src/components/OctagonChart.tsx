@@ -12,194 +12,137 @@ interface OctagonChartProps {
   componentNames?: Record<string, string>;
 }
 
+// FINAL VALID KEYS — MATCH DB EXACTLY
 const ORDERED_KEYS = [
   "self-identity",
   "self-esteem",
+  "self-confidence",
   "self-agency",
-  "self-awareness",
-  "self-connection",
-  "self-motivation",
+  "self-assertiveness",
   "self-regulation",
-  "self-protection",
+  "self-motivation",
+  "self-compassion",
 ];
 
 const OctagonChart = ({ scores, componentNames = {} }: OctagonChartProps) => {
-  // Use fixed order to avoid messy polygon
-  const orderedEntries = ORDERED_KEYS
-    .filter((key) => scores[key] !== undefined)
-    .map((key) => [key, scores[key]] as [string, number]);
+  // Protect against incomplete data
+  const availableKeys = ORDERED_KEYS.filter((key) => scores[key] !== undefined);
+  if (availableKeys.length < 3) return null; // avoid broken polygon
 
-  // Sort for highlight badges
+  // Sorting for highlight markers
   const sortedEntries = Object.entries(scores).sort((a, b) => b[1] - a[1]);
-  const top2Keys = sortedEntries.slice(0, 2).map(([key]) => key);
-  const lowestKey = sortedEntries[sortedEntries.length - 1]?.[0];
+  const top2 = sortedEntries.slice(0, 2).map(([k]) => k);
+  const lowest = sortedEntries[sortedEntries.length - 1]?.[0];
 
-  // Convert into Recharts format
+  // Convert data for Recharts
   const data = ORDERED_KEYS.map((key) => ({
     key,
     subject: componentNames[key] || key.replace(/-/g, " "),
     value: scores[key] ?? 0,
-    fullMark: 50, // max score in quiz
-    isTop2: top2Keys.includes(key),
-    isLowest: key === lowestKey,
+    fullMark: 50,
+    isTop2: top2.includes(key),
+    isLowest: key === lowest,
   }));
 
   return (
     <div className="relative w-full max-w-lg mx-auto">
-      {/* Ambient glow background */}
+      {/* Ambient glow */}
       <div className="absolute inset-0 bg-gradient-to-br from-violet-500/10 via-cyan-500/10 to-emerald-500/10 rounded-full blur-3xl scale-75 opacity-60" />
 
       <div className="relative h-80 md:h-96">
         <ResponsiveContainer width="100%" height="100%">
           <RadarChart cx="50%" cy="50%" outerRadius="75%" data={data}>
             <defs>
-              {/* Gradient fill */}
+              {/* Gradient */}
               <linearGradient id="radarGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                 <stop offset="0%" stopColor="#8B5CF6" stopOpacity={0.65} />
                 <stop offset="50%" stopColor="#06B6D4" stopOpacity={0.45} />
                 <stop offset="100%" stopColor="#10B981" stopOpacity={0.65} />
               </linearGradient>
 
-              {/* Stroke gradient */}
+              {/* Stroke */}
               <linearGradient id="strokeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                 <stop offset="0%" stopColor="#8B5CF6" />
                 <stop offset="50%" stopColor="#06B6D4" />
                 <stop offset="100%" stopColor="#10B981" />
               </linearGradient>
 
-              {/* Glow effect */}
+              {/* Glow */}
               <filter id="radarGlow" x="-50%" y="-50%" width="200%" height="200%">
-                <feGaussianBlur stdDeviation="4" result="coloredBlur" />
+                <feGaussianBlur stdDeviation="4" result="blur" />
                 <feMerge>
-                  <feMergeNode in="coloredBlur" />
+                  <feMergeNode in="blur" />
                   <feMergeNode in="SourceGraphic" />
                 </feMerge>
               </filter>
             </defs>
 
-            {/* Grid polygon */}
-            <PolarGrid stroke="url(#strokeGradient)" strokeOpacity={0.18} gridType="polygon" />
+            <PolarGrid stroke="url(#strokeGradient)" strokeOpacity={0.15} gridType="polygon" />
+            <PolarRadiusAxis domain={[0, 50]} tick={false} axisLine={false} />
 
-            {/* Radius reference lines */}
-            <PolarRadiusAxis angle={90} domain={[0, 50]} tick={false} axisLine={false} />
-
-            {/* Labels around the radar */}
             <PolarAngleAxis
               dataKey="subject"
-              tick={({ payload, x, y, cx, cy, ...rest }) => {
+              tick={({ payload, x, y, cx, cy }) => {
                 const angle = Math.atan2(y - cy, x - cx);
-                const radius = 14;
-                const offsetX = Math.cos(angle) * radius;
-                const offsetY = Math.sin(angle) * radius;
-
+                const offset = 12;
                 return (
                   <text
-                    {...rest}
-                    x={x + offsetX}
-                    y={y + offsetY}
-                    textAnchor={x > cx ? "start" : x < cx ? "end" : "middle"}
+                    x={x + Math.cos(angle) * offset}
+                    y={y + Math.sin(angle) * offset}
+                    className="fill-foreground text-[11px] font-medium"
+                    textAnchor="middle"
                     dominantBaseline="central"
-                    className="fill-foreground text-[11px] md:text-xs font-medium"
-                    style={{
-                      textShadow: "0 1px 2px rgba(0,0,0,0.1)",
-                    }}
                   >
                     {payload.value}
                   </text>
                 );
               }}
-              tickLine={false}
             />
 
-            {/* Soft background radar */}
-            <Radar
-              name="Background"
-              dataKey="fullMark"
-              stroke="transparent"
-              fill="hsl(var(--muted))"
-              fillOpacity={0.1}
-            />
+            {/* Background */}
+            <Radar dataKey="fullMark" fill="hsl(var(--muted))" fillOpacity={0.1} stroke="none" />
 
-            {/* Main Shape */}
+            {/* Main */}
             <Radar
-              name="Score"
               dataKey="value"
               stroke="url(#strokeGradient)"
               fill="url(#radarGradient)"
               fillOpacity={0.55}
-              strokeWidth={2.5}
+              strokeWidth={2.4}
               filter="url(#radarGlow)"
               dot={(props: any) => {
                 const { cx, cy, payload } = props;
 
-                // Highlight top 2 highest
-                if (payload.isTop2) {
+                if (payload.isTop2)
                   return (
-                    <g key={payload.key}>
+                    <g>
                       <circle cx={cx} cy={cy} r={14} fill="#27D787" opacity={0.28} />
-                      <circle
-                        cx={cx}
-                        cy={cy}
-                        r={9}
-                        fill="#27D787"
-                        stroke="#fff"
-                        strokeWidth={2.2}
-                        filter="url(#radarGlow)"
-                      />
+                      <circle cx={cx} cy={cy} r={8} fill="#27D787" stroke="#fff" strokeWidth={2} />
                     </g>
                   );
-                }
 
-                // Highlight lowest score
-                if (payload.isLowest) {
+                if (payload.isLowest)
                   return (
-                    <g key={payload.key}>
+                    <g>
                       <circle cx={cx} cy={cy} r={14} fill="#FF8A3D" opacity={0.28} />
-                      <circle
-                        cx={cx}
-                        cy={cy}
-                        r={9}
-                        fill="#FF8A3D"
-                        stroke="#fff"
-                        strokeWidth={2.2}
-                        filter="url(#radarGlow)"
-                      />
+                      <circle cx={cx} cy={cy} r={8} fill="#FF8A3D" stroke="#fff" strokeWidth={2} />
                     </g>
                   );
-                }
 
-                // Normal dot
-                return (
-                  <circle
-                    key={payload.key}
-                    cx={cx}
-                    cy={cy}
-                    r={4}
-                    fill="#fff"
-                    stroke="url(#strokeGradient)"
-                    strokeWidth={2}
-                  />
-                );
+                return <circle cx={cx} cy={cy} r={4} fill="#fff" stroke="url(#strokeGradient)" strokeWidth={2} />;
               }}
             />
           </RadarChart>
         </ResponsiveContainer>
       </div>
 
-      {/* Indicators */}
-      <div className="flex justify-center gap-4 mt-4 flex-wrap">
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded-full bg-[#27D787] shadow-lg shadow-[#27D787]/40" />
-          <span className="text-xs text-muted-foreground font-medium">
-            Top Strengths
-          </span>
+      {/* Legend */}
+      <div className="flex justify-center gap-4 mt-4">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <div className="w-3 h-3 bg-[#27D787] rounded-full" /> Top Strengths
         </div>
-
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded-full bg-[#FF8A3D] shadow-lg shadow-[#FF8A3D]/40" />
-          <span className="text-xs text-muted-foreground font-medium">
-            Growth Area
-          </span>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <div className="w-3 h-3 bg-[#FF8A3D] rounded-full" /> Growth Area
         </div>
       </div>
     </div>
