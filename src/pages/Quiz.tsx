@@ -4,9 +4,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { Brain, ArrowRight, Mail, Loader2 } from "lucide-react";
+import { ArrowRight, Mail, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { flushSync } from "react-dom";
+
+// IMPORT IMAGES FOR PRELOAD (Result images in src folder MUST be imported)
+import wellnessMale from "@/assets/wellness-male.jpg";
+import wellnessFemale from "@/assets/wellness-female.jpg";
+
+import maleGoal from "/images/male_goal.jpeg";
+import femaleGoal from "/images/female_goal.jpeg";
+import maleNow from "/images/male_now.jpeg";
+import femaleNow from "/images/female_now.jpeg";
 
 interface Question {
   id: string;
@@ -66,6 +75,7 @@ const Quiz = () => {
   useEffect(() => {
     sessionStorage.setItem("quiz_current_index", String(currentQuestionIndex));
   }, [currentQuestionIndex]);
+
 
   // ========================= FETCH QUIZ DATA =========================
   const fetchQuizData = async () => {
@@ -127,20 +137,13 @@ const Quiz = () => {
     fetchQuizData();
   }, []);
 
+
   // ========================= PRELOAD GENDER IMAGES =========================
   const gender = sessionStorage.getItem("gender");
 
   const genderImages = {
-    male: [
-      "/src/assets/wellness-male.jpg",
-      "/images/male_goal.jpeg",
-      "/images/male_now.jpeg",
-    ],
-    female: [
-      "/src/assets/wellness-female.jpg",
-      "/images/female_goal.jpeg",
-      "/images/female_now.jpeg",
-    ],
+    male: [wellnessMale, maleGoal, maleNow],
+    female: [wellnessFemale, femaleGoal, femaleNow],
   };
 
   useEffect(() => {
@@ -152,7 +155,8 @@ const Quiz = () => {
     }
   }, [loading, gender]);
 
-  // ========================= SELECT OPTION (FIXED) =========================
+
+  // ========================= SELECT OPTION (FIXED with flushSync) =========================
   const currentQuestion = questions[currentQuestionIndex];
   const currentOptions = options.filter((o) => o.question_id === currentQuestion?.id);
 
@@ -163,7 +167,7 @@ const Quiz = () => {
   const handleSelectOption = (optionId: string, score: number) => {
     if (!currentQuestion) return;
 
-    // FORCE React to commit answer BEFORE animation runs
+    // Ensure answer is committed BEFORE animation delay
     flushSync(() => {
       setAnswers((prev) => ({
         ...prev,
@@ -171,15 +175,16 @@ const Quiz = () => {
       }));
     });
 
-    // Delay for fade animation — safe now
+    // Allows fade animation before moving to next question
     setTimeout(() => {
       if (currentQuestionIndex < questions.length - 1) {
         setCurrentQuestionIndex((prev) => prev + 1);
       } else {
         setShowEmailCapture(true);
       }
-    }, 120); // You can adjust to 100–200ms
+    }, 120);
   };
+
 
   // ========================= SCORE CALC =========================
   const calculateScores = () => {
@@ -194,6 +199,7 @@ const Quiz = () => {
       rels.forEach((rel) => {
         const comp = components.find((c) => c.id === rel.component_id);
         if (!comp) return;
+
         const key = comp.component_key;
         scores[key] = (scores[key] || 0) + ans.score;
       });
@@ -205,6 +211,7 @@ const Quiz = () => {
 
     return { scores, sortedComponents };
   };
+
 
   // ========================= SUBMIT =========================
   const handleSubmit = async () => {
@@ -244,6 +251,7 @@ const Quiz = () => {
     }
   };
 
+
   // ========================= UI =========================
   if (loading) {
     return (
@@ -261,22 +269,36 @@ const Quiz = () => {
     );
   }
 
+
   return (
     <div className="min-h-screen bg-gradient-hero">
+
+      {/* ========================= HEADER ========================= */}
       <header className="container mx-auto px-4 py-6">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Brain className="h-7 w-7 text-primary" />
-            <span className="text-lg font-display font-semibold text-foreground">
-              MindProfile
-            </span>
-          </div>
 
+          {/* Back Button in Header */}
+          {currentQuestionIndex > 0 && !showEmailCapture ? (
+            <button
+              onClick={() => setCurrentQuestionIndex((prev) => prev - 1)}
+              className="text-sm text-muted-foreground hover:text-foreground"
+            >
+              Back
+            </button>
+          ) : (
+            <div className="w-10" />
+          )}
+
+          {/* Progress label */}
           <span className="text-sm text-muted-foreground">
             {showEmailCapture
               ? "Almost done!"
               : `Question ${currentQuestionIndex + 1} of ${questions.length}`}
           </span>
+
+          {/* Spacer to balance layout */}
+          <div className="w-10" />
+
         </div>
       </header>
 
@@ -284,20 +306,13 @@ const Quiz = () => {
         <Progress value={showEmailCapture ? 100 : progress} className="h-2" />
       </div>
 
+
+      {/* ========================= MAIN ========================= */}
       <main className="container mx-auto px-4 pb-16">
         <div className="max-w-xl mx-auto">
 
           {!showEmailCapture ? (
             <>
-              {currentQuestionIndex > 0 && (
-                <button
-                  onClick={() => setCurrentQuestionIndex((prev) => prev - 1)}
-                  className="mb-4 text-sm text-muted-foreground hover:text-foreground flex items-center gap-1"
-                >
-                  ← Back
-                </button>
-              )}
-
               <div key={currentQuestionIndex} className="animate-fade-in">
                 <div className="text-center mb-10">
                   <h2 className="text-2xl md:text-3xl font-display font-semibold text-foreground">
@@ -373,6 +388,7 @@ const Quiz = () => {
 
         </div>
       </main>
+
     </div>
   );
 };
