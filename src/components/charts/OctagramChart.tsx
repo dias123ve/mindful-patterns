@@ -12,11 +12,10 @@ interface OctagramChartProps {
 }
 
 const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
-  // Get highest score for normalization
+  // Normalize values
   const maxValue = Math.max(...Object.values(scores));
-  const SCALE = 0.6; // reduce max height
+  const SCALE = 0.6;
 
-  // Normalize data
   const data = Object.keys(scores).map((key) => ({
     key,
     label: componentNames[key] || key,
@@ -27,14 +26,14 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
   if (!data.length) return <p>No chart data.</p>;
 
   // Highlight logic
-  const sortedData = [...data].sort((a, b) => b.rawValue - a.rawValue);
-  const top1Key = sortedData[0]?.key;
-  const top2Key = sortedData[1]?.key;
-  const lowestKey = sortedData[sortedData.length - 1]?.key;
+  const sorted = [...data].sort((a, b) => b.rawValue - a.rawValue);
+  const top1 = sorted[0]?.key;
+  const top2 = sorted[1]?.key;
+  const lowest = sorted[sorted.length - 1]?.key;
 
   const getHighlightType = (key: string) => {
-    if (key === top1Key || key === top2Key) return "high";
-    if (key === lowestKey) return "low";
+    if (key === top1 || key === top2) return "high";
+    if (key === lowest) return "low";
     return "normal";
   };
 
@@ -60,7 +59,6 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
         </g>
       );
     }
-
     return <circle cx={cx} cy={cy} r={6} fill="white" stroke="#4DD4AC" strokeWidth={2} />;
   };
 
@@ -69,27 +67,23 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
     if (!payload) return null;
 
     const label = payload.value;
-    const words = label.split("-");
-    const lines = words.length > 1 ? [words[0] + "-", words.slice(1).join("-")] : [label];
+    const parts = label.split("-");
+    const lines = parts.length > 1 ? [parts[0] + "-", parts.slice(1).join("-")] : [label];
 
     const chartWidth = viewBox?.outerRadius ? viewBox.outerRadius * 2 : 300;
-
-    // Responsive font size
-    const fontSize = Math.max(9, Math.min(12, chartWidth / 30));
+    const fontSize = Math.max(9, Math.min(12, chartWidth / 28));
     const lineHeight = fontSize + 2;
 
-    const isRight = x > cx + 10;
-    const isLeft = x < cx - 10;
-    const isTop = y < cy - 10;
-    const isBottom = y > cy + 10;
+    const isRight = x > cx;
+    const isLeft = x < cx;
+    const isTop = y < cy;
+    const isBottom = y > cy;
 
-    // Responsive offset
     const offsetScale = Math.max(0.7, Math.min(1, chartWidth / 300));
     let offsetX = isRight ? 14 * offsetScale : isLeft ? -14 * offsetScale : 0;
     let offsetY = isTop ? -10 * offsetScale : isBottom ? 14 * offsetScale : 0;
 
-    let anchor =
-      isRight ? "start" : isLeft ? "end" : "middle";
+    const anchor = isRight ? "start" : isLeft ? "end" : "middle";
 
     return (
       <text
@@ -100,8 +94,8 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
         fontSize={fontSize}
         fontWeight={500}
       >
-        {lines.map((line, i) => (
-          <tspan key={i} x={x + offsetX} dy={i === 0 ? 0 : lineHeight}>
+        {lines.map((line, idx) => (
+          <tspan key={idx} x={x + offsetX} dy={idx === 0 ? 0 : lineHeight}>
             {line}
           </tspan>
         ))}
@@ -110,23 +104,38 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
   };
 
   return (
-    <div className="w-full flex flex-col items-center gap-4">
+    <div className="w-full flex flex-col items-center gap-2">
+      {/* RESPONSIVE CONTAINER HEIGHT */}
       <div
-        className="octagram-chart-container p-3 sm:p-4 w-full"
+        className="octagram-chart-container p-1 sm:p-3 w-full"
         style={{
-          minHeight: 150,         // mobile
+          minHeight: 250,            // Mobile compact
         }}
       >
-        <ResponsiveContainer width="100%" height={260}>
+        <ResponsiveContainer
+          width="100%"
+          height={
+            window.innerWidth < 640
+              ? 260      // Mobile
+              : window.innerWidth < 1024
+              ? 330      // Tablet
+              : 480      // Desktop (large & premium)
+          }
+        >
           <RadarChart
             cx="50%"
             cy="50%"
-            outerRadius="42%"        // MOBILE-FRIENDLY
+            outerRadius={
+              window.innerWidth < 640
+                ? "36%"    // Mobile (lebih dalam)
+                : window.innerWidth < 1024
+                ? "42%"    // Tablet
+                : "48%"    // Desktop bigger
+            }
             data={data}
-            margin={{ top: 10, right: 10, bottom: 10, left: 10 }}
+            margin={{ top: 6, right: 6, bottom: 6, left: 6 }}
           >
             <PolarGrid stroke="#e2e8f0" strokeWidth={1} gridType="polygon" />
-
             <PolarAngleAxis dataKey="label" tick={CustomLabel} tickLine={false} />
 
             <Radar
@@ -143,12 +152,12 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
       {/* LEGEND */}
       <div className="flex items-center gap-6 mt-1 text-sm font-medium text-slate-600">
         <div className="flex items-center gap-2">
-          <span className="inline-block w-3 h-3 rounded-full" style={{ backgroundColor: "#27D787" }} />
+          <span className="inline-block w-3 h-3 rounded-full bg-[#27D787]" />
           Top Score
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="inline-block w-3 h-3 rounded-full" style={{ backgroundColor: "#FF8A3D" }} />
+          <span className="inline-block w-3 h-3 rounded-full bg-[#FF8A3D]" />
           Lowest Score
         </div>
       </div>
