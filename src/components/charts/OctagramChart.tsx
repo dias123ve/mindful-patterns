@@ -32,7 +32,8 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
   };
 
   const CustomDot = ({ cx, cy, payload }: any) => {
-    if (!payload) return null;
+    if (!cx || !cy || !payload) return null;
+
     const type = getHighlightType(payload.value);
 
     if (type === "high") {
@@ -64,12 +65,17 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
     <div className="octagram-chart-container">
       <div className="mx-auto" style={{ width: "480px", maxWidth: "100%" }}>
         <ResponsiveContainer width="100%" height={520}>
-          <RadarChart cx="50%" cy="46%" outerRadius="68%" data={data}>
-
-            {/* Disable default labels */}
-            <PolarAngleAxis dataKey="label" tick={false} tickLine={false} />
-
+          <RadarChart
+            cx="50%"
+            cy="46%"
+            outerRadius="68%"
+            data={data}
+            margin={{ top: 10, right: 10, bottom: 10, left: 10 }}
+          >
             <PolarGrid stroke="#e2e8f0" strokeWidth={1} gridType="polygon" />
+
+            {/** MATIKAN LABEL DEFAULT */}
+            <PolarAngleAxis dataKey="label" tick={false} tickLine={false} />
 
             <Radar
               name="Values"
@@ -81,61 +87,43 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
               dot={<CustomDot />}
             />
 
-            {/* ⭐ CUSTOM MANUAL LABELS (WRAPPING WORKS 100%) */}
-            {data.map((entry, index) => {
-              const total = data.length;
-              const angle = (Math.PI * 2 * index) / total - Math.PI / 2;
+            {/** LABEL MANUAL — TIDAK TERPOTONG */}
+            <svg>
+              {data.map((entry, index) => {
+                const total = data.length;
+                const angle = (Math.PI * 2 * index) / total - Math.PI / 2;
 
-              // posisi pusat chart (ResponsiveContainer transform ke pixel)
-              const cx = 240;
-              const cy = 240;
+                // center chart (harus mengikuti cy/cx RadarChart)
+                const cx = 240; 
+                const cy = 240;
 
-              // Jarak label dari pusat
-              const radius = 200;
+                // radius label (semakin besar, semakin keluar)
+                const radius = 200;
 
-              const x = cx + radius * Math.cos(angle);
-              const y = cy + radius * Math.sin(angle);
+                const x = cx + radius * Math.cos(angle);
+                const y = cy + radius * Math.sin(angle);
 
-              // anchor otomatis
-              const anchor =
-                Math.cos(angle) > 0.25
-                  ? "start"
-                  : Math.cos(angle) < -0.25
-                  ? "end"
-                  : "middle";
+                const cos = Math.cos(angle);
+                const anchor =
+                  cos > 0.3 ? "start" :
+                  cos < -0.3 ? "end" :
+                  "middle";
 
-              // WRAP TEKS 2 BARIS
-              const maxChars = 12;
-              const words = entry.label.split(" ");
-
-              let line1 = "";
-              let line2 = "";
-
-              for (let w of words) {
-                if ((line1 + " " + w).trim().length <= maxChars) {
-                  line1 = (line1 + " " + w).trim();
-                } else {
-                  line2 = (line2 + " " + w).trim();
-                }
-              }
-
-              return (
-                <text
-                  key={index}
-                  x={x}
-                  y={y}
-                  textAnchor={anchor}
-                  fill="#64748b"
-                  fontSize={13}
-                  fontWeight={500}
-                  style={{ pointerEvents: "none" }}
-                >
-                  <tspan x={x} dy="-0.2em">{line1}</tspan>
-                  {line2 && <tspan x={x} dy="1.2em">{line2}</tspan>}
-                </text>
-              );
-            })}
-
+                return (
+                  <text
+                    key={index}
+                    x={x}
+                    y={y}
+                    textAnchor={anchor}
+                    fill="#64748b"
+                    fontSize={13}
+                    fontWeight={500}
+                  >
+                    {entry.label}
+                  </text>
+                );
+              })}
+            </svg>
           </RadarChart>
         </ResponsiveContainer>
       </div>
@@ -145,6 +133,7 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
           <span className="w-3 h-3 rounded-full bg-[#27D787]"></span>
           <span>Top Score</span>
         </div>
+
         <div className="flex items-center gap-2">
           <span className="w-3 h-3 rounded-full bg-[#FF8A3D]"></span>
           <span>Grow Area</span>
