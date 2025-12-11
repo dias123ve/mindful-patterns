@@ -157,12 +157,16 @@ const Results = () => {
           </p>
 
           {/* ⭐ FIXED: OCTAGRAM CHART */}
-          <div className="max-w-3xl mx-auto mt-10">
-            <OctagramChart
-              scores={componentScores}
-              componentNames={componentNames}
-            />
-          </div>
+        <div className="max-w-3xl mx-auto mt-10">
+  {Object.keys(componentScores).length > 0 ? (
+    <OctagramChart
+      scores={componentScores}
+      componentNames={componentNames}
+    />
+  ) : (
+    <p className="text-center text-muted-foreground">Loading chart...</p>
+  )}
+</div>
 
           {/* POSITIVE SECTIONS */}
           {positiveComponents.length > 0 && (
