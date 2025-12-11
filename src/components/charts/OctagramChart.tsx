@@ -13,7 +13,7 @@ interface OctagramChartProps {
 }
 
 const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
-  // ⛔ Prevent crash: no data → don't render chart
+  // Prevent rendering when empty (hindari chart blank)
   if (!scores || Object.keys(scores).length === 0) {
     return (
       <div className="text-center text-muted-foreground py-10">
@@ -22,7 +22,7 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
     );
   }
 
-  // Convert to chart-friendly format
+  // Convert data → chart format
   const data = useMemo(() => {
     return Object.entries(scores).map(([key, value]) => ({
       key,
@@ -31,7 +31,7 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
     }));
   }, [scores, componentNames]);
 
-  // Determine top 2 & lowest via index
+  // Determine top 2 & lowest using index
   const sorted = [...data]
     .map((d, i) => ({ ...d, i }))
     .sort((a, b) => b.value - a.value);
@@ -45,7 +45,7 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
     return "normal";
   };
 
-  // DOT rendering
+  // DOT styling
   const CustomDot = ({ cx, cy, payload }: any) => {
     if (!cx || !cy) return null;
 
@@ -56,7 +56,7 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
         <g>
           <circle cx={cx} cy={cy} r={16} fill="#27D787" opacity={0.25} />
           <circle cx={cx} cy={cy} r={10} fill="#27D787" />
-          <circle cx={cx} cy={cy} r={4} fill="white" opacity={0.7" />
+          <circle cx={cx} cy={cy} r={4} fill="white" opacity={0.7} />
         </g>
       );
     }
@@ -66,13 +66,20 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
         <g>
           <circle cx={cx} cy={cy} r={16} fill="#FF8A3D" opacity={0.25} />
           <circle cx={cx} cy={cy} r={10} fill="#FF8A3D" />
-          <circle cx={cx} cy={cy} r={4} fill="white" opacity={0.7" />
+          <circle cx={cx} cy={cy} r={4} fill="white" opacity={0.7} />
         </g>
       );
     }
 
     return (
-      <circle cx={cx} cy={cy} r={6} fill="white" stroke="#4DD4AC" strokeWidth={2} />
+      <circle
+        cx={cx}
+        cy={cy}
+        r={6}
+        fill="white"
+        stroke="#4DD4AC"
+        strokeWidth={2}
+      />
     );
   };
 
@@ -83,12 +90,10 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
 
     const angle = payload.coordinate?.angle ?? 0;
     const offset = 20;
-
     const posY = angle > 180 ? y + offset : y - offset;
 
-    // Split label into max 2 lines
-    const maxChars = 12;
     const words = label.split(" ");
+    const maxChars = 12;
     let line1 = "";
     let line2 = "";
 
@@ -115,7 +120,7 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
     );
   };
 
-  // Inject index into data for highlighting
+  // Inject index untuk highlight system
   const chartData = data.map((d, i) => ({ ...d, index: i }));
 
   return (
@@ -138,7 +143,11 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
             margin={{ top: 10, right: 50, bottom: 10, left: 50 }}
           >
             <PolarGrid stroke="#e2e8f0" strokeWidth={1} gridType="polygon" />
-            <PolarAngleAxis dataKey="label" tick={CustomLabel} tickLine={false} />
+            <PolarAngleAxis
+              dataKey="label"
+              tick={CustomLabel}
+              tickLine={false}
+            />
             <Radar
               name="Values"
               dataKey="value"
@@ -159,6 +168,7 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
           <span className="w-3 h-3 rounded-full bg-[#27D787]"></span>
           <span>Top Score</span>
         </div>
+
         <div className="flex items-center gap-2">
           <span className="w-3 h-3 rounded-full bg-[#FF8A3D]"></span>
           <span>Grow Area</span>
