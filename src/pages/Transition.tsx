@@ -33,7 +33,7 @@ const GrowthCurve = () => {
       path.style.strokeDashoffset = "0";
     }
 
-    // Dot movement
+    // Dot movement animation
     if (!reduce) {
       const duration = 1300;
       const delay = 180;
@@ -44,13 +44,12 @@ const GrowthCurve = () => {
         const t = Math.min(1, (now - start) / duration);
         const eased = ease(t);
         const pt = path.getPointAtLength(eased * pathLength);
+
         dot.setAttribute("cx", String(pt.x));
         dot.setAttribute("cy", String(pt.y));
 
         const glow = Math.max(0, (eased - 0.75) / 0.25);
-        dot.style.filter = `drop-shadow(0 6px ${12 * glow}px rgba(16,124,116,${
-          0.15 * glow
-        }))`;
+        dot.style.filter = `drop-shadow(0 6px ${12 * glow}px rgba(16,124,116,${0.15 * glow}))`;
 
         if (t < 1) requestAnimationFrame(moveDot);
       };
@@ -73,15 +72,15 @@ const GrowthCurve = () => {
         xmlns="http://www.w3.org/2000/svg"
       >
         <defs>
-          {/* Main stroke gradient */}
+          {/* Gradient stroke: red → orange → yellow → green */}
           <linearGradient id="growthStroke" x1="0%" x2="100%">
-            <stop offset="0%" stopColor="#FF4D4D" />       {/* Merah */}
-            <stop offset="33%" stopColor="#FF8A2B" />      {/* Oranye */}
-            <stop offset="66%" stopColor="#FFD93D" />      {/* Kuning */}
-            <stop offset="100%" stopColor="#3BB273" />     {/* Hijau */}
+            <stop offset="0%" stopColor="#FF4D4D" />
+            <stop offset="33%" stopColor="#FF8A2B" />
+            <stop offset="66%" stopColor="#FFD93D" />
+            <stop offset="100%" stopColor="#3BB273" />
           </linearGradient>
 
-          {/* Area fill */}
+          {/* Fill area */}
           <linearGradient id="growthFill" x1="0%" x2="100%">
             <stop offset="0%" stopColor="#FF4D4D20" />
             <stop offset="33%" stopColor="#FF8A2B18" />
@@ -90,13 +89,13 @@ const GrowthCurve = () => {
           </linearGradient>
         </defs>
 
-        {/* Fill area */}
+        {/* Fill area under curve */}
         <path d={`${pathD} L 520 220 L 0 220 Z`} fill="url(#growthFill)" />
 
         {/* Background subtle line */}
         <path d={pathD} stroke="rgba(0,0,0,0.05)" strokeWidth={7} fill="none" />
 
-        {/* Animated stroke */}
+        {/* Main animated stroke */}
         <path
           ref={pathRef}
           d={pathD}
@@ -107,7 +106,7 @@ const GrowthCurve = () => {
           strokeLinejoin="round"
         />
 
-        {/* Day marks */}
+        {/* Day labels */}
         <g
           fontSize="12"
           textAnchor="middle"
@@ -121,19 +120,19 @@ const GrowthCurve = () => {
           <text x="500" y="210">60</text>
         </g>
 
-        {/* Moving dot */}
+        {/* START DOT — NOW RED */}
         <circle
           ref={dotRef}
           cx="20"
           cy="150"
           r="9"
           fill="white"
-          stroke="#3BB273"
+          stroke="#FF4D4D"  // Red border
           strokeWidth="2.5"
         />
-        <circle cx="20" cy="150" r="5" fill="url(#growthStroke)" />
+        <circle cx="20" cy="150" r="5" fill="#FF4D4D" />  {/* Red inner */}
 
-        {/* Goal marker */}
+        {/* Final goal dot */}
         <g transform="translate(500,40)">
           <circle
             r="14"
@@ -142,12 +141,10 @@ const GrowthCurve = () => {
             strokeWidth="3"
             filter="drop-shadow(0 6px 16px rgba(16,124,116,0.22))"
           />
-
           <circle r="7" fill="#3BB273" opacity="0.18">
             <animate attributeName="r" values="7;14;7" dur="1.8s" repeatCount="indefinite" />
             <animate attributeName="opacity" values="0.25;0;0.25" dur="1.8s" repeatCount="indefinite" />
           </circle>
-
           <path
             d="M0 -2.6 L1 -1 L3 -1 L1 1 L1.5 3 L0 2 L-1.5 3 L-1 1 L-3 -1 L-1 -1 Z"
             fill="#3BB273"
@@ -155,13 +152,14 @@ const GrowthCurve = () => {
           />
         </g>
 
+        {/* Goal label (beside dot) */}
         <text
-          x="95%"
-          y="45"
+          x="518"
+          y="44"
           fontSize="14"
           fill="#2F8F68"
           fontFamily="DM Sans, sans-serif"
-          textAnchor="end"
+          textAnchor="start"
           style={{ fontWeight: 600 }}
         >
           Goal
@@ -208,7 +206,11 @@ const Transition = () => {
             <GrowthCurve />
           </div>
 
-          <div className="text-center fade-up" style={{ animationDelay: "0.3s" }}>
+          {/* Centered button */}
+          <div
+            className="w-full flex justify-center fade-up"
+            style={{ animationDelay: "0.3s" }}
+          >
             <Link to="/offer">
               <Button
                 variant="hero"
@@ -220,7 +222,6 @@ const Transition = () => {
               </Button>
             </Link>
           </div>
-
         </div>
       </main>
 
