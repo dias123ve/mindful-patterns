@@ -154,9 +154,9 @@ const GrowthCurve = () => {
 
         {/* GOAL LABEL — ABOVE DOT, RIGHT-ALIGNED */}
         <text
-          x="500"
-          y="24"
-          fontSize="14"
+          x="514"
+          y="18"
+          fontSize="17"
           fill="#2F8F68"
           fontFamily="DM Sans, sans-serif"
           textAnchor="end"
