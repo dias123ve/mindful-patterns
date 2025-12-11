@@ -49,14 +49,32 @@ const Quiz = () => {
   const [submitting, setSubmitting] = useState(false);
   const [showEmailCapture, setShowEmailCapture] = useState(false);
 
+  // ========================= RESTORE FROM SESSION =========================
   useEffect(() => {
-    fetchQuizData();
+    const savedAnswers = sessionStorage.getItem("quiz_answers");
+    const savedIndex = sessionStorage.getItem("quiz_current_index");
+
+    if (savedAnswers) {
+      setAnswers(JSON.parse(savedAnswers));
+    }
+    if (savedIndex) {
+      setCurrentQuestionIndex(Number(savedIndex));
+    }
   }, []);
+
+  // Save answers automatically
+  useEffect(() => {
+    sessionStorage.setItem("quiz_answers", JSON.stringify(answers));
+  }, [answers]);
+
+  // Save question index automatically
+  useEffect(() => {
+    sessionStorage.setItem("quiz_current_index", String(currentQuestionIndex));
+  }, [currentQuestionIndex]);
 
   // ========================= FETCH QUIZ DATA =========================
   const fetchQuizData = async () => {
     try {
-      // 1. Get active quiz
       const { data: quiz, error: quizErr } = await supabase
         .from("quizzes")
         .select("id")
@@ -69,7 +87,6 @@ const Quiz = () => {
         return;
       }
 
-      // 2. Get questions
       const { data: qData, error: qErr } = await supabase
         .from("quiz_questions")
         .select("*")
@@ -88,7 +105,6 @@ const Quiz = () => {
 
       const questionIds = qData.map((q) => q.id);
 
-      // 3. Get options
       const { data: oData, error: oErr } = await supabase
         .from("quiz_question_options")
         .select("*")
@@ -97,14 +113,12 @@ const Quiz = () => {
 
       if (oErr) throw oErr;
 
-      // 4. Get question → component relations
       const { data: rels, error: relErr } = await supabase
         .from("quiz_question_components")
         .select("question_id, component_id");
 
       if (relErr) throw relErr;
 
-      // 5. Get components table
       const { data: comps, error: compErr } = await supabase
         .from("components")
         .select("id, component_key");
@@ -123,7 +137,10 @@ const Quiz = () => {
     }
   };
 
-  // ========================= SELECT OPTION =========================
+  useEffect(() => {
+    fetchQuizData();
+  }, []);
+
   const currentQuestion = questions[currentQuestionIndex];
   const currentOptions = options.filter((o) => o.question_id === currentQuestion?.id);
 
@@ -156,7 +173,6 @@ const Quiz = () => {
       const ans = answers[q.id];
       if (!ans) return;
 
-      // ambil semua component_id terkait question
       const rels = componentRels.filter((r) => r.question_id === q.id);
 
       rels.forEach((rel) => {
@@ -265,30 +281,41 @@ const Quiz = () => {
       <main className="container mx-auto px-4 pb-16">
         <div className="max-w-xl mx-auto">
           {!showEmailCapture ? (
-            <div key={currentQuestionIndex} className="animate-fade-in">
-              <div className="text-center mb-10">
-                <h2 className="text-2xl md:text-3xl font-display font-semibold text-foreground">
-                  {currentQuestion?.question_text}
-                </h2>
-              </div>
+            <>
+              {currentQuestionIndex > 0 && (
+                <button
+                  onClick={() => setCurrentQuestionIndex((prev) => prev - 1)}
+                  className="mb-4 text-sm text-muted-foreground hover:text-foreground flex items-center gap-1"
+                >
+                  ← Back
+                </button>
+              )}
 
-              <div className="space-y-3">
-                {currentOptions.map((opt, i) => (
-                  <button
-                    key={opt.id}
-                    onClick={() => handleSelectOption(opt.id, opt.score || 0)}
-                    className={`w-full text-left p-5 rounded-xl border-2 transition-all ${
-                      answers[currentQuestion.id]?.optionId === opt.id
-                        ? "border-primary bg-primary/10 shadow-soft"
-                        : "border-border bg-card hover:border-primary/50 hover:bg-primary/5"
-                    }`}
-                    style={{ animationDelay: `${i * 0.05}s` }}
-                  >
-                    {opt.option_text}
-                  </button>
-                ))}
+              <div key={currentQuestionIndex} className="animate-fade-in">
+                <div className="text-center mb-10">
+                  <h2 className="text-2xl md:text-3xl font-display font-semibold text-foreground">
+                    {currentQuestion?.question_text}
+                  </h2>
+                </div>
+
+                <div className="space-y-3">
+                  {currentOptions.map((opt, i) => (
+                    <button
+                      key={opt.id}
+                      onClick={() => handleSelectOption(opt.id, opt.score || 0)}
+                      className={`w-full text-left p-5 rounded-xl border-2 transition-all ${
+                        answers[currentQuestion.id]?.optionId === opt.id
+                          ? "border-primary bg-primary/10 shadow-soft"
+                          : "border-border bg-card hover:border-primary/50 hover:bg-primary/5"
+                      }`}
+                      style={{ animationDelay: `${i * 0.05}s` }}
+                    >
+                      {opt.option_text}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            </>
           ) : (
             <div className="text-center animate-fade-in-up">
               <div className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-6">
