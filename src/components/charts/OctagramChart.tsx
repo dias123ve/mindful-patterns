@@ -14,7 +14,7 @@ interface OctagramChartProps {
 const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
   // Determine max score
   const maxValue = Math.max(...Object.values(scores));
-  const SCALE = 0.6; // === 60%
+  const SCALE = 0.5; // === 50%
 
   // Convert score object → normalized array for Recharts
   const data = Object.keys(scores).map((key) => ({
@@ -107,7 +107,7 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
       {/* ======= CHART ======= */}
       <div className="octagram-chart-container p-2 w-full" style={{ minHeight: 400 }}>
         <ResponsiveContainer width="100%" height={400}>
-          <RadarChart cx="50%" cy="50%" outerRadius="60%" data={data}>
+          <RadarChart cx="50%" cy="50%" outerRadius="70%" data={data}>
             <PolarGrid stroke="#e2e8f0" strokeWidth={1} gridType="polygon" />
 
             <PolarAngleAxis dataKey="label" tick={CustomLabel} tickLine={false} />
