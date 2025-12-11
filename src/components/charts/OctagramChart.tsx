@@ -14,7 +14,7 @@ interface OctagramChartProps {
 const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
   // Get highest score for normalization
   const maxValue = Math.max(...Object.values(scores));
-  const SCALE = 0.8; // reduce max height
+  const SCALE = 0.6; // reduce max height
 
   // Normalize data
   const data = Object.keys(scores).map((key) => ({
@@ -117,7 +117,7 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
           minHeight: 150,         // mobile
         }}
       >
-        <ResponsiveContainer width="100%" height={380}>
+        <ResponsiveContainer width="100%" height={260}>
           <RadarChart
             cx="50%"
             cy="50%"
