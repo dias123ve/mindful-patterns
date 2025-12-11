@@ -36,12 +36,20 @@ const Results = () => {
 
   const [gender, setGender] = useState<"male" | "female">("female");
 
+  // Load gender + results
   useEffect(() => {
     const storedGender = sessionStorage.getItem("gender") as "male" | "female" | null;
     if (storedGender) setGender(storedGender);
 
     fetchResults();
   }, []);
+
+  // Scroll to top whenever step changes to page 2
+  useEffect(() => {
+    if (step === 2) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [step]);
 
   const fetchResults = async () => {
     const submissionId = sessionStorage.getItem("quiz_submission_id");
@@ -115,6 +123,7 @@ const Results = () => {
     );
   }
 
+  // Compute negativity score
   const allScores = Object.values(componentScores);
   const maxScore = Math.max(...allScores, 1);
   const negativityScore = Math.min(...allScores);
@@ -128,16 +137,6 @@ const Results = () => {
       {step === 1 && (
         <main className="container mx-auto px-4 py-14 pb-24">
 
-          {/* Back button */}
-          <div className="max-w-3xl mx-auto mb-4">
-            <button
-              onClick={() => navigate(-1)}
-              className="text-sm text-foreground/80 hover:text-foreground flex items-center gap-1 transition"
-            >
-              ← Back
-            </button>
-          </div>
-
           <div className="max-w-3xl mx-auto text-center">
 
             <h1 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-3">
@@ -148,6 +147,7 @@ const Results = () => {
               A concise overview of your inner patterns based on your quiz responses.
             </p>
 
+            {/* Negativity Bar */}
             <div className="flex justify-center mb-12">
               <NegativityBar
                 score={negativityScore}
@@ -156,16 +156,11 @@ const Results = () => {
               />
             </div>
 
+            {/* BUTTON to next page */}
             <Button
               size="lg"
               className="w-full sm:w-auto px-6 py-4 sm:px-8 sm:py-6 text-base sm:text-lg font-semibold"
-              onClick={() => {
-                setStep(2);
-                setTimeout(
-                  () => window.scrollTo({ top: 120, behavior: "smooth" }),
-                  50
-                );
-              }}
+              onClick={() => setStep(2)}
             >
               See Your Strengths and Challenges →
             </Button>
@@ -179,7 +174,7 @@ const Results = () => {
       {step === 2 && (
         <main className="container mx-auto px-4 py-14 pb-24">
 
-          {/* Back to Summary */}
+          {/* Back button only on page 2 */}
           <div className="max-w-3xl mx-auto mb-4">
             <button
               onClick={() => setStep(1)}
@@ -191,10 +186,12 @@ const Results = () => {
 
           <div className="max-w-3xl mx-auto">
 
+            {/* NEW TITLE */}
             <h1 className="text-2xl md:text-3xl font-display font-bold text-foreground text-center mb-3">
               Deep Dive: Your Components
             </h1>
 
+            {/* NEW DESCRIPTION */}
             <p className="text-muted-foreground max-w-lg mx-auto text-center mb-10">
               See the strengths shaping your progress and the key area that holds the greatest growth potential.
             </p>
