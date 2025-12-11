@@ -43,7 +43,7 @@ const NowToGoalVisual = ({
 
           <div className="space-y-6">
 
-            {/* STRONG components */}
+            {/* NORMAL components */}
             {positiveComponents.map((comp) => {
               const score = componentScores[comp.component_key] || 0;
               const pos = getStrongPos(score);
@@ -53,7 +53,7 @@ const NowToGoalVisual = ({
 
                   <div className="flex justify-between w-[75%] mx-auto">
                     <span className="text-[15px] font-semibold">{comp.name}</span>
-                    <span className="text-[13px] opacity-60">(Strong)</span>
+                    <span className="text-[13px] opacity-60">(Normal)</span>
                   </div>
 
                   <div className="relative h-2 bg-[#D5D7DB] rounded-full w-[75%] mx-auto">
