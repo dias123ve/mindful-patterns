@@ -1,14 +1,13 @@
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
 
-// FINAL: gunakan JPG files
 import maleImg from "@/assets/wellness-male.jpg";
 import femaleImg from "@/assets/wellness-female.jpg";
 
 export interface NegativityBarProps {
   score: number;
   maxScore?: number;
-  gender?: "male" | "female";
+  gender?: "male" | "female"; // optional now
   animated?: boolean;
   showImage?: boolean;
   className?: string;
@@ -17,19 +16,31 @@ export interface NegativityBarProps {
 export const NegativityBar = ({
   score,
   maxScore,
-  gender = "female",
+  gender,
   animated = true,
   showImage = true,
   className,
 }: NegativityBarProps) => {
 
   // ----------------------------
-  // AUTO SCALING LOGIC
+  // GET GENDER FROM SESSION STORAGE
+  // ----------------------------
+  const storedGender = sessionStorage.getItem("gender") as "male" | "female" | null;
+
+  // Priority:
+  // 1. Prop gender (if provided)
+  // 2. SessionStorage gender
+  // 3. Default to "female"
+  const finalGender =
+    gender ??
+    storedGender ??
+    "female";
+
+  // ----------------------------
+  // AUTO SCALE LOGIC
   // ----------------------------
   const safeMax = Math.max(maxScore ?? score, 1);
   const normalized = Math.min(score / safeMax, 1);
-
-  // Highest score stops at "Normal" zone → 25%
   const targetPosition = 25 + (1 - normalized) * 75;
 
   const [displayPosition, setDisplayPosition] = useState(
@@ -45,50 +56,63 @@ export const NegativityBar = ({
     return () => clearTimeout(timer);
   }, [targetPosition, animated]);
 
-  // Choose gender image
-  const imgSrc = gender === "male" ? maleImg : femaleImg;
+  // ----------------------------
+  // IMAGE BASED ON GENDER
+  // ----------------------------
+  const imgSrc = finalGender === "male" ? maleImg : femaleImg;
+
+  // Prevent capsule hitting edges
+  const clampedLabelPos = Math.max(5, Math.min(displayPosition, 95));
 
   return (
     <div className={cn("w-full max-w-sm space-y-4", className)}>
 
-      {/* ----------------------------
-          TITLE
-      ---------------------------- */}
+      {/* Title */}
       <h3 className="text-base font-medium text-foreground tracking-tight px-1 text-center">
         Inner Challenge Level
       </h3>
 
-      {/* ----------------------------
-          HEADER IMAGE
-      ---------------------------- */}
+      {/* Header Image */}
       {showImage && (
         <div className="overflow-hidden rounded-2xl">
           <img
             src={imgSrc}
-            alt="Wellness illustration"
+            alt="User Profile Mood"
             className="w-full h-auto object-cover opacity-90"
           />
         </div>
       )}
 
-      {/* ----------------------------
-          BAR + INDICATOR
-      ---------------------------- */}
+      {/* Bar Section */}
       <div className="px-1 mt-1">
 
         <div className="relative pt-8 pb-2">
 
-          {/* === YOUR LEVEL LABEL (capsule) === */}
+          {/* Capsule */}
           <div
-            className="absolute -top-5 -translate-x-1/2 z-[9999]"
-            style={{ left: `${displayPosition}%` }}
+            className="absolute -top-5 -translate-x-1/2 z-[999]"
+            style={{ left: `${clampedLabelPos}%` }}
           >
-            <div className="bg-card/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-medium border border-border shadow select-none">
+            <div className="
+              bg-card/95
+              backdrop-blur-sm
+              px-3
+              py-1
+              rounded-full
+              text-xs
+              font-medium
+              border
+              border-border
+              shadow
+              whitespace-nowrap
+              min-w-[70px]
+              text-center
+            ">
               Your Level
             </div>
           </div>
 
-          {/* === DOT INDICATOR === */}
+          {/* Dot */}
           <div
             className={cn(
               "absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-20",
@@ -96,16 +120,19 @@ export const NegativityBar = ({
             )}
             style={{ left: `${displayPosition}%` }}
           >
-            <div className="w-6 h-6 rounded-full bg-white border-2 border-white shadow-lg ring-1 ring-black/10 flex items-center justify-center">
+            <div className="
+              w-6 h-6 rounded-full bg-white border-2 border-white shadow-lg
+              ring-1 ring-black/10 flex items-center justify-center
+            ">
               <div className="w-2.5 h-2.5 rounded-full bg-white" />
             </div>
           </div>
 
-          {/* === BAR BACKGROUND === */}
+          {/* Bar */}
           <div className="absolute inset-x-0 top-3 h-4">
             <div className="absolute inset-0 bg-card shadow-sm border border-border/50 rounded-full p-0.5">
               <div
-                className="w-full h-full rounded-full shadow-inner bg-gradient-to-r 
+                className="w-full h-full rounded-full shadow-inner bg-gradient-to-r
                   from-[#4ade80]
                   via-[#facc15] via-40%
                   via-[#fb923c] via-70%
@@ -119,9 +146,7 @@ export const NegativityBar = ({
 
         </div>
 
-        {/* ----------------------------
-            LEVEL LABELS BELOW BAR
-        ---------------------------- */}
+        {/* Level Labels */}
         <div className="flex justify-between mt-5 text-xs text-muted-foreground select-none">
           <span>low</span>
           <span>normal</span>
@@ -129,6 +154,7 @@ export const NegativityBar = ({
           <span>high</span>
         </div>
       </div>
+
     </div>
   );
 };
