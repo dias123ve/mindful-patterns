@@ -1,13 +1,13 @@
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
 
-// Only JPEG images — clean & safe for Vercel
-import maleImg from "@/assets/wellness-male.jpeg";
-import femaleImg from "@/assets/wellness-female.jpeg";
+// FINAL: gunakan JPG files
+import maleImg from "@/assets/wellness-male.jpg";
+import femaleImg from "@/assets/wellness-female.jpg";
 
 export interface NegativityBarProps {
-  score: number;        // lowest component score
-  maxScore?: number;    // highest component score
+  score: number;
+  maxScore?: number;
   gender?: "male" | "female";
   animated?: boolean;
   showImage?: boolean;
@@ -23,12 +23,13 @@ export const NegativityBar = ({
   className,
 }: NegativityBarProps) => {
 
-  // --- AUTO SCALE ---
+  // ----------------------------
+  // AUTO SCALING LOGIC
+  // ----------------------------
   const safeMax = Math.max(maxScore ?? score, 1);
   const normalized = Math.min(score / safeMax, 1);
 
-  // Max score → NORMAL area (25%)
-  // Min score → HIGH area   (100%)
+  // Highest score stops at "Normal" zone → 25%
   const targetPosition = 25 + (1 - normalized) * 75;
 
   const [displayPosition, setDisplayPosition] = useState(
@@ -44,30 +45,22 @@ export const NegativityBar = ({
     return () => clearTimeout(timer);
   }, [targetPosition, animated]);
 
-  // CLEAN IMAGE PICKER — no PNG
+  // Choose gender image
   const imgSrc = gender === "male" ? maleImg : femaleImg;
 
   return (
     <div className={cn("w-full max-w-sm space-y-4", className)}>
 
-      {/* === YOUR LEVEL (always top layer) === */}
-      <div
-        className="relative z-[9999] flex justify-center pointer-events-none"
-      >
-        <div
-          className="absolute -top-6 -translate-x-1/2 text-xs font-medium text-foreground select-none"
-          style={{ left: `${displayPosition}%` }}
-        >
-          Your Level
-        </div>
-      </div>
-
-      {/* Title */}
+      {/* ----------------------------
+          TITLE
+      ---------------------------- */}
       <h3 className="text-base font-medium text-foreground tracking-tight px-1 text-center">
         Inner Challenge Level
       </h3>
 
-      {/* Header Image */}
+      {/* ----------------------------
+          HEADER IMAGE
+      ---------------------------- */}
       {showImage && (
         <div className="overflow-hidden rounded-2xl">
           <img
@@ -78,27 +71,24 @@ export const NegativityBar = ({
         </div>
       )}
 
-      {/* Content */}
-      <div className="space-y-3 px-1">
+      {/* ----------------------------
+          BAR + INDICATOR
+      ---------------------------- */}
+      <div className="px-1 mt-1">
 
-        {/* --- BAR AREA --- */}
-        <div className="relative h-4">
+        <div className="relative pt-8 pb-2">
 
-          {/* Background bar */}
-          <div className="absolute inset-0 bg-card shadow-sm border border-border/50 rounded-full p-0.5">
-            <div
-              className="w-full h-full rounded-full shadow-inner bg-gradient-to-r 
-                from-[#4ade80]
-                via-[#facc15] via-40%
-                via-[#fb923c] via-70%
-                to-[#ef4444]
-                relative overflow-hidden"
-            >
-              <div className="absolute inset-0 bg-gradient-to-b from-white/30 to-transparent h-1/2" />
+          {/* === YOUR LEVEL LABEL (capsule) === */}
+          <div
+            className="absolute -top-5 -translate-x-1/2 z-[9999]"
+            style={{ left: `${displayPosition}%` }}
+          >
+            <div className="bg-card/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-medium border border-border shadow select-none">
+              Your Level
             </div>
           </div>
 
-          {/* Dot */}
+          {/* === DOT INDICATOR === */}
           <div
             className={cn(
               "absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-20",
@@ -110,10 +100,29 @@ export const NegativityBar = ({
               <div className="w-2.5 h-2.5 rounded-full bg-white" />
             </div>
           </div>
+
+          {/* === BAR BACKGROUND === */}
+          <div className="absolute inset-x-0 top-3 h-4">
+            <div className="absolute inset-0 bg-card shadow-sm border border-border/50 rounded-full p-0.5">
+              <div
+                className="w-full h-full rounded-full shadow-inner bg-gradient-to-r 
+                  from-[#4ade80]
+                  via-[#facc15] via-40%
+                  via-[#fb923c] via-70%
+                  to-[#ef4444]
+                  relative overflow-hidden"
+              >
+                <div className="absolute inset-0 bg-gradient-to-b from-white/30 to-transparent h-1/2" />
+              </div>
+            </div>
+          </div>
+
         </div>
 
-        {/* Labels */}
-        <div className="flex justify-between mt-3 text-xs text-muted-foreground select-none">
+        {/* ----------------------------
+            LEVEL LABELS BELOW BAR
+        ---------------------------- */}
+        <div className="flex justify-between mt-5 text-xs text-muted-foreground select-none">
           <span>low</span>
           <span>normal</span>
           <span>medium</span>
