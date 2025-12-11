@@ -12,9 +12,9 @@ interface OctagramChartProps {
 }
 
 const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
-  /* ---------------- NORMALIZATION ---------------- */
+  // Normalize values
   const maxValue = Math.max(...Object.values(scores));
-  const SCALE = 0.4; // shrink radar area to 40% of chart radius
+  const SCALE = 0.6; // radar height
 
   const data = Object.keys(scores).map((key) => ({
     key,
@@ -25,7 +25,7 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
 
   if (!data.length) return <p>No chart data.</p>;
 
-  /* ---------------- HIGHLIGHT LOGIC ---------------- */
+  // Highlight logic
   const sorted = [...data].sort((a, b) => b.rawValue - a.rawValue);
   const top1 = sorted[0]?.key;
   const top2 = sorted[1]?.key;
@@ -37,27 +37,26 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
     return "normal";
   };
 
-  /* ---------------- DOT OFFSET FIX (FINAL) ---------------- */
+  /* -------------------------------------------------
+     DOT RENDERER — pulls dots inward without error
+  -------------------------------------------------- */
   const CustomDot = (props: any) => {
-    const { cx, cy, payload, viewBox } = props;
+    const { cx, cy, payload, chartWidth, chartHeight } = props;
+
+    if (!cx || !cy || !payload) return null;
 
     const type = getHighlightType(payload.payload.key);
 
-    // TRUE center of chart
-    const centerX = viewBox.cx;
-    const centerY = viewBox.cy;
+    // true center of radar
+    const centerX = chartWidth / 2;
+    const centerY = chartHeight / 2;
 
-    // DOT actual original coordinate
-    const baseX = cx;
-    const baseY = cy;
+    // how much dot should be pulled inward
+    const DOT_PULL = 1 - SCALE; // automatic sync with radar scale
 
-    // Move dot inward: if SCALE = 0.4 → factor = 0.6
-    const factor = 1 - SCALE;
+    const adjX = cx + (centerX - cx) * DOT_PULL;
+    const adjY = cy + (centerY - cy) * DOT_PULL;
 
-    const adjX = baseX + (centerX - baseX) * factor;
-    const adjY = baseY + (centerY - baseY) * factor;
-
-    /* -------- DOT DRAWING -------- */
     if (type === "high") {
       return (
         <g>
@@ -90,27 +89,26 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
     );
   };
 
-  /* ---------------- RESPONSIVE LABEL ---------------- */
+  /* -------------------------------------------------
+     RESPONSIVE LABEL RENDERER
+  -------------------------------------------------- */
   const CustomLabel = ({ x, y, payload, cx, cy, viewBox }: any) => {
     if (!payload) return null;
 
     const label = payload.value;
     const parts = label.split("-");
-    const lines = parts.length > 1 ? [parts[0] + "-", parts.slice(1).join("-")] : [label];
+    const lines =
+      parts.length > 1 ? [parts[0] + "-", parts.slice(1).join("-")] : [label];
 
-    const chartWidth = viewBox?.outerRadius ? viewBox.outerRadius * 2 : 300;
-
-    const fontSize = Math.max(9, Math.min(12, chartWidth / 28));
-    const lineHeight = fontSize + 2;
+    const fontSize = Math.max(9, 12);
 
     const isRight = x > cx;
     const isLeft = x < cx;
     const isTop = y < cy;
     const isBottom = y > cy;
 
-    const offsetScale = Math.max(0.7, Math.min(1, chartWidth / 300));
-    let offsetX = isRight ? 14 * offsetScale : isLeft ? -14 * offsetScale : 0;
-    let offsetY = isTop ? -10 * offsetScale : isBottom ? 14 * offsetScale : 0;
+    let offsetX = isRight ? 14 : isLeft ? -14 : 0;
+    let offsetY = isTop ? -10 : isBottom ? 14 : 0;
 
     const anchor = isRight ? "start" : isLeft ? "end" : "middle";
 
@@ -124,7 +122,7 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
         fontWeight={500}
       >
         {lines.map((line, idx) => (
-          <tspan key={idx} x={x + offsetX} dy={idx === 0 ? 0 : lineHeight}>
+          <tspan key={idx} x={x + offsetX} dy={idx === 0 ? 0 : fontSize + 2}>
             {line}
           </tspan>
         ))}
@@ -132,33 +130,21 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
     );
   };
 
-  /* ---------------- RENDER ---------------- */
+  /* -------------------------------------------------
+     RENDER
+  -------------------------------------------------- */
   return (
     <div className="w-full flex flex-col items-center gap-2">
-
-      {/* CHART WRAPPER */}
-      <div className="octagram-chart-container p-1 sm:p-1 w-full" style={{ minHeight: 260 }}>
-        <ResponsiveContainer
-          width="100%"
-          height={
-            window.innerWidth < 640 ? 280 :
-            window.innerWidth < 1024 ? 350 :
-            420
-          }
-        >
+      <div className="octagram-chart-container p-1 w-full" style={{ minHeight: 260 }}>
+        <ResponsiveContainer width="100%" height={420}>
           <RadarChart
             cx="50%"
             cy="50%"
-            outerRadius={
-              window.innerWidth < 640 ? "34%" :
-              window.innerWidth < 1024 ? "38%" :
-              "42%"
-            }
+            outerRadius="52%"   // chart stays big
             data={data}
             margin={{ top: 6, right: 6, bottom: 6, left: 6 }}
           >
             <PolarGrid stroke="#e2e8f0" strokeWidth={1} gridType="polygon" />
-
             <PolarAngleAxis dataKey="label" tick={CustomLabel} tickLine={false} />
 
             <Radar
@@ -172,8 +158,8 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
         </ResponsiveContainer>
       </div>
 
-      {/* LEGEND */}
-      <div className="flex items-center gap-6 mt-[3px] mb-[6px] text-sm font-medium text-slate-600">
+      {/* Legend */}
+      <div className="flex items-center gap-6 mt-[4px] mb-[6px] text-sm font-medium text-slate-600">
         <div className="flex items-center gap-2">
           <span className="inline-block w-3 h-3 rounded-full bg-[#27D787]" />
           Top Score
