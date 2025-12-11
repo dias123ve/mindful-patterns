@@ -37,31 +37,56 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
     return "normal";
   };
 
-  /* ---------------- DOT RENDERER ---------------- */
-  const CustomDot = ({ cx, cy, payload }: any) => {
-    const type = getHighlightType(payload.payload.key);
+ /* ---------------- DOT RENDERER ---------------- */
+const CustomDot = ({ cx, cy, payload, ...rest }: any) => {
+  const type = getHighlightType(payload.payload.key);
 
-    if (type === "high") {
-      return (
-        <g>
-          <circle cx={cx} cy={cy} r={16} fill="#27D787" opacity={0.25} />
-          <circle cx={cx} cy={cy} r={10} fill="#27D787" />
-          <circle cx={cx} cy={cy} r={4} fill="white" opacity={0.7} />
-        </g>
-      );
-    }
-    if (type === "low") {
-      return (
-        <g>
-          <circle cx={cx} cy={cy} r={16} fill="#FF8A3D" opacity={0.25} />
-          <circle cx={cx} cy={cy} r={10} fill="#FF8A3D" />
-          <circle cx={cx} cy={cy} r={4} fill="white" opacity={0.7} />
-        </g>
-      );
-    }
-    return <circle cx={cx} cy={cy} r={6} fill="white" stroke="#4DD4AC" strokeWidth={2} />;
-  };
+  // ===== MOVE DOT TOWARD CENTER =====
+  const centerX = rest?.cx || 0;
+  const centerY = rest?.cy || 0;
 
+  // Dot moves 18% closer to center (adjustable)
+  const factor = 0.18;
+
+  const offsetX = (centerX - cx) * factor;
+  const offsetY = (centerY - cy) * factor;
+
+  const adjX = cx + offsetX;
+  const adjY = cy + offsetY;
+
+  // ===== REDRAW DOT AT NEW LOCATION =====
+
+  if (type === "high") {
+    return (
+      <g>
+        <circle cx={adjX} cy={adjY} r={16} fill="#27D787" opacity={0.25} />
+        <circle cx={adjX} cy={adjY} r={10} fill="#27D787" />
+        <circle cx={adjX} cy={adjY} r={4} fill="white" opacity={0.7} />
+      </g>
+    );
+  }
+
+  if (type === "low") {
+    return (
+      <g>
+        <circle cx={adjX} cy={adjY} r={16} fill="#FF8A3D" opacity={0.25} />
+        <circle cx={adjX} cy={adjY} r={10} fill="#FF8A3D" />
+        <circle cx={adjX} cy={adjY} r={4} fill="white" opacity={0.7} />
+      </g>
+    );
+  }
+
+  return (
+    <circle
+      cx={adjX}
+      cy={adjY}
+      r={6}
+      fill="white"
+      stroke="#4DD4AC"
+      strokeWidth={2}
+    />
+  );
+};
   /* ---------------- RESPONSIVE LABEL ---------------- */
   const CustomLabel = ({ x, y, payload, cx, cy, viewBox }: any) => {
     if (!payload) return null;
@@ -109,17 +134,17 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
       <div
         className="octagram-chart-container p-1 sm:p-1 w-full"
         style={{
-          minHeight: 250,            // Mobile compact
+          minHeight: 260,            // Mobile compact
         }}
       >
         <ResponsiveContainer
           width="100%"
           height={
             window.innerWidth < 640
-              ? 260      // Mobile
+              ? 280      // Mobile
               : window.innerWidth < 1024
-              ? 310      // Tablet
-              : 380      // Desktop (large & premium)
+              ? 350      // Tablet
+              : 420      // Desktop (large & premium)
           }
         >
           <RadarChart
@@ -127,10 +152,10 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
             cy="50%"
             outerRadius={
               window.innerWidth < 640
-                ? "36%"    // Mobile (lebih dalam)
+                ? "38%"    // Mobile (lebih dalam)
                 : window.innerWidth < 1024
-                ? "38%"    // Tablet
-                : "40%"    // Desktop bigger
+                ? "43%"    // Tablet
+                : "48%"    // Desktop bigger
             }
             data={data}
             margin={{ top: 6, right: 6, bottom: 6, left: 6 }}
