@@ -12,23 +12,22 @@ interface OctagramChartProps {
 }
 
 const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
-  // Determine max score
+  // Get highest score for normalization
   const maxValue = Math.max(...Object.values(scores));
-  const SCALE = 0.5; // === 50%
+  const SCALE = 0.6; // reduce max height
 
-  // Convert score object → normalized array for Recharts
+  // Normalize data
   const data = Object.keys(scores).map((key) => ({
     key,
     label: componentNames[key] || key,
-    rawValue: scores[key], // for highlighting logic
-    value: (scores[key] / maxValue) * SCALE, // normalized
+    rawValue: scores[key],
+    value: (scores[key] / maxValue) * SCALE,
   }));
 
   if (!data.length) return <p>No chart data.</p>;
 
-  // Sort using raw values (not normalized)
+  // Highlight logic
   const sortedData = [...data].sort((a, b) => b.rawValue - a.rawValue);
-
   const top1Key = sortedData[0]?.key;
   const top2Key = sortedData[1]?.key;
   const lowestKey = sortedData[sortedData.length - 1]?.key;
@@ -52,7 +51,6 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
         </g>
       );
     }
-
     if (type === "low") {
       return (
         <g>
@@ -66,23 +64,32 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
     return <circle cx={cx} cy={cy} r={6} fill="white" stroke="#4DD4AC" strokeWidth={2} />;
   };
 
-  /* ---------------- LABEL RENDERER ---------------- */
-  const CustomLabel = ({ x, y, payload, cx, cy }: any) => {
+  /* ---------------- RESPONSIVE LABEL ---------------- */
+  const CustomLabel = ({ x, y, payload, cx, cy, viewBox }: any) => {
     if (!payload) return null;
 
     const label = payload.value;
     const words = label.split("-");
     const lines = words.length > 1 ? [words[0] + "-", words.slice(1).join("-")] : [label];
 
+    const chartWidth = viewBox?.outerRadius ? viewBox.outerRadius * 2 : 300;
+
+    // Responsive font size
+    const fontSize = Math.max(9, Math.min(12, chartWidth / 30));
+    const lineHeight = fontSize + 2;
+
     const isRight = x > cx + 10;
     const isLeft = x < cx - 10;
     const isTop = y < cy - 10;
     const isBottom = y > cy + 10;
 
-    let offsetX = isRight ? 16 : isLeft ? -16 : 0;
-    let offsetY = isTop ? -10 : isBottom ? 14 : 0;
+    // Responsive offset
+    const offsetScale = Math.max(0.7, Math.min(1, chartWidth / 300));
+    let offsetX = isRight ? 14 * offsetScale : isLeft ? -14 * offsetScale : 0;
+    let offsetY = isTop ? -10 * offsetScale : isBottom ? 14 * offsetScale : 0;
 
-    let anchor = isRight ? "start" : isLeft ? "end" : "middle";
+    let anchor =
+      isRight ? "start" : isLeft ? "end" : "middle";
 
     return (
       <text
@@ -90,11 +97,11 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
         y={y + offsetY}
         textAnchor={anchor}
         fill="#64748b"
-        fontSize={12}
+        fontSize={fontSize}
         fontWeight={500}
       >
         {lines.map((line, i) => (
-          <tspan key={i} x={x + offsetX} dy={i === 0 ? 0 : 14}>
+          <tspan key={i} x={x + offsetX} dy={i === 0 ? 0 : lineHeight}>
             {line}
           </tspan>
         ))}
@@ -104,10 +111,20 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
 
   return (
     <div className="w-full flex flex-col items-center gap-4">
-      {/* ======= CHART ======= */}
-      <div className="octagram-chart-container p-2 w-full" style={{ minHeight: 400 }}>
-        <ResponsiveContainer width="100%" height={400}>
-          <RadarChart cx="50%" cy="50%" outerRadius="70%" data={data}>
+      <div
+        className="octagram-chart-container p-3 sm:p-4 w-full"
+        style={{
+          minHeight: 360,         // mobile
+        }}
+      >
+        <ResponsiveContainer width="100%" height={380}>
+          <RadarChart
+            cx="50%"
+            cy="50%"
+            outerRadius="42%"        // MOBILE-FRIENDLY
+            data={data}
+            margin={{ top: 30, right: 30, bottom: 30, left: 30 }}
+          >
             <PolarGrid stroke="#e2e8f0" strokeWidth={1} gridType="polygon" />
 
             <PolarAngleAxis dataKey="label" tick={CustomLabel} tickLine={false} />
@@ -123,8 +140,8 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
         </ResponsiveContainer>
       </div>
 
-      {/* ======= LEGEND ======= */}
-      <div className="flex items-center gap-6 mt-2 text-sm font-medium text-slate-600">
+      {/* LEGEND */}
+      <div className="flex items-center gap-6 mt-1 text-sm font-medium text-slate-600">
         <div className="flex items-center gap-2">
           <span className="inline-block w-3 h-3 rounded-full" style={{ backgroundColor: "#27D787" }} />
           Top Score
