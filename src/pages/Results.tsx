@@ -12,8 +12,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-// ⭐ FIXED: import chart yang benar
-import OctagramChart from "@/components/charts/OctagramChart";
+// ⭐ NEW: Import NegativityBar
+import { NegativityBar } from "@/components/charts/NegativityBar";
 
 interface ComponentData {
   id: string;
@@ -37,9 +37,24 @@ const Results = () => {
   const [positiveComponents, setPositiveComponents] = useState<ComponentData[]>([]);
   const [negativeComponent, setNegativeComponent] = useState<ComponentData | null>(null);
 
+  const [gender, setGender] = useState<"male" | "female">("female");
+
   useEffect(() => {
+    fetchProfile();
     fetchResults();
   }, []);
+
+  // ⭐ OPTIONAL: Fetch gender from Supabase user profile
+  const fetchProfile = async () => {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("gender")
+      .single();
+
+    if (profile?.gender === "male" || profile?.gender === "female") {
+      setGender(profile.gender);
+    }
+  };
 
   const fetchResults = async () => {
     const submissionId = sessionStorage.getItem("quiz_submission_id");
@@ -54,12 +69,12 @@ const Results = () => {
     try {
       let scores: Record<string, number> = {};
 
-      // Load scores from sessionStorage
+      // Load scores stored after quiz submit
       if (componentScoresStr) {
         scores = JSON.parse(componentScoresStr);
         setComponentScores(scores);
       } else {
-        // Fallback from database
+        // fallback to database
         const { data: submission, error: subError } = await supabase
           .from("quiz_submissions")
           .select("component_scores")
@@ -72,7 +87,7 @@ const Results = () => {
         setComponentScores(scores);
       }
 
-      // Load metadata
+      // Fetch metadata for each component
       const { data: componentsData, error: compError } = await supabase
         .from("components")
         .select(
@@ -81,15 +96,14 @@ const Results = () => {
 
       if (compError) throw compError;
 
-      // Build readable names for labels
+      // Create map of names
       const namesMap: Record<string, string> = {};
       componentsData?.forEach((c) => {
         if (c.component_key) namesMap[c.component_key] = c.name;
       });
-
       setComponentNames(namesMap);
 
-      // Sort high → low
+      // Sort components by score (descending)
       const sortedKeys = Object.entries(scores)
         .sort(([, a], [, b]) => b - a)
         .map(([key]) => key);
@@ -98,7 +112,7 @@ const Results = () => {
         .map((key) => componentsData?.find((c) => c.component_key === key))
         .filter(Boolean) as ComponentData[];
 
-      // Pick top 2 + 1 lowest
+      // Pick highest and lowest
       if (sortedComponents.length >= 3) {
         setPositiveComponents(sortedComponents.slice(0, 2));
         setNegativeComponent(sortedComponents[sortedComponents.length - 1]);
@@ -126,8 +140,14 @@ const Results = () => {
     );
   }
 
+  // ⭐ Compute negativity score
+  const allScores = Object.values(componentScores);
+  const maxScore = Math.max(...allScores, 1); // avoid zero
+  const negativityScore = Math.min(...allScores); // lowest = most negative area
+
   return (
     <div className="min-h-screen bg-gradient-hero">
+
       {/* HEADER */}
       <header className="container mx-auto px-4 py-6">
         <Link to="/" className="flex items-center gap-2">
@@ -141,7 +161,7 @@ const Results = () => {
       <main className="container mx-auto px-4 py-5 pb-16">
         <div className="max-w-3xl mx-auto">
 
-          {/* HEADER WITH CHART */}
+          {/* HEADER TITLE */}
           <div className="flex items-center justify-center gap-3 mb-3">
             <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
               <CheckCircle2 className="h-6 w-6 text-primary" />
@@ -152,25 +172,22 @@ const Results = () => {
             </h1>
           </div>
 
-          <p className="text-muted-foreground max-w-md mx-auto text-center">
-            Based on your responses, here are your patterns.
+          <p className="text-muted-foreground max-w-md mx-auto text-center mb-6">
+            Based on your responses, here is your emotional pattern.
           </p>
 
-          {/* ⭐ FIXED: OCTAGRAM CHART */}
-        <div className="max-w-3xl mx-auto mt-1 sm:mt-1">
-  {Object.keys(componentScores).length > 0 ? (
-    <OctagramChart
-      scores={componentScores}
-      componentNames={componentNames}
-    />
-  ) : (
-    <p className="text-center text-muted-foreground">Loading chart...</p>
-  )}
-</div>
+          {/* ⭐ NEW: NEGATIVITY BAR (Replacing Octagram Chart) */}
+          <div className="max-w-3xl mx-auto mt-6 flex justify-center">
+            <NegativityBar
+              score={negativityScore}
+              maxScore={maxScore}
+              gender={gender}
+            />
+          </div>
 
           {/* POSITIVE SECTIONS */}
           {positiveComponents.length > 0 && (
-            <section className="mb-12">
+            <section className="mb-12 mt-12">
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center">
                   <CheckCircle2 className="h-5 w-5 text-green-600" />
