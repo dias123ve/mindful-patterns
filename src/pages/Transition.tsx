@@ -92,7 +92,7 @@ const GrowthCurve = () => {
         {/* Fill area under curve */}
         <path d={`${pathD} L 520 220 L 0 220 Z`} fill="url(#growthFill)" />
 
-        {/* Background subtle line */}
+        {/* Subtle background line */}
         <path d={pathD} stroke="rgba(0,0,0,0.05)" strokeWidth={7} fill="none" />
 
         {/* Main animated stroke */}
@@ -120,19 +120,19 @@ const GrowthCurve = () => {
           <text x="500" y="210">60</text>
         </g>
 
-        {/* START DOT — NOW RED */}
+        {/* START DOT — RED */}
         <circle
           ref={dotRef}
           cx="20"
           cy="150"
           r="9"
           fill="white"
-          stroke="#FF4D4D"  // Red border
+          stroke="#FF4D4D"
           strokeWidth="2.5"
         />
-        <circle cx="20" cy="150" r="5" fill="#FF4D4D" />  {/* Red inner */}
+        <circle cx="20" cy="150" r="5" fill="#FF4D4D" />
 
-        {/* Final goal dot */}
+        {/* GOAL DOT */}
         <g transform="translate(500,40)">
           <circle
             r="14"
@@ -152,14 +152,14 @@ const GrowthCurve = () => {
           />
         </g>
 
-        {/* Goal label (beside dot) */}
+        {/* GOAL LABEL — ABOVE DOT, RIGHT-ALIGNED */}
         <text
-          x="518"
-          y="44"
+          x="500"
+          y="24"
           fontSize="14"
           fill="#2F8F68"
           fontFamily="DM Sans, sans-serif"
-          textAnchor="start"
+          textAnchor="end"
           style={{ fontWeight: 600 }}
         >
           Goal
@@ -206,7 +206,7 @@ const Transition = () => {
             <GrowthCurve />
           </div>
 
-          {/* Centered button */}
+          {/* CENTERED BUTTON */}
           <div
             className="w-full flex justify-center fade-up"
             style={{ animationDelay: "0.3s" }}
