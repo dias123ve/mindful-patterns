@@ -157,7 +157,7 @@ const Results = () => {
           </p>
 
           {/* ⭐ FIXED: OCTAGRAM CHART */}
-        <div className="max-w-3xl mx-auto mt-2 sm:mt-4">
+        <div className="max-w-3xl mx-auto mt-1 sm:mt-1">
   {Object.keys(componentScores).length > 0 ? (
     <OctagramChart
       scores={componentScores}
