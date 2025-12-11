@@ -14,7 +14,7 @@ interface OctagramChartProps {
 const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
   // Normalize values
   const maxValue = Math.max(...Object.values(scores));
-  const SCALE = 0.6;
+  const SCALE = 0.4;
 
   const data = Object.keys(scores).map((key) => ({
     key,
@@ -37,56 +37,30 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
     return "normal";
   };
 
- /* ---------------- DOT RENDERER ---------------- */
-const CustomDot = ({ cx, cy, payload, ...rest }: any) => {
-  const type = getHighlightType(payload.payload.key);
+  /* ---------------- DOT RENDERER ---------------- */
+  const CustomDot = ({ cx, cy, payload }: any) => {
+    const type = getHighlightType(payload.payload.key);
 
-  // ===== MOVE DOT TOWARD CENTER =====
-  const centerX = rest?.cx || 0;
-  const centerY = rest?.cy || 0;
-
-  // Dot moves 18% closer to center (adjustable)
-  const factor = 0.18;
-
-  const offsetX = (centerX - cx) * factor;
-  const offsetY = (centerY - cy) * factor;
-
-  const adjX = cx + offsetX;
-  const adjY = cy + offsetY;
-
-  // ===== REDRAW DOT AT NEW LOCATION =====
-
-  if (type === "high") {
-    return (
-      <g>
-        <circle cx={adjX} cy={adjY} r={16} fill="#27D787" opacity={0.25} />
-        <circle cx={adjX} cy={adjY} r={10} fill="#27D787" />
-        <circle cx={adjX} cy={adjY} r={4} fill="white" opacity={0.7} />
-      </g>
-    );
-  }
-
-  if (type === "low") {
-    return (
-      <g>
-        <circle cx={adjX} cy={adjY} r={16} fill="#FF8A3D" opacity={0.25} />
-        <circle cx={adjX} cy={adjY} r={10} fill="#FF8A3D" />
-        <circle cx={adjX} cy={adjY} r={4} fill="white" opacity={0.7} />
-      </g>
-    );
-  }
-
-  return (
-    <circle
-      cx={adjX}
-      cy={adjY}
-      r={6}
-      fill="white"
-      stroke="#4DD4AC"
-      strokeWidth={2}
-    />
-  );
-};
+    if (type === "high") {
+      return (
+        <g>
+          <circle cx={cx} cy={cy} r={16} fill="#27D787" opacity={0.25} />
+          <circle cx={cx} cy={cy} r={10} fill="#27D787" />
+          <circle cx={cx} cy={cy} r={4} fill="white" opacity={0.7} />
+        </g>
+      );
+    }
+    if (type === "low") {
+      return (
+        <g>
+          <circle cx={cx} cy={cy} r={16} fill="#FF8A3D" opacity={0.25} />
+          <circle cx={cx} cy={cy} r={10} fill="#FF8A3D" />
+          <circle cx={cx} cy={cy} r={4} fill="white" opacity={0.7} />
+        </g>
+      );
+    }
+    return <circle cx={cx} cy={cy} r={6} fill="white" stroke="#4DD4AC" strokeWidth={2} />;
+  };
   /* ---------------- RESPONSIVE LABEL ---------------- */
   const CustomLabel = ({ x, y, payload, cx, cy, viewBox }: any) => {
     if (!payload) return null;
