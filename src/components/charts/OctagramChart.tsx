@@ -12,9 +12,9 @@ interface OctagramChartProps {
 }
 
 const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
-  // Normalize values
+  /* ---------------- NORMALIZATION ---------------- */
   const maxValue = Math.max(...Object.values(scores));
-  const SCALE = 0.4;
+  const SCALE = 0.4; // area shrink to 40% of radius
 
   const data = Object.keys(scores).map((key) => ({
     key,
@@ -25,7 +25,7 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
 
   if (!data.length) return <p>No chart data.</p>;
 
-  // Highlight logic
+  /* ---------------- HIGHLIGHT LOGIC ---------------- */
   const sorted = [...data].sort((a, b) => b.rawValue - a.rawValue);
   const top1 = sorted[0]?.key;
   const top2 = sorted[1]?.key;
@@ -37,30 +37,54 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
     return "normal";
   };
 
-  /* ---------------- DOT RENDERER ---------------- */
-  const CustomDot = ({ cx, cy, payload }: any) => {
+  /* ---------------- DOT OFFSET ---------------- */
+  const CustomDot = ({ cx, cy, payload, ...rest }: any) => {
     const type = getHighlightType(payload.payload.key);
 
+    // CENTER of chart
+    const centerX = rest?.cx || 0;
+    const centerY = rest?.cy || 0;
+
+    // Dot moves inward based on SCALE
+    const factor = 1 - SCALE; // e.g. 1 - 0.4 = 0.6
+
+    // Move dot toward center
+    const adjX = cx + (centerX - cx) * factor;
+    const adjY = cy + (centerY - cy) * factor;
+
+    /* -------- DOT DRAWING -------- */
     if (type === "high") {
       return (
         <g>
-          <circle cx={cx} cy={cy} r={16} fill="#27D787" opacity={0.25} />
-          <circle cx={cx} cy={cy} r={10} fill="#27D787" />
-          <circle cx={cx} cy={cy} r={4} fill="white" opacity={0.7} />
+          <circle cx={adjX} cy={adjY} r={16} fill="#27D787" opacity={0.25} />
+          <circle cx={adjX} cy={adjY} r={10} fill="#27D787" />
+          <circle cx={adjX} cy={adjY} r={4} fill="white" opacity={0.7} />
         </g>
       );
     }
+
     if (type === "low") {
       return (
         <g>
-          <circle cx={cx} cy={cy} r={16} fill="#FF8A3D" opacity={0.25} />
-          <circle cx={cx} cy={cy} r={10} fill="#FF8A3D" />
-          <circle cx={cx} cy={cy} r={4} fill="white" opacity={0.7} />
+          <circle cx={adjX} cy={adjY} r={16} fill="#FF8A3D" opacity={0.25} />
+          <circle cx={adjX} cy={adjY} r={10} fill="#FF8A3D" />
+          <circle cx={adjX} cy={adjY} r={4} fill="white" opacity={0.7} />
         </g>
       );
     }
-    return <circle cx={cx} cy={cy} r={6} fill="white" stroke="#4DD4AC" strokeWidth={2} />;
+
+    return (
+      <circle
+        cx={adjX}
+        cy={adjY}
+        r={6}
+        fill="white"
+        stroke="#4DD4AC"
+        strokeWidth={2}
+      />
+    );
   };
+
   /* ---------------- RESPONSIVE LABEL ---------------- */
   const CustomLabel = ({ x, y, payload, cx, cy, viewBox }: any) => {
     if (!payload) return null;
@@ -70,6 +94,7 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
     const lines = parts.length > 1 ? [parts[0] + "-", parts.slice(1).join("-")] : [label];
 
     const chartWidth = viewBox?.outerRadius ? viewBox.outerRadius * 2 : 300;
+
     const fontSize = Math.max(9, Math.min(12, chartWidth / 28));
     const lineHeight = fontSize + 2;
 
@@ -102,34 +127,25 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
     );
   };
 
+  /* ---------------- RENDER ---------------- */
   return (
     <div className="w-full flex flex-col items-center gap-2">
-      {/* RESPONSIVE CONTAINER HEIGHT */}
-      <div
-        className="octagram-chart-container p-1 sm:p-1 w-full"
-        style={{
-          minHeight: 260,            // Mobile compact
-        }}
-      >
+      <div className="octagram-chart-container p-1 sm:p-1 w-full" style={{ minHeight: 260 }}>
         <ResponsiveContainer
           width="100%"
           height={
-            window.innerWidth < 640
-              ? 280      // Mobile
-              : window.innerWidth < 1024
-              ? 350      // Tablet
-              : 420      // Desktop (large & premium)
+            window.innerWidth < 640 ? 280 :
+            window.innerWidth < 1024 ? 350 : 
+            420
           }
         >
           <RadarChart
             cx="50%"
             cy="50%"
             outerRadius={
-              window.innerWidth < 640
-                ? "38%"    // Mobile (lebih dalam)
-                : window.innerWidth < 1024
-                ? "43%"    // Tablet
-                : "48%"    // Desktop bigger
+              window.innerWidth < 640 ? "38%" :
+              window.innerWidth < 1024 ? "43%" :
+              "48%"
             }
             data={data}
             margin={{ top: 6, right: 6, bottom: 6, left: 6 }}
