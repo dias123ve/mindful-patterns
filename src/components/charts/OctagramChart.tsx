@@ -5,7 +5,6 @@ import {
   Radar,
   ResponsiveContainer,
 } from "recharts";
-import { useMemo } from "react";
 
 interface OctagramChartProps {
   scores: Record<string, number>;
@@ -13,27 +12,28 @@ interface OctagramChartProps {
 }
 
 const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
-  const data = useMemo(() => {
-    return Object.entries(scores).map(([key, value]) => ({
-      label: componentNames[key] || key,
-      value,
-    }));
-  }, [scores, componentNames]);
+  // Convert score object → array for Recharts
+  const data = Object.keys(scores).map((key) => ({
+    label: componentNames[key] || key,
+    value: scores[key],
+  }));
 
+  if (!data.length) return <p>No chart data available.</p>;
+
+  // Determine highlighting
   const values = data.map((d) => d.value);
-  const sortedValues = [...values].sort((a, b) => b - a);
-  const highestTwo = [sortedValues[0], sortedValues[1]];
-  const lowest = sortedValues[sortedValues.length - 1];
+  const sorted = [...values].sort((a, b) => b - a);
+  const highestTwo = [sorted[0], sorted[1]];
+  const lowest = sorted[sorted.length - 1];
 
-  const getHighlightType = (value: number): "high" | "low" | "normal" => {
-    if (highestTwo.includes(value)) return "high";
+  const getHighlightType = (value: number) => {
     if (value === lowest) return "low";
+    if (highestTwo.includes(value)) return "high";
     return "normal";
   };
 
   const CustomDot = ({ cx, cy, payload }: any) => {
-    if (!cx || !cy || !payload) return null;
-
+    if (!payload) return null;
     const type = getHighlightType(payload.value);
 
     if (type === "high") {
@@ -41,7 +41,7 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
         <g>
           <circle cx={cx} cy={cy} r={16} fill="#27D787" opacity={0.25} />
           <circle cx={cx} cy={cy} r={10} fill="#27D787" />
-          <circle cx={cx} cy={cy} r={4} fill="white" opacity={0.7} />
+          <circle cx={cx} cy={cy} r={4} fill="white" opacity={0.6} />
         </g>
       );
     }
@@ -51,94 +51,73 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
         <g>
           <circle cx={cx} cy={cy} r={16} fill="#FF8A3D" opacity={0.25} />
           <circle cx={cx} cy={cy} r={10} fill="#FF8A3D" />
-          <circle cx={cx} cy={cy} r={4} fill="white" opacity={0.7} />
+          <circle cx={cx} cy={cy} r={4} fill="white" opacity={0.6} />
         </g>
       );
     }
 
+    return <circle cx={cx} cy={cy} r={6} fill="white" stroke="#4DD4AC" strokeWidth={2} />;
+  };
+
+  const CustomLabel = ({ x, y, payload, cx, cy }: any) => {
+    if (!payload) return null;
+
+    const label = payload.value;
+    const words = label.split("-");
+    const lines = words.length > 1 ? [words[0] + "-", words.slice(1).join("-")] : [label];
+
+    const isRight = x > cx + 10;
+    const isLeft = x < cx - 10;
+    const isTop = y < cy - 10;
+    const isBottom = y > cy + 10;
+
+    let offsetX = isRight ? 18 : isLeft ? -18 : 0;
+    let offsetY = isTop ? -12 : isBottom ? 16 : 0;
+
+    let anchor = isRight ? "start" : isLeft ? "end" : "middle";
+
     return (
-      <circle cx={cx} cy={cy} r={6} fill="white" stroke="#4DD4AC" strokeWidth={2} />
+      <text
+        x={x + offsetX}
+        y={y + offsetY}
+        textAnchor={anchor}
+        fill="#64748b"
+        fontSize={12}
+        fontWeight={500}
+      >
+        {lines.map((line, i) => (
+          <tspan key={i} x={x + offsetX} dy={i === 0 ? 0 : 14}>
+            {line}
+          </tspan>
+        ))}
+      </text>
     );
   };
 
   return (
-    <div className="octagram-chart-container">
-      <div className="mx-auto" style={{ width: "480px", maxWidth: "100%" }}>
-        <ResponsiveContainer width="100%" height={520}>
-          <RadarChart
-            cx="50%"
-            cy="46%"
-            outerRadius="68%"
-            data={data}
-            margin={{ top: 10, right: 10, bottom: 10, left: 10 }}
-          >
-            <PolarGrid stroke="#e2e8f0" strokeWidth={1} gridType="polygon" />
+    <div className="octagram-chart-container p-6 min-h-[600px]">
+      <ResponsiveContainer width="100%" height={580}>
+        <RadarChart
+          cx="50%"
+          cy="50%"
+          outerRadius="55%"
+          data={data}
+          margin={{ top: 40, right: 60, bottom: 40, left: 60 }}
+        >
+          <PolarGrid stroke="#e2e8f0" strokeWidth={1} gridType="polygon" />
 
-            {/** MATIKAN LABEL DEFAULT */}
-            <PolarAngleAxis dataKey="label" tick={false} tickLine={false} />
+          <PolarAngleAxis dataKey="label" tick={CustomLabel} tickLine={false} />
 
-            <Radar
-              name="Values"
-              dataKey="value"
-              stroke="#14B8A6"
-              strokeWidth={2}
-              fillOpacity={0.6}
-              fill="#4DD4AC"
-              dot={<CustomDot />}
-            />
-
-            {/** LABEL MANUAL — TIDAK TERPOTONG */}
-            <svg>
-              {data.map((entry, index) => {
-                const total = data.length;
-                const angle = (Math.PI * 2 * index) / total - Math.PI / 2;
-
-                // center chart (harus mengikuti cy/cx RadarChart)
-                const cx = 240; 
-                const cy = 240;
-
-                // radius label (semakin besar, semakin keluar)
-                const radius = 200;
-
-                const x = cx + radius * Math.cos(angle);
-                const y = cy + radius * Math.sin(angle);
-
-                const cos = Math.cos(angle);
-                const anchor =
-                  cos > 0.3 ? "start" :
-                  cos < -0.3 ? "end" :
-                  "middle";
-
-                return (
-                  <text
-                    key={index}
-                    x={x}
-                    y={y}
-                    textAnchor={anchor}
-                    fill="#64748b"
-                    fontSize={13}
-                    fontWeight={500}
-                  >
-                    {entry.label}
-                  </text>
-                );
-              })}
-            </svg>
-          </RadarChart>
-        </ResponsiveContainer>
-      </div>
-
-      <div className="flex justify-center gap-8 mt-6 text-sm text-gray-600">
-        <div className="flex items-center gap-2">
-          <span className="w-3 h-3 rounded-full bg-[#27D787]"></span>
-          <span>Top Score</span>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span className="w-3 h-3 rounded-full bg-[#FF8A3D]"></span>
-          <span>Grow Area</span>
-        </div>
-      </div>
+          <Radar
+            name="Values"
+            dataKey="value"
+            stroke="#14B8A6"
+            strokeWidth={2}
+            fill="rgba(20,184,166,0.35)"
+            dot={<CustomDot />}
+          />
+        </RadarChart>
+      </ResponsiveContainer>
     </div>
   );
 };
