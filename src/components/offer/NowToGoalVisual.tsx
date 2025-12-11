@@ -19,23 +19,23 @@ const NowToGoalVisual = ({
   negativeComponent,
   componentScores,
 }: NowToGoalVisualProps) => {
-  const gender = sessionStorage.getItem("gender") === "male" ? "male" : "female";
+  const gender =
+    sessionStorage.getItem("gender") === "male" ? "male" : "female";
 
-  // FIX: jpeg extension
   const personNowSrc = `/images/${gender}_now.jpeg`;
   const personGoalSrc = `/images/${gender}_goal.jpeg`;
 
-  const getStrongPos = (score: number) => Math.max((score / MAX_SCORE) * 85, 30);
+  const getStrongPos = (score: number) =>
+    Math.max((score / MAX_SCORE) * 85, 30);
   const getLowPos = (score: number) => Math.max((score / MAX_SCORE) * 45, 18);
 
   return (
-    <div className="bg-card rounded-2xl p-4 sm:p-6 md:p-8 shadow-soft border border-border fade-up max-w-[760px] mx-auto">
+    <div className="bg-card rounded-2xl p-2 sm:p-6 md:p-8 shadow-soft border border-border fade-up max-w-[760px] mx-auto">
 
-      {/* MOBILE = 2 columns | DESKTOP = 3 columns */}
       <div className="grid grid-cols-2 md:grid-cols-[1fr_auto_1fr] gap-4 items-start">
 
         {/* LEFT — NOW */}
-        <div className="text-center">
+        <div className="text-center sm:text-center">
           <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">
             Now
           </h3>
@@ -53,16 +53,17 @@ const NowToGoalVisual = ({
               return (
                 <div key={comp.id} className="space-y-1">
 
-                  {/* LABEL MOBILE = VERTICAL */}
-                  <div className="flex flex-col sm:flex-row sm:justify-between w-[85%] mx-auto text-center sm:text-left gap-0.5">
-                    <span className="text-[13px] sm:text-[15px] font-semibold">
+                  {/* LABEL */}
+                  <div className="flex flex-col sm:flex-row sm:justify-between w-[85%] mx-auto text-left gap-0.5">
+                    <span className="text-[12px] sm:text-[15px] font-semibold">
                       {comp.name}
                     </span>
-                    <span className="text-[11px] sm:text-[13px] opacity-60">
+                    <span className="text-[10px] sm:text-[13px] opacity-60">
                       (Normal)
                     </span>
                   </div>
 
+                  {/* BAR */}
                   <div className="relative h-2 bg-[#D5D7DB] rounded-full w-[85%] mx-auto">
                     <div
                       className="absolute h-2 rounded-full"
@@ -77,40 +78,41 @@ const NowToGoalVisual = ({
               );
             })}
 
-            {/* LOW */}
-            {negativeComponent && (() => {
-              const score = componentScores[negativeComponent.component_key] || 0;
-              const pos = getLowPos(score);
+            {/* LOW COMPONENT */}
+            {negativeComponent &&
+              (() => {
+                const score =
+                  componentScores[negativeComponent.component_key] || 0;
+                const pos = getLowPos(score);
 
-              return (
-                <div className="space-y-1">
+                return (
+                  <div className="space-y-1">
+                    <div className="flex flex-col sm:flex-row sm:justify-between w-[85%] mx-auto text-left gap-0.5">
+                      <span className="text-[12px] sm:text-[15px] font-semibold">
+                        {negativeComponent.name}
+                      </span>
+                      <span className="text-[10px] sm:text-[13px] opacity-60">
+                        (Low)
+                      </span>
+                    </div>
 
-                  <div className="flex flex-col sm:flex-row sm:justify-between w-[85%] mx-auto text-center sm:text-left gap-0.5">
-                    <span className="text-[13px] sm:text-[15px] font-semibold">
-                      {negativeComponent.name}
-                    </span>
-                    <span className="text-[11px] sm:text-[13px] opacity-60">
-                      (Low)
-                    </span>
+                    <div className="relative h-2 bg-[#D5D7DB] rounded-full w-[85%] mx-auto">
+                      <div
+                        className="absolute h-2 rounded-full"
+                        style={{ width: `${pos}%`, backgroundColor: "#E57373" }}
+                      />
+                      <div
+                        className="absolute -top-[4px] h-3 w-3 rounded-full shadow"
+                        style={{ backgroundColor: "#C62828", left: `${pos}%` }}
+                      />
+                    </div>
                   </div>
-
-                  <div className="relative h-2 bg-[#D5D7DB] rounded-full w-[85%] mx-auto">
-                    <div
-                      className="absolute h-2 rounded-full"
-                      style={{ width: `${pos}%`, backgroundColor: "#E57373" }}
-                    />
-                    <div
-                      className="absolute -top-[4px] h-3 w-3 rounded-full shadow"
-                      style={{ backgroundColor: "#C62828", left: `${pos}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })()}
+                );
+              })()}
           </div>
         </div>
 
-        {/* CENTER — ARROW (hidden on mobile, lowered on desktop) */}
+        {/* CENTER ARROW (Desktop only) */}
         <div
           className="arrow-container hidden md:flex justify-center items-start"
           style={{ transform: "translateX(-20px)" }}
@@ -130,11 +132,10 @@ const NowToGoalVisual = ({
 
           <style>{`
             .arrow-container {
-              padding-top: 20px; /* mobile (even though arrow hidden) */
+              padding-top: 20px;
               padding-bottom: 20px;
             }
 
-            /* DESKTOP → lower arrow significantly */
             @media (min-width: 768px) {
               .arrow-container {
                 padding-top: 120px;
@@ -161,7 +162,7 @@ const NowToGoalVisual = ({
         </div>
 
         {/* RIGHT — FUTURE YOU */}
-        <div className="text-center">
+        <div className="text-center sm:text-center">
           <h3 className="text-sm font-semibold uppercase tracking-wide text-success mb-3">
             Future You
           </h3>
@@ -175,9 +176,13 @@ const NowToGoalVisual = ({
             {positiveComponents.map((comp) => (
               <div key={comp.id} className="space-y-1">
 
-                <div className="flex flex-col sm:flex-row sm:justify-between w-[85%] mx-auto text-center sm:text-left gap-0.5">
-                  <span className="text-[13px] sm:text-[15px] font-semibold">{comp.name}</span>
-                  <span className="text-[11px] sm:text-[13px] opacity-60">(Elevated)</span>
+                <div className="flex flex-col sm:flex-row sm:justify-between w-[85%] mx-auto text-left gap-0.5">
+                  <span className="text-[12px] sm:text-[15px] font-semibold">
+                    {comp.name}
+                  </span>
+                  <span className="text-[10px] sm:text-[13px] opacity-60">
+                    (Elevated)
+                  </span>
                 </div>
 
                 <div className="relative h-2 bg-[#D5D7DB] rounded-full w-[85%] mx-auto">
@@ -190,18 +195,18 @@ const NowToGoalVisual = ({
                     style={{ left: "85%" }}
                   />
                 </div>
-
               </div>
             ))}
 
             {negativeComponent && (
               <div className="space-y-1">
-
-                <div className="flex flex-col sm:flex-row sm:justify-between w-[85%] mx-auto text-center sm:text-left gap-0.5">
-                  <span className="text-[13px] sm:text-[15px] font-semibold">
+                <div className="flex flex-col sm:flex-row sm:justify-between w-[85%] mx-auto text-left gap-0.5">
+                  <span className="text-[12px] sm:text-[15px] font-semibold">
                     {negativeComponent.name}
                   </span>
-                  <span className="text-[11px] sm:text-[13px] opacity-60">(Steady)</span>
+                  <span className="text-[10px] sm:text-[13px] opacity-60">
+                    (Steady)
+                  </span>
                 </div>
 
                 <div className="relative h-2 bg-[#D5D7DB] rounded-full w-[85%] mx-auto">
@@ -214,7 +219,6 @@ const NowToGoalVisual = ({
                     style={{ backgroundColor: "#FBC02D", left: "65%" }}
                   />
                 </div>
-
               </div>
             )}
           </div>
