@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Brain, ArrowRight, Mail, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { flushSync } from "react-dom";
 
 interface Question {
   id: string;
@@ -49,25 +50,19 @@ const Quiz = () => {
   const [submitting, setSubmitting] = useState(false);
   const [showEmailCapture, setShowEmailCapture] = useState(false);
 
-  // ========================= RESTORE FROM SESSION =========================
+  // ========================= RESTORE SESSION =========================
   useEffect(() => {
     const savedAnswers = sessionStorage.getItem("quiz_answers");
     const savedIndex = sessionStorage.getItem("quiz_current_index");
 
-    if (savedAnswers) {
-      setAnswers(JSON.parse(savedAnswers));
-    }
-    if (savedIndex) {
-      setCurrentQuestionIndex(Number(savedIndex));
-    }
+    if (savedAnswers) setAnswers(JSON.parse(savedAnswers));
+    if (savedIndex) setCurrentQuestionIndex(Number(savedIndex));
   }, []);
 
-  // Save answers automatically
   useEffect(() => {
     sessionStorage.setItem("quiz_answers", JSON.stringify(answers));
   }, [answers]);
 
-  // Save question index automatically
   useEffect(() => {
     sessionStorage.setItem("quiz_current_index", String(currentQuestionIndex));
   }, [currentQuestionIndex]);
@@ -75,28 +70,25 @@ const Quiz = () => {
   // ========================= FETCH QUIZ DATA =========================
   const fetchQuizData = async () => {
     try {
-      const { data: quiz, error: quizErr } = await supabase
+      const { data: quiz } = await supabase
         .from("quizzes")
         .select("id")
         .eq("is_active", true)
         .single();
 
-      if (quizErr) throw quizErr;
       if (!quiz) {
         setLoading(false);
         return;
       }
 
-      const { data: qData, error: qErr } = await supabase
+      const { data: qData } = await supabase
         .from("quiz_questions")
         .select("*")
         .eq("quiz_id", quiz.id)
         .eq("is_active", true)
         .order("display_order", { ascending: true });
 
-      if (qErr) throw qErr;
-
-      if (!qData || qData.length === 0) {
+      if (!qData?.length) {
         setQuestions([]);
         setOptions([]);
         setLoading(false);
@@ -105,32 +97,26 @@ const Quiz = () => {
 
       const questionIds = qData.map((q) => q.id);
 
-      const { data: oData, error: oErr } = await supabase
+      const { data: oData } = await supabase
         .from("quiz_question_options")
         .select("*")
         .in("question_id", questionIds)
         .order("display_order", { ascending: true });
 
-      if (oErr) throw oErr;
-
-      const { data: rels, error: relErr } = await supabase
+      const { data: rels } = await supabase
         .from("quiz_question_components")
         .select("question_id, component_id");
 
-      if (relErr) throw relErr;
-
-      const { data: comps, error: compErr } = await supabase
+      const { data: comps } = await supabase
         .from("components")
         .select("id, component_key");
-
-      if (compErr) throw compErr;
 
       setQuestions(qData);
       setOptions(oData || []);
       setComponentRels(rels || []);
       setComponents(comps || []);
     } catch (err) {
-      console.error("Fetch error:", err);
+      console.error(err);
       toast.error("Failed to load quiz");
     } finally {
       setLoading(false);
@@ -141,6 +127,32 @@ const Quiz = () => {
     fetchQuizData();
   }, []);
 
+  // ========================= PRELOAD GENDER IMAGES =========================
+  const gender = sessionStorage.getItem("gender");
+
+  const genderImages = {
+    male: [
+      "/src/assets/wellness-male.jpg",
+      "/images/male_goal.jpeg",
+      "/images/male_now.jpeg",
+    ],
+    female: [
+      "/src/assets/wellness-female.jpg",
+      "/images/female_goal.jpeg",
+      "/images/female_now.jpeg",
+    ],
+  };
+
+  useEffect(() => {
+    if (!loading && gender && genderImages[gender]) {
+      genderImages[gender].forEach((src) => {
+        const img = new Image();
+        img.src = src;
+      });
+    }
+  }, [loading, gender]);
+
+  // ========================= SELECT OPTION (FIXED) =========================
   const currentQuestion = questions[currentQuestionIndex];
   const currentOptions = options.filter((o) => o.question_id === currentQuestion?.id);
 
@@ -151,21 +163,25 @@ const Quiz = () => {
   const handleSelectOption = (optionId: string, score: number) => {
     if (!currentQuestion) return;
 
-    setAnswers((prev) => ({
-      ...prev,
-      [currentQuestion.id]: { optionId, score },
-    }));
+    // FORCE React to commit answer BEFORE animation runs
+    flushSync(() => {
+      setAnswers((prev) => ({
+        ...prev,
+        [currentQuestion.id]: { optionId, score },
+      }));
+    });
 
+    // Delay for fade animation — safe now
     setTimeout(() => {
       if (currentQuestionIndex < questions.length - 1) {
         setCurrentQuestionIndex((prev) => prev + 1);
       } else {
         setShowEmailCapture(true);
       }
-    }, 250);
+    }, 120); // You can adjust to 100–200ms
   };
 
-  // ========================= SCORE CALCULATION =========================
+  // ========================= SCORE CALC =========================
   const calculateScores = () => {
     const scores: Record<string, number> = {};
 
@@ -178,10 +194,7 @@ const Quiz = () => {
       rels.forEach((rel) => {
         const comp = components.find((c) => c.id === rel.component_id);
         if (!comp) return;
-
         const key = comp.component_key;
-        if (!key) return;
-
         scores[key] = (scores[key] || 0) + ans.score;
       });
     });
@@ -193,18 +206,12 @@ const Quiz = () => {
     return { scores, sortedComponents };
   };
 
-  // ========================= SUBMIT QUIZ =========================
+  // ========================= SUBMIT =========================
   const handleSubmit = async () => {
-    if (!email.trim()) {
-      toast.error("Enter your email");
-      return;
-    }
+    if (!email.trim()) return toast.error("Enter your email");
 
     const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-    if (!valid) {
-      toast.error("Email is invalid");
-      return;
-    }
+    if (!valid) return toast.error("Email is invalid");
 
     setSubmitting(true);
 
@@ -227,6 +234,7 @@ const Quiz = () => {
 
       sessionStorage.setItem("quiz_submission_id", data.id);
       sessionStorage.setItem("component_scores", JSON.stringify(scores));
+
       navigate("/results");
     } catch (err) {
       console.error(err);
@@ -248,10 +256,7 @@ const Quiz = () => {
   if (questions.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-hero flex items-center justify-center">
-        <div className="text-center">
-          <Brain className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <p className="text-muted-foreground">No quiz questions available.</p>
-        </div>
+        <p className="text-muted-foreground">No quiz questions available.</p>
       </div>
     );
   }
@@ -266,6 +271,7 @@ const Quiz = () => {
               MindProfile
             </span>
           </div>
+
           <span className="text-sm text-muted-foreground">
             {showEmailCapture
               ? "Almost done!"
@@ -280,6 +286,7 @@ const Quiz = () => {
 
       <main className="container mx-auto px-4 pb-16">
         <div className="max-w-xl mx-auto">
+
           {!showEmailCapture ? (
             <>
               {currentQuestionIndex > 0 && (
@@ -363,6 +370,7 @@ const Quiz = () => {
               </div>
             </div>
           )}
+
         </div>
       </main>
     </div>
