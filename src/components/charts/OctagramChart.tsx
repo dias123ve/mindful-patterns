@@ -13,35 +13,50 @@ interface OctagramChartProps {
 }
 
 const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
+  // ⛔ Prevent crash: no data → don't render chart
+  if (!scores || Object.keys(scores).length === 0) {
+    return (
+      <div className="text-center text-muted-foreground py-10">
+        No data available
+      </div>
+    );
+  }
+
+  // Convert to chart-friendly format
   const data = useMemo(() => {
     return Object.entries(scores).map(([key, value]) => ({
+      key,
       label: componentNames[key] || key,
       value,
     }));
   }, [scores, componentNames]);
 
-  const values = data.map((d) => d.value);
-  const sortedValues = [...values].sort((a, b) => b - a);
-  const highestTwo = [sortedValues[0], sortedValues[1]];
-  const lowest = sortedValues[sortedValues.length - 1];
+  // Determine top 2 & lowest via index
+  const sorted = [...data]
+    .map((d, i) => ({ ...d, i }))
+    .sort((a, b) => b.value - a.value);
 
-  const getHighlightType = (value: number): "high" | "low" | "normal" => {
-    if (highestTwo.includes(value)) return "high";
-    if (value === lowest) return "low";
+  const topTwo = sorted.slice(0, 2).map((x) => x.i);
+  const lowestIndex = sorted[sorted.length - 1].i;
+
+  const getHighlightType = (index: number): "high" | "low" | "normal" => {
+    if (topTwo.includes(index)) return "high";
+    if (index === lowestIndex) return "low";
     return "normal";
   };
 
+  // DOT rendering
   const CustomDot = ({ cx, cy, payload }: any) => {
-    if (!cx || !cy || !payload) return null;
+    if (!cx || !cy) return null;
 
-    const type = getHighlightType(payload.value);
+    const type = getHighlightType(payload.index);
 
     if (type === "high") {
       return (
         <g>
           <circle cx={cx} cy={cy} r={16} fill="#27D787" opacity={0.25} />
           <circle cx={cx} cy={cy} r={10} fill="#27D787" />
-          <circle cx={cx} cy={cy} r={4} fill="white" opacity={0.7} />
+          <circle cx={cx} cy={cy} r={4} fill="white" opacity={0.7" />
         </g>
       );
     }
@@ -51,7 +66,7 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
         <g>
           <circle cx={cx} cy={cy} r={16} fill="#FF8A3D" opacity={0.25} />
           <circle cx={cx} cy={cy} r={10} fill="#FF8A3D" />
-          <circle cx={cx} cy={cy} r={4} fill="white" opacity={0.7} />
+          <circle cx={cx} cy={cy} r={4} fill="white" opacity={0.7" />
         </g>
       );
     }
@@ -61,61 +76,66 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
     );
   };
 
-  // FINAL LABEL FIX
-const CustomLabel = ({ x, y, payload }: any) => {
-  if (!payload?.payload?.label) return null;
+  // LABEL FIX — auto offset based on angle
+  const CustomLabel = ({ x, y, payload }: any) => {
+    const label = payload?.payload?.label;
+    if (!label) return null;
 
-  const text = payload.payload.label;
-  const maxChars = 12;
+    const angle = payload.coordinate?.angle ?? 0;
+    const offset = 20;
 
-  const words = text.split(" ");
-  let line1 = "";
-  let line2 = "";
+    const posY = angle > 180 ? y + offset : y - offset;
 
-  for (let w of words) {
-    if ((line1 + " " + w).trim().length <= maxChars) {
-      line1 = (line1 + " " + w).trim();
-    } else {
-      line2 = (line2 + " " + w).trim();
+    // Split label into max 2 lines
+    const maxChars = 12;
+    const words = label.split(" ");
+    let line1 = "";
+    let line2 = "";
+
+    for (let w of words) {
+      if ((line1 + " " + w).trim().length <= maxChars) {
+        line1 = (line1 + " " + w).trim();
+      } else {
+        line2 = (line2 + " " + w).trim();
+      }
     }
-  }
 
-  return (
-    <text
-      x={x}
-      y={y}
-      textAnchor="middle"
-      fill="#64748b"
-      fontSize={13}
-      fontWeight={500}
-    >
-      <tspan x={x} dy="-0.2em">{line1}</tspan>
-      {line2 && <tspan x={x} dy="1.2em">{line2}</tspan>}
-    </text>
-  );
-};
+    return (
+      <text
+        x={x}
+        y={posY}
+        textAnchor="middle"
+        fill="#64748b"
+        fontSize={13}
+        fontWeight={500}
+      >
+        <tspan x={x} dy="-0.2em">{line1}</tspan>
+        {line2 && <tspan x={x} dy="1.2em">{line2}</tspan>}
+      </text>
+    );
+  };
 
+  // Inject index into data for highlighting
+  const chartData = data.map((d, i) => ({ ...d, index: i }));
 
   return (
     <div className="octagram-chart-container">
-
-      {/* WRAPPER — batasi ukuran chart */}
-      <div 
-  className="mx-auto"
-  style={{
-    width: "480px",
-    maxWidth: "100%",
-    paddingLeft: "40px",
-    paddingRight: "40px"
-  }}
->
+      <div
+        className="mx-auto"
+        style={{
+          width: "480px",
+          maxWidth: "100%",
+          paddingLeft: "40px",
+          paddingRight: "40px",
+        }}
+      >
         <ResponsiveContainer width="100%" height={520}>
           <RadarChart
             cx="50%"
             cy="50%"
-            outerRadius="68%"
-            data={data}
-            margin={{ top: 10, right: 60, bottom: 10, left: 60 }}
+            outerRadius="60%"
+            data={chartData}
+            margin={{ top: 10, right: 50, bottom: 10, left: 50 }}
           >
             <PolarGrid stroke="#e2e8f0" strokeWidth={1} gridType="polygon" />
             <PolarAngleAxis dataKey="label" tick={CustomLabel} tickLine={false} />
@@ -127,24 +147,23 @@ const CustomLabel = ({ x, y, payload }: any) => {
               fillOpacity={0.6}
               fill="#4DD4AC"
               dot={<CustomDot />}
+              isAnimationActive={false}
             />
           </RadarChart>
         </ResponsiveContainer>
       </div>
 
-      {/* SINGLE LEGEND (tidak duplikat) */}
+      {/* LEGEND */}
       <div className="flex justify-center gap-8 mt-6 text-sm text-gray-600">
         <div className="flex items-center gap-2">
           <span className="w-3 h-3 rounded-full bg-[#27D787]"></span>
           <span>Top Score</span>
         </div>
-
         <div className="flex items-center gap-2">
           <span className="w-3 h-3 rounded-full bg-[#FF8A3D]"></span>
           <span>Grow Area</span>
         </div>
       </div>
-
     </div>
   );
 };
