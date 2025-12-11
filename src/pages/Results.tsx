@@ -26,6 +26,7 @@ interface ComponentData {
 
 const Results = () => {
   const navigate = useNavigate();
+
   const [loading, setLoading] = useState(true);
   const [step, setStep] = useState<1 | 2>(1);
 
@@ -35,7 +36,6 @@ const Results = () => {
 
   const [gender, setGender] = useState<"male" | "female">("female");
 
-  // Load gender & results
   useEffect(() => {
     const storedGender = sessionStorage.getItem("gender") as "male" | "female" | null;
     if (storedGender) setGender(storedGender);
@@ -122,11 +122,22 @@ const Results = () => {
   return (
     <div className="min-h-screen bg-gradient-hero">
 
-      {/* -------------------------------- */}
-      {/* PAGE 1 — INSIGHT SUMMARY */}
-      {/* -------------------------------- */}
+      {/* ------------------------------------------------------ */}
+      {/* PAGE 1 — SUMMARY                                        */}
+      {/* ------------------------------------------------------ */}
       {step === 1 && (
         <main className="container mx-auto px-4 py-14 pb-24">
+
+          {/* Back button */}
+          <div className="max-w-3xl mx-auto mb-4">
+            <button
+              onClick={() => navigate(-1)}
+              className="text-sm text-foreground/80 hover:text-foreground flex items-center gap-1 transition"
+            >
+              ← Back
+            </button>
+          </div>
+
           <div className="max-w-3xl mx-auto text-center">
 
             <h1 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-3">
@@ -137,7 +148,6 @@ const Results = () => {
               A concise overview of your inner patterns based on your quiz responses.
             </p>
 
-            {/* Negativity Bar */}
             <div className="flex justify-center mb-12">
               <NegativityBar
                 score={negativityScore}
@@ -146,32 +156,47 @@ const Results = () => {
               />
             </div>
 
-            {/* NEXT BUTTON */}
             <Button
-  size="lg"
-  className="w-full sm:w-auto px-6 py-4 sm:px-8 sm:py-6 text-base sm:text-lg font-semibold"
-  onClick={() => setStep(2)}
->
-  See Your Strengths and Challenges →
-</Button>
-
+              size="lg"
+              className="w-full sm:w-auto px-6 py-4 sm:px-8 sm:py-6 text-base sm:text-lg font-semibold"
+              onClick={() => {
+                setStep(2);
+                setTimeout(
+                  () => window.scrollTo({ top: 120, behavior: "smooth" }),
+                  50
+                );
+              }}
+            >
+              See Your Strengths and Challenges →
+            </Button>
           </div>
         </main>
       )}
 
-      {/* -------------------------------- */}
-      {/* PAGE 2 — COMPONENTS BREAKDOWN */}
-      {/* -------------------------------- */}
+      {/* ------------------------------------------------------ */}
+      {/* PAGE 2 — DEEP DIVE                                      */}
+      {/* ------------------------------------------------------ */}
       {step === 2 && (
         <main className="container mx-auto px-4 py-14 pb-24">
+
+          {/* Back to Summary */}
+          <div className="max-w-3xl mx-auto mb-4">
+            <button
+              onClick={() => setStep(1)}
+              className="text-sm text-foreground/80 hover:text-foreground flex items-center gap-1 transition"
+            >
+              ← Back
+            </button>
+          </div>
+
           <div className="max-w-3xl mx-auto">
 
-            <h1 className="text-3xl md:text-4xl font-display font-bold text-foreground text-center mb-3">
-              Your Components Breakdown
+            <h1 className="text-2xl md:text-3xl font-display font-bold text-foreground text-center mb-3">
+              Deep Dive: Your Components
             </h1>
 
             <p className="text-muted-foreground max-w-lg mx-auto text-center mb-10">
-              Discover the strengths you can amplify and the challenge that needs your attention the most.
+              See the strengths shaping your progress and the key area that holds the greatest growth potential.
             </p>
 
             {/* STRENGTHS */}
@@ -179,7 +204,7 @@ const Results = () => {
               <section className="mb-12">
                 <div className="flex items-center gap-3 mb-6">
                   <CheckCircle2 className="h-6 w-6 text-green-600" />
-                  <h2 className="text-2xl font-display font-bold text-foreground">
+                  <h2 className="text-xl font-display font-bold text-foreground">
                     Your Strengths
                   </h2>
                 </div>
@@ -188,14 +213,14 @@ const Results = () => {
                   {positiveComponents.map((component, index) => (
                     <div
                       key={component.id}
-                      className="bg-card rounded-2xl p-6 md:p-8 shadow-soft animate-fade-in-up border-l-4 border-green-500"
+                      className="bg-card rounded-2xl p-6 md:p-8 shadow-soft border-l-4 border-green-500 animate-fade-in-up"
                       style={{ animationDelay: `${index * 0.1}s` }}
                     >
                       <h3 className="text-xl font-display font-semibold text-foreground mb-3">
                         {component.name}
                       </h3>
 
-                      <p className="text-muted-foreground mb-4 leading-relaxed">
+                      <p className="text-foreground mb-4 leading-relaxed">
                         {component.description_positive}
                       </p>
 
@@ -204,6 +229,7 @@ const Results = () => {
                           <BookOpen className="h-4 w-4 text-green-600" />
                           Examples in Daily Life
                         </h4>
+
                         <p className="text-sm text-muted-foreground">
                           {component.example_positive}
                         </p>
@@ -226,24 +252,22 @@ const Results = () => {
               </section>
             )}
 
-            {/* CHALLENGE */}
+            {/* MAIN CHALLENGE */}
             {negativeComponent && (
               <section className="mb-16">
                 <div className="flex items-center gap-3 mb-6">
                   <AlertTriangle className="h-6 w-6 text-amber-600" />
-                  <h2 className="text-2xl font-display font-bold text-foreground">
+                  <h2 className="text-xl font-display font-bold text-foreground">
                     Your Main Challenge
                   </h2>
                 </div>
 
-                <div
-                  className="bg-card rounded-2xl p-6 md:p-8 shadow-soft animate-fade-in-up border-l-4 border-amber-500"
-                >
+                <div className="bg-card rounded-2xl p-6 md:p-8 shadow-soft border-l-4 border-amber-500 animate-fade-in-up">
                   <h3 className="text-xl font-display font-semibold text-foreground mb-3">
                     {negativeComponent.name}
                   </h3>
 
-                  <p className="text-muted-foreground mb-4 leading-relaxed">
+                  <p className="text-foreground mb-4 leading-relaxed">
                     {negativeComponent.description_negative}
                   </p>
 
@@ -252,6 +276,7 @@ const Results = () => {
                       <BookOpen className="h-4 w-4 text-amber-600" />
                       How This Shows Up
                     </h4>
+
                     <p className="text-sm text-muted-foreground">
                       {negativeComponent.example_negative}
                     </p>
@@ -275,13 +300,12 @@ const Results = () => {
             {/* CONTINUE */}
             <div className="text-center mt-12">
               <Button
-  size="lg"
-  className="w-full sm:w-auto px-6 py-4 sm:px-8 sm:py-6 text-base sm:text-lg font-semibold"
-  onClick={() => navigate("/transition")}
->
-  Continue →
-</Button>
-
+                size="lg"
+                className="w-full sm:w-auto px-6 py-4 sm:px-8 sm:py-6 text-base sm:text-lg font-semibold"
+                onClick={() => navigate("/transition")}
+              >
+                Continue →
+              </Button>
             </div>
           </div>
         </main>
