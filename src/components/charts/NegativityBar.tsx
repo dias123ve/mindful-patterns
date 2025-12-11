@@ -23,7 +23,7 @@ export const NegativityBar = ({
 }: NegativityBarProps) => {
 
   // ==============================
-  // FIX: GET GENDER SAFELY ON CLIENT
+  // SAFE GENDER SOURCE
   // ==============================
   const [finalGender, setFinalGender] = useState<"male" | "female">("female");
 
@@ -38,10 +38,12 @@ export const NegativityBar = ({
   }, [gender]);
 
   // ==============================
-  // AUTO SCALE LOGIC
+  // BAR POSITION LOGIC
   // ==============================
   const safeMax = Math.max(maxScore ?? score, 1);
   const normalized = Math.min(score / safeMax, 1);
+
+  // Normal zone = 25%
   const targetPosition = 25 + (1 - normalized) * 75;
 
   const [displayPosition, setDisplayPosition] = useState(
@@ -57,21 +59,40 @@ export const NegativityBar = ({
     return () => clearTimeout(t);
   }, [targetPosition, animated]);
 
-  // ==============================
-  // IMAGE BASED ON FINAL GENDER
-  // ==============================
   const imgSrc = finalGender === "male" ? maleImg : femaleImg;
 
-  // prevent capsule from hitting edges
+  // Safe position for capsule
   const clampedLabelPos = Math.max(5, Math.min(displayPosition, 95));
+
+  // ==============================
+  // DETERMINE LEVEL TEXT
+  // ==============================
+  let levelTitle = "";
+  let levelBody = "";
+
+  if (displayPosition <= 35) {
+    levelTitle = "Normal Level";
+    levelBody =
+      "Your mind is currently stable, handling everyday challenges smoothly. Let’s take a closer look at the key components shaping this stability and uncover your potential.";
+  } else if (displayPosition <= 70) {
+    levelTitle = "Medium Level";
+    levelBody =
+      "You experience some inner tension that might slow you down, but your strengths help you cope. Let’s see which components are supporting you and which ones create the most friction.";
+  } else {
+    levelTitle = "High Level";
+    levelBody =
+      "Your inner landscape is heavily challenged, signaling areas ripe for meaningful development. Let’s find the components that support you and the key growth opportunity that will make the biggest impact.";
+  }
 
   return (
     <div className={cn("w-full max-w-sm space-y-4", className)}>
 
+      {/* TITLE */}
       <h3 className="text-base font-medium text-foreground text-center px-1">
         Inner Challenge Level
       </h3>
 
+      {/* IMAGE */}
       {showImage && (
         <div className="overflow-hidden rounded-2xl">
           <img
@@ -82,11 +103,11 @@ export const NegativityBar = ({
         </div>
       )}
 
-      {/* BAR AREA */}
+      {/* ==== BAR AREA ==== */}
       <div className="px-1 mt-1">
         <div className="relative pt-8 pb-2">
 
-          {/* Capsule */}
+          {/* CAPSULE (Your Level) */}
           <div
             className="absolute -top-5 -translate-x-1/2 z-[999]"
             style={{ left: `${clampedLabelPos}%` }}
@@ -96,7 +117,7 @@ export const NegativityBar = ({
             </div>
           </div>
 
-          {/* Dot */}
+          {/* DOT */}
           <div
             className={cn(
               "absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-20",
@@ -109,10 +130,16 @@ export const NegativityBar = ({
             </div>
           </div>
 
-          {/* Gradient Bar */}
+          {/* GRADIENT BAR */}
           <div className="absolute inset-x-0 top-3 h-4">
             <div className="absolute inset-0 bg-card border border-border/50 rounded-full p-0.5 shadow-sm">
-              <div className="w-full h-full rounded-full bg-gradient-to-r from-[#4ade80] via-[#facc15] via-40% via-[#fb923c] via-70% to-[#ef4444] shadow-inner relative overflow-hidden">
+              <div className="w-full h-full rounded-full bg-gradient-to-r 
+                  from-[#4ade80]
+                  via-[#facc15] via-40%
+                  via-[#fb923c] via-70%
+                  to-[#ef4444]
+                  shadow-inner relative overflow-hidden
+                ">
                 <div className="absolute inset-0 bg-gradient-to-b from-white/30 to-transparent h-1/2" />
               </div>
             </div>
@@ -120,11 +147,22 @@ export const NegativityBar = ({
 
         </div>
 
-        <div className="flex justify-between mt-5 text-xs text-muted-foreground select-none">
-          <span>low</span>
-          <span>normal</span>
-          <span>medium</span>
-          <span>high</span>
+        {/* LABELS */}
+        <div className="flex justify-between mt-2 text-xs font-medium text-muted-foreground select-none">
+          <span>Low</span>
+          <span>Normal</span>
+          <span>Medium</span>
+          <span>High</span>
+        </div>
+
+        {/* ==== LEVEL DESCRIPTION BOX ==== */}
+        <div className="mt-4 px-1">
+          <div className="bg-card/70 border border-border/40 rounded-xl p-4 shadow-sm space-y-1">
+            <p className="text-foreground font-semibold text-sm">{levelTitle}</p>
+            <p className="text-foreground text-xs leading-relaxed">
+              {levelBody}
+            </p>
+          </div>
         </div>
       </div>
 
