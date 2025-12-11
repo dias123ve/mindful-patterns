@@ -14,7 +14,7 @@ interface OctagramChartProps {
 const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
   /* ---------------- NORMALIZATION ---------------- */
   const maxValue = Math.max(...Object.values(scores));
-  const SCALE = 0.4; // area shrink to 40% of radius
+  const SCALE = 0.4; // shrink radar area to 40% of chart radius
 
   const data = Object.keys(scores).map((key) => ({
     key,
@@ -37,20 +37,25 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
     return "normal";
   };
 
-  /* ---------------- DOT OFFSET ---------------- */
-  const CustomDot = ({ cx, cy, payload, ...rest }: any) => {
+  /* ---------------- DOT OFFSET FIX (FINAL) ---------------- */
+  const CustomDot = (props: any) => {
+    const { cx, cy, payload, viewBox } = props;
+
     const type = getHighlightType(payload.payload.key);
 
-    // CENTER of chart
-    const centerX = rest?.cx || 0;
-    const centerY = rest?.cy || 0;
+    // TRUE center of chart
+    const centerX = viewBox.cx;
+    const centerY = viewBox.cy;
 
-    // Dot moves inward based on SCALE
-    const factor = 1 - SCALE; // e.g. 1 - 0.4 = 0.6
+    // DOT actual original coordinate
+    const baseX = cx;
+    const baseY = cy;
 
-    // Move dot toward center
-    const adjX = cx + (centerX - cx) * factor;
-    const adjY = cy + (centerY - cy) * factor;
+    // Move dot inward: if SCALE = 0.4 → factor = 0.6
+    const factor = 1 - SCALE;
+
+    const adjX = baseX + (centerX - baseX) * factor;
+    const adjY = baseY + (centerY - baseY) * factor;
 
     /* -------- DOT DRAWING -------- */
     if (type === "high") {
@@ -130,12 +135,14 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
   /* ---------------- RENDER ---------------- */
   return (
     <div className="w-full flex flex-col items-center gap-2">
+
+      {/* CHART WRAPPER */}
       <div className="octagram-chart-container p-1 sm:p-1 w-full" style={{ minHeight: 260 }}>
         <ResponsiveContainer
           width="100%"
           height={
             window.innerWidth < 640 ? 280 :
-            window.innerWidth < 1024 ? 350 : 
+            window.innerWidth < 1024 ? 350 :
             420
           }
         >
@@ -143,14 +150,15 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
             cx="50%"
             cy="50%"
             outerRadius={
-              window.innerWidth < 640 ? "38%" :
-              window.innerWidth < 1024 ? "43%" :
-              "48%"
+              window.innerWidth < 640 ? "34%" :
+              window.innerWidth < 1024 ? "38%" :
+              "42%"
             }
             data={data}
             margin={{ top: 6, right: 6, bottom: 6, left: 6 }}
           >
             <PolarGrid stroke="#e2e8f0" strokeWidth={1} gridType="polygon" />
+
             <PolarAngleAxis dataKey="label" tick={CustomLabel} tickLine={false} />
 
             <Radar
