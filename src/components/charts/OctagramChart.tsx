@@ -14,7 +14,7 @@ interface OctagramChartProps {
 const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
   // Get highest score for normalization
   const maxValue = Math.max(...Object.values(scores));
-  const SCALE = 0.6; // reduce max height
+  const SCALE = 0.7; // reduce max height
 
   // Normalize data
   const data = Object.keys(scores).map((key) => ({
@@ -114,7 +114,7 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
       <div
         className="octagram-chart-container p-3 sm:p-4 w-full"
         style={{
-          minHeight: 360,         // mobile
+          minHeight: 300,         // mobile
         }}
       >
         <ResponsiveContainer width="100%" height={380}>
@@ -123,7 +123,7 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
             cy="50%"
             outerRadius="42%"        // MOBILE-FRIENDLY
             data={data}
-            margin={{ top: 30, right: 30, bottom: 30, left: 30 }}
+            margin={{ top: 10, right: 10, bottom: 10, left: 10 }}
           >
             <PolarGrid stroke="#e2e8f0" strokeWidth={1} gridType="polygon" />
 
