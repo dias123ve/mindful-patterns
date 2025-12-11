@@ -107,7 +107,7 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
     <div className="w-full flex flex-col items-center gap-2">
       {/* RESPONSIVE CONTAINER HEIGHT */}
       <div
-        className="octagram-chart-container p-1 sm:p-3 w-full"
+        className="octagram-chart-container p-1 sm:p-1 w-full"
         style={{
           minHeight: 250,            // Mobile compact
         }}
@@ -118,8 +118,8 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
             window.innerWidth < 640
               ? 260      // Mobile
               : window.innerWidth < 1024
-              ? 330      // Tablet
-              : 480      // Desktop (large & premium)
+              ? 310      // Tablet
+              : 380      // Desktop (large & premium)
           }
         >
           <RadarChart
@@ -129,8 +129,8 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
               window.innerWidth < 640
                 ? "36%"    // Mobile (lebih dalam)
                 : window.innerWidth < 1024
-                ? "42%"    // Tablet
-                : "48%"    // Desktop bigger
+                ? "38%"    // Tablet
+                : "40%"    // Desktop bigger
             }
             data={data}
             margin={{ top: 6, right: 6, bottom: 6, left: 6 }}
@@ -150,7 +150,7 @@ const OctagramChart = ({ scores, componentNames }: OctagramChartProps) => {
       </div>
 
       {/* LEGEND */}
-      <div className="flex items-center gap-6 mt-1 text-sm font-medium text-slate-600">
+      <div className="flex items-center gap-6 mt-[3px] mb-[6px] text-sm font-medium text-slate-600">
         <div className="flex items-center gap-2">
           <span className="inline-block w-3 h-3 rounded-full bg-[#27D787]" />
           Top Score
