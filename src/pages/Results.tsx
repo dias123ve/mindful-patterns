@@ -148,12 +148,13 @@ const Results = () => {
 
             {/* NEXT BUTTON */}
             <Button
-              size="lg"
-              className="px-8 py-6 text-lg font-semibold"
-              onClick={() => setStep(2)}
-            >
-              See Your Strengths and Challenges →
-            </Button>
+  size="lg"
+  className="w-full sm:w-auto px-6 py-4 sm:px-8 sm:py-6 text-base sm:text-lg font-semibold"
+  onClick={() => setStep(2)}
+>
+  See Your Strengths and Challenges →
+</Button>
+
           </div>
         </main>
       )}
@@ -274,12 +275,13 @@ const Results = () => {
             {/* CONTINUE */}
             <div className="text-center mt-12">
               <Button
-                size="lg"
-                className="px-8 py-6 text-lg font-semibold"
-                onClick={() => navigate("/transition")}
-              >
-                Continue →
-              </Button>
+  size="lg"
+  className="w-full sm:w-auto px-6 py-4 sm:px-8 sm:py-6 text-base sm:text-lg font-semibold"
+  onClick={() => navigate("/transition")}
+>
+  Continue →
+</Button>
+
             </div>
           </div>
         </main>
