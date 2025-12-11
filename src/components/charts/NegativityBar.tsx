@@ -1,119 +1,129 @@
 import { cn } from "@/lib/utils";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 
-export interface NegativityBarProps {
+import maleImg from "@/assets/wellness-male.jpeg";
+import femaleImg from "@/assets/wellness-female.jpeg";
+import wellnessImage from "@/assets/wellness-header.png";
+
+interface NegativityBarProps {
   score: number;
-  maxScore: number;
+  maxScore?: number;
   gender?: "male" | "female";
   animated?: boolean;
+  showImage?: boolean;
   className?: string;
 }
 
-export const NegativityBar = ({
+const NegativityBar = ({
   score,
   maxScore,
-  gender = "female",
+  gender,
   animated = true,
+  showImage = true,
   className,
 }: NegativityBarProps) => {
-  // Normalization
-  const safeMax = Math.max(maxScore, 1);
+
+  const safeMax = Math.max(maxScore ?? score, 1);
   const normalized = Math.min(score / safeMax, 1);
 
-  // Dot cap at Normal zone (75%)
-  const targetPos = (1 - normalized) * 75;
+  // Max score → NORMAL zone (25%)
+  // Min score → HIGH zone (100%)
+  const targetPosition = 25 + (1 - normalized) * 75;
 
-  const [displayPosition, setDisplayPosition] = useState(0);
+  const [displayPosition, setDisplayPosition] = useState(animated ? 0 : targetPosition);
 
   useEffect(() => {
     if (!animated) {
-      setDisplayPosition(targetPos);
+      setDisplayPosition(targetPosition);
       return;
     }
-    const t = setTimeout(() => setDisplayPosition(targetPos), 120);
-    return () => clearTimeout(t);
-  }, [targetPos, animated]);
+    const timer = setTimeout(() => setDisplayPosition(targetPosition), 150);
+    return () => clearTimeout(timer);
+  }, [targetPosition, animated]);
 
-  // Gender-based image import
   const imgSrc =
     gender === "male"
-      ? "/assets/wellness-male.jpeg"
-      : "/assets/wellness-female.jpeg";
+      ? maleImg
+      : gender === "female"
+      ? femaleImg
+      : wellnessImage;
 
   return (
     <div className={cn("w-full max-w-sm space-y-4", className)}>
 
-      {/* Header image */}
-      <div className="overflow-hidden rounded-2xl">
-        <img
-          src={imgSrc}
-          alt="Session Illustration"
-          className="w-full h-auto object-cover opacity-95"
-        />
-      </div>
-
-      {/* Title */}
-      <h3 className="text-base font-medium text-foreground tracking-tight">
-        Negativity Level
-      </h3>
-
-      {/* Bar + Indicator */}
-      <div className="relative pt-10 pb-2">
-
-        {/* === YOUR LEVEL LABEL ABOVE DOT === */}
+      {/* === YOUR LEVEL ABOVE EVERYTHING (HIGHEST z-index) === */}
+      <div
+        className="relative z-50 flex justify-center"
+        style={{ pointerEvents: "none" }} // prevent click capturing
+      >
         <div
-          className="absolute -top-8 -translate-x-1/2 text-xs font-medium text-foreground whitespace-nowrap"
-          style={{ left: `${displayPosition}%` }}
+          className="absolute -top-6 -translate-x-1/2 text-xs font-medium text-foreground select-none"
+          style={{ left: `${displayPosition}%`, zIndex: 9999 }}
         >
           Your Level
         </div>
-
-        {/* Vertical line */}
-        <div
-          className="absolute -top-3 -translate-x-1/2 text-foreground"
-          style={{ left: `${displayPosition}%` }}
-        >
-          |
-        </div>
-
-        {/* Dot indicator */}
-        <div
-          className={cn(
-            "absolute -top-1 -translate-x-1/2 z-10 transition-all duration-700 ease-out"
-          )}
-          style={{ left: `${displayPosition}%` }}
-        >
-          <div className="w-5 h-5 rounded-full bg-white shadow-lg border border-white/60 flex items-center justify-center">
-            {/* inner white dot */}
-            <div className="w-2 h-2 rounded-full bg-white" />
-          </div>
-        </div>
-
-        {/* Gradient bar */}
-        <div className="rounded-full bg-card shadow-sm border border-border/40 p-[3px]">
-          <div
-            className={cn(
-              "w-full h-[8px] rounded-full bg-gradient-to-r",
-              "from-[#4ade80]",
-              "via-[#facc15] via-40%",
-              "via-[#fb923c] via-70%",
-              "to-[#ef4444]",
-              "relative overflow-hidden"
-            )}
-          >
-            <div className="absolute inset-0 bg-gradient-to-b from-white/40 to-transparent h-1/2" />
-          </div>
-        </div>
-
       </div>
 
-      {/* === LEVEL LABELS UNDER BAR === */}
-      <div className="flex justify-between text-[11px] text-muted-foreground px-1 select-none">
-        <span>Low</span>
-        <span>Normal</span>
-        <span>Medium</span>
-        <span>High</span>
+      {/* Title */}
+      <h3 className="text-base font-medium text-foreground tracking-tight px-1 text-center">
+        Inner Challenge Level
+      </h3>
+
+      {/* Header Image */}
+      {showImage && (
+        <div className="overflow-hidden rounded-2xl">
+          <img
+            src={imgSrc}
+            alt="Wellness illustration"
+            className="w-full h-auto object-cover opacity-90"
+          />
+        </div>
+      )}
+
+      {/* Content */}
+      <div className="space-y-3 px-1">
+
+        {/* BAR */}
+        <div className="relative h-4">
+
+          {/* Background bar */}
+          <div className="absolute inset-0 bg-card shadow-sm border border-border/50 rounded-full p-0.5">
+            <div className="w-full h-full rounded-full shadow-inner bg-gradient-to-r 
+              from-[#4ade80]
+              via-[#facc15] via-40%
+              via-[#fb923c] via-70%
+              to-[#ef4444]
+              relative overflow-hidden
+            ">
+              <div className="absolute inset-0 bg-gradient-to-b from-white/30 to-transparent h-1/2" />
+            </div>
+          </div>
+
+          {/* DOT */}
+          <div
+            className={cn(
+              "absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-20",
+              animated && "transition-all duration-700 ease-out"
+            )}
+            style={{ left: `${displayPosition}%` }}
+          >
+            <div className="w-6 h-6 rounded-full bg-white border-2 border-white shadow-lg ring-1 ring-black/10 flex items-center justify-center">
+              <div className="w-2.5 h-2.5 rounded-full bg-white" />
+            </div>
+          </div>
+        </div>
+
+        {/* LABELS */}
+        <div className="flex justify-between mt-3 text-xs text-muted-foreground">
+          <span>low</span>
+          <span>normal</span>
+          <span>medium</span>
+          <span>high</span>
+        </div>
       </div>
     </div>
   );
 };
+
+export { NegativityBar };
+export type { NegativityBarProps };
