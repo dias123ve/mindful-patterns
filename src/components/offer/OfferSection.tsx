@@ -1,6 +1,12 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Package, BookOpen, ArrowRight } from "lucide-react";
+import {
+  Sparkles,
+  Package,
+  BookOpen,
+  LibraryBig,
+  ArrowRight,
+} from "lucide-react";
 
 interface ComponentData {
   id: string;
@@ -12,10 +18,15 @@ interface OfferSectionProps {
   positiveComponents: ComponentData[];
   negativeComponent: ComponentData | null;
   discountExpired: boolean;
-  timeLeft?: number; // optional mini timer
+  timeLeft?: number;
 }
 
-const OfferSection = ({ positiveComponents, negativeComponent, discountExpired, timeLeft }: OfferSectionProps) => {
+const OfferSection = ({
+  positiveComponents,
+  negativeComponent,
+  discountExpired,
+  timeLeft,
+}: OfferSectionProps) => {
   const navigate = useNavigate();
 
   const handleSinglePurchase = () => {
@@ -25,6 +36,11 @@ const OfferSection = ({ positiveComponents, negativeComponent, discountExpired, 
 
   const handleBundlePurchase = () => {
     sessionStorage.setItem("purchase_type", "bundle");
+    navigate("/checkout");
+  };
+
+  const handleFullSeriesPurchase = () => {
+    sessionStorage.setItem("purchase_type", "full_series");
     navigate("/checkout");
   };
 
@@ -45,11 +61,11 @@ const OfferSection = ({ positiveComponents, negativeComponent, discountExpired, 
         </div>
       </div>
 
-      {/* Offer Cards */}
-      <div className="grid md:grid-cols-2 gap-6 mb-12">
+      {/* ---- GRID: 1 col mobile, 3 col desktop ---- */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-full">
 
-        {/* Single Ebook Offer */}
-        <div className="bg-card rounded-2xl p-6 md:p-8 shadow-soft border border-border fade-up flex flex-col h-full">
+        {/* ---------------- SINGLE CARD ---------------- */}
+        <div className="bg-card rounded-2xl p-4 md:p-8 shadow-soft border border-border fade-up flex flex-col h-full w-full">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-12 h-12 rounded-full bg-warning-light flex items-center justify-center">
               <BookOpen className="h-6 w-6 text-warning" />
@@ -58,7 +74,6 @@ const OfferSection = ({ positiveComponents, negativeComponent, discountExpired, 
               <h3 className="text-lg font-display font-bold text-foreground">
                 Fix Your Key Challenge
               </h3>
-
               {negativeComponent && (
                 <p className="text-sm text-muted-foreground">
                   Ebook to steady your {negativeComponent.name}
@@ -67,44 +82,45 @@ const OfferSection = ({ positiveComponents, negativeComponent, discountExpired, 
             </div>
           </div>
 
+          {/* Price */}
           <div className="mb-6">
-            {/* PRICE */}
             <div className="flex items-baseline gap-2 mb-2">
               <span className="text-3xl font-display font-bold text-foreground">
                 {discountExpired ? "$20" : "$12"}
               </span>
 
               {!discountExpired && (
-                <span className="text-lg text-muted-foreground line-through">$20</span>
+                <span className="text-lg text-muted-foreground line-through">
+                  $20
+                </span>
               )}
             </div>
 
             <p className="text-muted-foreground text-sm leading-relaxed">
-              A focused guide to help you improve this key area through clear, gentle improvements.
+              A focused guide to help you improve this key area through clear,
+              gentle improvements.
             </p>
 
-            {/* Challenge tag */}
-            <ul className="space-y-2 text-sm">
-              {negativeComponent && (
-                <li className="flex items-center gap-2 text-orange-500 mt-1">
+            {negativeComponent && (
+              <ul className="space-y-2 text-sm mt-3">
+                <li className="flex items-center gap-2 text-orange-500">
                   <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
                   <span>Challenge Guide: {negativeComponent.name}</span>
                 </li>
-              )}
-            </ul>
+              </ul>
+            )}
           </div>
 
-          {/* Mini Timer */}
           {!discountExpired && timeLeft !== undefined && (
             <p className="text-xs text-green-600 font-medium mb-3">
               You have {formatTime(timeLeft)} left at this price.
             </p>
           )}
 
-          <Button 
-            onClick={handleSinglePurchase} 
-            variant="outline" 
-            size="lg" 
+          <Button
+            onClick={handleSinglePurchase}
+            variant="outline"
+            size="lg"
             className="w-full mt-auto"
           >
             Get the Key Challenge Guide
@@ -112,9 +128,9 @@ const OfferSection = ({ positiveComponents, negativeComponent, discountExpired, 
           </Button>
         </div>
 
-        {/* Bundle Offer */}
-        <div 
-          className="relative bg-card rounded-2xl p-6 md:p-8 shadow-medium border-2 border-primary fade-up"
+        {/* ---------------- BUNDLE CARD ---------------- */}
+        <div
+          className="relative bg-card rounded-2xl p-4 md:p-8 shadow-medium border-2 border-primary fade-up flex flex-col h-full w-full"
           style={{ animationDelay: "0.12s" }}
         >
           {/* Best Value Badge */}
@@ -133,30 +149,29 @@ const OfferSection = ({ positiveComponents, negativeComponent, discountExpired, 
               <h3 className="text-lg font-display font-bold text-foreground">
                 Complete Personalized Bundle
               </h3>
-              <p className="text-sm text-muted-foreground">
-                3 Tailored Ebooks
-              </p>
+              <p className="text-sm text-muted-foreground">3 Tailored Ebooks</p>
             </div>
           </div>
 
+          {/* Price */}
           <div className="mb-6">
-            {/* PRICE */}
             <div className="flex items-baseline gap-2 mb-2">
               <span className="text-3xl font-display font-bold text-foreground">
                 {discountExpired ? "$29" : "$17"}
               </span>
 
               {!discountExpired && (
-                <span className="text-lg text-muted-foreground line-through">$29</span>
+                <span className="text-lg text-muted-foreground line-through">
+                  $29
+                </span>
               )}
             </div>
 
             <p className="text-muted-foreground text-sm leading-relaxed mb-4">
-              A full set of guides that help you elevate your best patterns while 
-              strengthening your key challenge for holistic personal growth.
+              A full set of guides that elevate your strengths and strengthen
+              your key challenge for holistic personal growth.
             </p>
 
-            {/* Strength + Challenge guides */}
             <ul className="space-y-2 text-sm">
               {positiveComponents.map((comp) => (
                 <li key={comp.id} className="flex items-center gap-2 text-success">
@@ -164,7 +179,6 @@ const OfferSection = ({ positiveComponents, negativeComponent, discountExpired, 
                   <span>Strength Guide: {comp.name}</span>
                 </li>
               ))}
-
               {negativeComponent && (
                 <li className="flex items-center gap-2 text-orange-500">
                   <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
@@ -174,29 +188,95 @@ const OfferSection = ({ positiveComponents, negativeComponent, discountExpired, 
             </ul>
           </div>
 
-          {/* Mini Timer */}
           {!discountExpired && timeLeft !== undefined && (
             <p className="text-xs text-green-600 font-medium mb-3">
               You have {formatTime(timeLeft)} left at this price.
             </p>
           )}
 
-          <Button 
-            onClick={handleBundlePurchase} 
-            variant="hero" 
-            size="lg" 
-            className="w-full"
+          <Button
+            onClick={handleBundlePurchase}
+            variant="hero"
+            size="lg"
+            className="w-full mt-auto"
           >
             Get the Full Personalized Bundle
             <ArrowRight className="h-4 w-4 ml-2" />
           </Button>
         </div>
+
+        {/* ---------------- FULL SELF SERIES CARD ---------------- */}
+        <div
+          className="bg-card rounded-2xl p-4 md:p-8 shadow-lg border border-border fade-up flex flex-col h-full w-full"
+          style={{ animationDelay: "0.22s" }}
+        >
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center">
+              <LibraryBig className="h-6 w-6 text-purple-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-display font-bold text-foreground">
+                Full Self Series
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Complete 16-Ebook Collection
+              </p>
+            </div>
+          </div>
+
+          {/* Price */}
+          <div className="flex items-baseline gap-2 mb-3">
+            <span className="text-3xl font-display font-bold text-foreground">
+              {discountExpired ? "$99" : "$60"}
+            </span>
+
+            {!discountExpired && (
+              <span className="text-lg text-muted-foreground line-through">
+                $99
+              </span>
+            )}
+          </div>
+
+          <p className="text-muted-foreground text-sm leading-relaxed mb-4">
+            This collection guides you through all 8 Self Series components,
+            helping you achieve deep, holistic transformation.
+          </p>
+
+          <ul className="space-y-2 text-sm mb-6">
+            <li className="flex items-center gap-2 text-success">
+              <span className="w-1.5 h-1.5 rounded-full bg-success" />
+              <span>8 Strength Guides (your strongest components)</span>
+            </li>
+
+            <li className="flex items-center gap-2 text-orange-500">
+              <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+              <span>8 Challenge Guides (your lowest components)</span>
+            </li>
+          </ul>
+
+          {!discountExpired && timeLeft !== undefined && (
+            <p className="text-xs text-green-600 font-medium mb-4">
+              You have {formatTime(timeLeft)} left at this price.
+            </p>
+          )}
+
+          <Button
+            onClick={handleFullSeriesPurchase}
+            variant="default"
+            size="lg"
+            className="w-full mt-auto"
+          >
+            Get the Full Self Series
+            <ArrowRight className="h-4 w-4 ml-2" />
+          </Button>
+        </div>
       </div>
 
-      {/* Footer Note */}
-      <div className="text-center fade-up" style={{ animationDelay: "0.24s" }}>
+      {/* Footer */}
+      <div className="text-center fade-up" style={{ animationDelay: "0.32s" }}>
         <p className="text-sm text-muted-foreground max-w-md mx-auto">
-          Your recommendations are dynamically tailored to your internal behavioral pattern profile.
+          Your recommendations are dynamically tailored to your behavioral
+          pattern profile.
         </p>
       </div>
     </div>
