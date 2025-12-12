@@ -92,10 +92,11 @@ export const NegativityBar = ({
       {showImage && (
         <div className="overflow-hidden rounded-2xl">
           <img
-            src={imgSrc}
-            alt="Profile"
-            className="w-full h-auto object-cover opacity-70 brightness-105 transition-opacity duration-700"
-          />
+  src={imgSrc}
+  alt="Profile"
+  className="w-full h-auto object-cover opacity-95"
+/>
+
         </div>
       )}
 
