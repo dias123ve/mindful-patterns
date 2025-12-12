@@ -18,7 +18,7 @@ interface OfferSectionProps {
   positiveComponents: ComponentData[];
   negativeComponent: ComponentData | null;
   discountExpired: boolean;
-  timeLeft?: number; // timer logic tetap ada, tapi tidak dirender
+  timeLeft?: number;
 }
 
 const OfferSection = ({
@@ -31,16 +31,19 @@ const OfferSection = ({
 
   const handleSinglePurchase = () => {
     sessionStorage.setItem("purchase_type", "single");
+    sessionStorage.setItem("discount_expired", discountExpired.toString());
     navigate("/checkout");
   };
 
   const handleBundlePurchase = () => {
     sessionStorage.setItem("purchase_type", "bundle");
+    sessionStorage.setItem("discount_expired", discountExpired.toString());
     navigate("/checkout");
   };
 
   const handleFullSeriesPurchase = () => {
     sessionStorage.setItem("purchase_type", "full_series");
+    sessionStorage.setItem("discount_expired", discountExpired.toString());
     navigate("/checkout");
   };
 
@@ -55,10 +58,10 @@ const OfferSection = ({
         </div>
       </div>
 
-      {/* ---- GRID ---- */}
+      {/* GRID */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-full">
 
-        {/* ---------------- SINGLE CARD ---------------- */}
+        {/* SINGLE CARD */}
         <div className="bg-card rounded-2xl p-4 md:p-8 shadow-soft border border-border fade-up flex flex-col h-full w-full">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-12 h-12 rounded-full bg-warning-light flex items-center justify-center">
@@ -91,7 +94,7 @@ const OfferSection = ({
             </div>
 
             <p className="text-muted-foreground text-sm leading-relaxed">
-             A focused guide to help you improve this core area through clear, gentle progress.
+              A focused guide to help you improve this core area through clear, gentle progress.
             </p>
 
             {negativeComponent && (
@@ -104,8 +107,6 @@ const OfferSection = ({
             )}
           </div>
 
-          {/* Timer hidden visually */}
-
           <Button
             onClick={handleSinglePurchase}
             variant="outline"
@@ -117,12 +118,12 @@ const OfferSection = ({
           </Button>
         </div>
 
-        {/* ---------------- BUNDLE CARD ---------------- */}
+        {/* BUNDLE CARD */}
         <div
           className="relative bg-card rounded-2xl p-4 md:p-8 shadow-medium border-2 border-primary fade-up flex flex-col h-full w-full"
           style={{ animationDelay: "0.12s" }}
         >
-          {/* Best Value Badge */}
+          {/* Badge */}
           <div className="absolute -top-3 left-1/2 -translate-x-1/2">
             <span className="inline-flex items-center gap-1 px-4 py-1 rounded-full bg-primary text-primary-foreground text-sm font-semibold">
               <Sparkles className="h-3 w-3" />
@@ -157,7 +158,7 @@ const OfferSection = ({
             </div>
 
             <p className="text-muted-foreground text-sm leading-relaxed mb-4">
-              A full set of guides that elevates your strongest patterns and improves your main challenge for holistic personal growth.
+              A full set of guides that elevates your strongest patterns and improves your main challenge.
             </p>
 
             <ul className="space-y-2 text-sm">
@@ -167,6 +168,7 @@ const OfferSection = ({
                   <span>Elevated Guide: {comp.name}</span>
                 </li>
               ))}
+
               {negativeComponent && (
                 <li className="flex items-center gap-2 text-orange-500">
                   <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
@@ -175,8 +177,6 @@ const OfferSection = ({
               )}
             </ul>
           </div>
-
-          {/* Timer hidden visually */}
 
           <Button
             onClick={handleBundlePurchase}
@@ -189,7 +189,7 @@ const OfferSection = ({
           </Button>
         </div>
 
-        {/* ---------------- FULL SELF SERIES CARD ---------------- */}
+        {/* FULL SERIES CARD */}
         <div
           className="bg-card rounded-2xl p-4 md:p-8 shadow-lg border border-border fade-up flex flex-col h-full w-full"
           style={{ animationDelay: "0.22s" }}
@@ -222,23 +222,20 @@ const OfferSection = ({
           </div>
 
           <p className="text-muted-foreground text-sm leading-relaxed mb-4">
-            This collection guides you through all 8 Self Series components,
-            helping you achieve deep, holistic transformation.
+            This collection guides you through all 8 Self Series components for deep, holistic transformation.
           </p>
 
           <ul className="space-y-2 text-sm mb-6">
             <li className="flex items-center gap-2 text-success">
               <span className="w-1.5 h-1.5 rounded-full bg-success" />
-              <span>8 Elevated Guides (for strong components)</span>
+              <span>8 Elevated Guides</span>
             </li>
 
             <li className="flex items-center gap-2 text-orange-500">
               <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
-              <span>8 Challenge Guides (for low components)</span>
+              <span>8 Challenge Guides</span>
             </li>
           </ul>
-
-          {/* Timer hidden visually */}
 
           <Button
             onClick={handleFullSeriesPurchase}
@@ -250,13 +247,13 @@ const OfferSection = ({
             <ArrowRight className="h-4 w-4 ml-2" />
           </Button>
         </div>
+
       </div>
 
       {/* Footer */}
       <div className="text-center fade-up" style={{ animationDelay: "0.32s" }}>
         <p className="text-sm text-muted-foreground max-w-md mx-auto">
-          Your recommendations are dynamically tailored to your behavioral
-          pattern profile.
+          Your recommendations are dynamically tailored to your behavioral pattern profile.
         </p>
       </div>
     </div>
