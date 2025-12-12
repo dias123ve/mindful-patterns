@@ -202,7 +202,7 @@ const Results = () => {
                 <div className="flex items-center gap-3 mb-6">
                   <CheckCircle2 className="h-6 w-6 text-green-600" />
                   <h2 className="text-xl font-display font-bold text-foreground">
-                    Your Strengths
+                    Your Leading Patterns
                   </h2>
                 </div>
 
@@ -255,7 +255,7 @@ const Results = () => {
                 <div className="flex items-center gap-3 mb-6">
                   <AlertTriangle className="h-6 w-6 text-amber-600" />
                   <h2 className="text-xl font-display font-bold text-foreground">
-                    Your Main Challenge
+                    Your Key Challenge
                   </h2>
                 </div>
 
