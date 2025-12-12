@@ -51,7 +51,7 @@ const OfferSection = ({
   };
 
   return (
-    <div className="space-y-12">
+    <div className="space-y-12 max-w-screen-2xl mx-auto px-4 md:px-6">
 
       {/* Header */}
       <div className="text-center mb-12 fade-up">
@@ -245,12 +245,12 @@ const OfferSection = ({
           <ul className="space-y-2 text-sm mb-6">
             <li className="flex items-center gap-2 text-success">
               <span className="w-1.5 h-1.5 rounded-full bg-success" />
-              <span>8 Strength Guides (your strongest components)</span>
+              <span>8 Strength Guides (to elevate strong components)</span>
             </li>
 
             <li className="flex items-center gap-2 text-orange-500">
               <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
-              <span>8 Challenge Guides (your lowest components)</span>
+              <span>8 Challenge Guides (to improve low components)</span>
             </li>
           </ul>
 
