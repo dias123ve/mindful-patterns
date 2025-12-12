@@ -162,7 +162,7 @@ const Results = () => {
               className="w-full sm:w-auto px-6 py-4 sm:px-8 sm:py-6 text-base sm:text-lg font-semibold"
               onClick={() => setStep(2)}
             >
-              See Your Strengths and Challenges →
+              See Your Patterns and Challenges →
             </Button>
           </div>
         </main>
@@ -193,7 +193,7 @@ const Results = () => {
 
             {/* NEW DESCRIPTION */}
             <p className="text-muted-foreground max-w-lg mx-auto text-center mb-10">
-              See the strengths shaping your progress and the key area that holds the greatest growth potential.
+              See the patterns shaping your progress and the key area with the greatest growth potential.
             </p>
 
             {/* STRENGTHS */}
@@ -255,7 +255,7 @@ const Results = () => {
                 <div className="flex items-center gap-3 mb-6">
                   <AlertTriangle className="h-6 w-6 text-amber-600" />
                   <h2 className="text-xl font-display font-bold text-foreground">
-                    Your Key Challenge
+                    Your Main Challenge
                   </h2>
                 </div>
 
