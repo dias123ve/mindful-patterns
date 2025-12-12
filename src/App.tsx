@@ -14,6 +14,7 @@ import EnterEmail from "./pages/EnterEmail";
 // NEW imports
 import Transition from "./pages/Transition";
 import Offer from "./pages/Offer";
+import PreQuiz from "./pages/PreQuiz";  // ← NEW
 
 import AdminLogin from "./pages/admin/Login";
 import AdminDashboard from "./pages/admin/Dashboard";
@@ -39,9 +40,9 @@ const App = () => (
           <Route path="/quiz" element={<Quiz />} />
           <Route path="/enter-email" element={<EnterEmail />} />
 
-          <Route path="/results" element={<Results />} />
-
           {/* NEW ROUTES */}
+          <Route path="/pre-quiz" element={<PreQuiz />} />   {/* ← NEW */}
+          <Route path="/results" element={<Results />} />
           <Route path="/transition" element={<Transition />} />
           <Route path="/offer" element={<Offer />} />
 
