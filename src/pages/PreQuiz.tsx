@@ -43,7 +43,7 @@ const PreQuiz = () => {
             className="w-full flex items-center justify-center gap-2 text-base py-6"
             onClick={handleContinue}
           >
-            Continue →
+            Continue
           </Button>
         </div>
       </div>
