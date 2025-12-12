@@ -2,7 +2,6 @@ import { Link } from "react-router-dom";
 import { Brain, Clock, BookOpen } from "lucide-react";
 import MaleIcon from "@/assets/male.svg";
 import FemaleIcon from "@/assets/female.svg";
-import { Button } from "@/components/ui/button";
 
 const Index = () => {
   return (
@@ -13,10 +12,6 @@ const Index = () => {
           <Link to="/" className="flex items-center gap-2">
             <Brain className="h-8 w-8 text-primary" />
             <span className="text-xl font-bold text-foreground">MindProfile</span>
-          </Link>
-
-          <Link to="/admin/login">
-            <Button variant="ghost" size="sm">Admin</Button>
           </Link>
         </nav>
       </header>
@@ -46,10 +41,9 @@ const Index = () => {
             {/* Male */}
             <button
               onClick={() => {
-  sessionStorage.setItem("gender", "male");
-  window.location.href = "/quiz?gender=male";
-}}
-
+                sessionStorage.setItem("gender", "male");
+                window.location.href = "/pre-quiz?gender=male";
+              }}
               className="w-48 h-60 bg-white rounded-2xl border border-slate-200/60 
                          shadow-md shadow-slate-200/40
                          hover:shadow-lg hover:scale-[1.05] transition-all 
@@ -62,10 +56,9 @@ const Index = () => {
             {/* Female */}
             <button
               onClick={() => {
-  sessionStorage.setItem("gender", "female");
-  window.location.href = "/quiz?gender=female";
-}}
-
+                sessionStorage.setItem("gender", "female");
+                window.location.href = "/pre-quiz?gender=female";
+              }}
               className="w-48 h-60 bg-white rounded-2xl border border-slate-200/60 
                          shadow-md shadow-slate-200/40
                          hover:shadow-lg hover:scale-[1.05] transition-all 
