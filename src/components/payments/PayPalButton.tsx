@@ -8,6 +8,8 @@ interface PayPalButtonProps {
 export function PayPalButton({ amount, onSuccess }: PayPalButtonProps) {
   const clientId = import.meta.env.VITE_PAYPAL_CLIENT_ID;
 
+  console.log("PAYPAL CLIENT ID →", clientId); // debugging
+
   if (!clientId) {
     console.error("Missing PayPal Client ID in env: VITE_PAYPAL_CLIENT_ID");
     return <div>Payment system is not configured.</div>;
@@ -18,6 +20,7 @@ export function PayPalButton({ amount, onSuccess }: PayPalButtonProps) {
       options={{
         "client-id": clientId,
         currency: "USD",
+        intent: "capture", // ⭐ penting untuk sandbox stabil!
       }}
     >
       <PayPalButtons
