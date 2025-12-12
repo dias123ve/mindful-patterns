@@ -14,8 +14,7 @@ const AboutYourPlan = () => {
         About Your Plan
       </h2>
       <p className="text-muted-foreground leading-relaxed mb-6">
-        This plan is built from your actual quiz results — your two strongest components and your lowest one. 
-        Each guide gives you clear explanations and practical steps tailored to your patterns.
+        This plan is built from your actual quiz results, based on your two highest components and your lowest one. Each guide gives you clear explanations and practical steps tailored to your patterns.
       </p>
       
       <h3 className="text-base font-semibold text-foreground mb-4">
