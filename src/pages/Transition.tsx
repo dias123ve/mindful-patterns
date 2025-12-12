@@ -1,7 +1,7 @@
 import { ArrowRight, Brain } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useLayoutEffect } from "react";
 
 const GrowthCurve = () => {
   const pathRef = useRef<SVGPathElement | null>(null);
@@ -49,7 +49,9 @@ const GrowthCurve = () => {
         dot.setAttribute("cy", String(pt.y));
 
         const glow = Math.max(0, (eased - 0.75) / 0.25);
-        dot.style.filter = `drop-shadow(0 6px ${12 * glow}px rgba(16,124,116,${0.15 * glow}))`;
+        dot.style.filter = `drop-shadow(0 6px ${12 * glow}px rgba(16,124,116,${
+          0.15 * glow
+        }))`;
 
         if (t < 1) requestAnimationFrame(moveDot);
       };
@@ -69,10 +71,9 @@ const GrowthCurve = () => {
         viewBox="0 0 520 220"
         className="w-full h-auto"
         preserveAspectRatio="xMidYMid meet"
-        xmlns="http://www.w3.org/2000/svg"
       >
         <defs>
-          {/* Gradient stroke: red → orange → yellow → green */}
+          {/* Gradient stroke */}
           <linearGradient id="growthStroke" x1="0%" x2="100%">
             <stop offset="0%" stopColor="#FF4D4D" />
             <stop offset="33%" stopColor="#FF8A2B" />
@@ -80,7 +81,7 @@ const GrowthCurve = () => {
             <stop offset="100%" stopColor="#3BB273" />
           </linearGradient>
 
-          {/* Fill area */}
+          {/* Area fill */}
           <linearGradient id="growthFill" x1="0%" x2="100%">
             <stop offset="0%" stopColor="#FF4D4D20" />
             <stop offset="33%" stopColor="#FF8A2B18" />
@@ -89,13 +90,13 @@ const GrowthCurve = () => {
           </linearGradient>
         </defs>
 
-        {/* Fill area under curve */}
+        {/* Filled gradient area */}
         <path d={`${pathD} L 520 220 L 0 220 Z`} fill="url(#growthFill)" />
 
-        {/* Subtle background line */}
+        {/* Faint background line */}
         <path d={pathD} stroke="rgba(0,0,0,0.05)" strokeWidth={7} fill="none" />
 
-        {/* Main animated stroke */}
+        {/* Main curve */}
         <path
           ref={pathRef}
           d={pathD}
@@ -106,7 +107,7 @@ const GrowthCurve = () => {
           strokeLinejoin="round"
         />
 
-        {/* Day labels */}
+        {/* Labels */}
         <g
           fontSize="12"
           textAnchor="middle"
@@ -120,7 +121,7 @@ const GrowthCurve = () => {
           <text x="500" y="210">60</text>
         </g>
 
-        {/* START DOT — RED */}
+        {/* Start dot (red) */}
         <circle
           ref={dotRef}
           cx="20"
@@ -132,7 +133,7 @@ const GrowthCurve = () => {
         />
         <circle cx="20" cy="150" r="5" fill="#FF4D4D" />
 
-        {/* GOAL DOT */}
+        {/* Goal dot */}
         <g transform="translate(500,40)">
           <circle
             r="14"
@@ -152,7 +153,7 @@ const GrowthCurve = () => {
           />
         </g>
 
-        {/* GOAL LABEL — ABOVE DOT, RIGHT-ALIGNED */}
+        {/* Goal label ABOVE + right aligned */}
         <text
           x="514"
           y="18"
@@ -178,8 +179,9 @@ const GrowthCurve = () => {
 };
 
 const Transition = () => {
-  // ✅ Force scroll to top on page load
-  useEffect(() => {
+
+  // ⭐ FIX: Scroll ke atas TANPA flicker
+  useLayoutEffect(() => {
     window.scrollTo(0, 0);
   }, []);
 
@@ -211,7 +213,7 @@ const Transition = () => {
             <GrowthCurve />
           </div>
 
-          {/* CENTERED BUTTON */}
+          {/* Centered button */}
           <div
             className="w-full flex justify-center fade-up"
             style={{ animationDelay: "0.3s" }}
