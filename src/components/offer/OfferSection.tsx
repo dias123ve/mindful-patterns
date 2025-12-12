@@ -18,7 +18,7 @@ interface OfferSectionProps {
   positiveComponents: ComponentData[];
   negativeComponent: ComponentData | null;
   discountExpired: boolean;
-  timeLeft?: number;
+  timeLeft?: number; // timer logic tetap ada, tapi tidak dirender
 }
 
 const OfferSection = ({
@@ -44,12 +44,6 @@ const OfferSection = ({
     navigate("/checkout");
   };
 
-  const formatTime = (sec: number) => {
-    const m = String(Math.floor(sec / 60)).padStart(2, "0");
-    const s = String(sec % 60).padStart(2, "0");
-    return `${m}:${s}`;
-  };
-
   return (
     <div className="space-y-12 max-w-screen-2xl mx-auto px-4 md:px-6">
 
@@ -61,7 +55,7 @@ const OfferSection = ({
         </div>
       </div>
 
-      {/* ---- GRID: 1 col mobile, 3 col desktop ---- */}
+      {/* ---- GRID ---- */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-full">
 
         {/* ---------------- SINGLE CARD ---------------- */}
@@ -72,7 +66,7 @@ const OfferSection = ({
             </div>
             <div>
               <h3 className="text-lg font-display font-bold text-foreground">
-                Fix Your Key Challenge
+                Fix Your Main Challenge
               </h3>
               {negativeComponent && (
                 <p className="text-sm text-muted-foreground">
@@ -97,8 +91,7 @@ const OfferSection = ({
             </div>
 
             <p className="text-muted-foreground text-sm leading-relaxed">
-              A focused guide to help you improve this key area through clear,
-              gentle improvements.
+             A focused guide to help you improve this core area through clear, gentle progress.
             </p>
 
             {negativeComponent && (
@@ -111,19 +104,15 @@ const OfferSection = ({
             )}
           </div>
 
-          {!discountExpired && timeLeft !== undefined && (
-            <p className="text-xs text-green-600 font-medium mb-3">
-              You have {formatTime(timeLeft)} left at this price.
-            </p>
-          )}
+          {/* Timer hidden visually */}
 
           <Button
             onClick={handleSinglePurchase}
             variant="outline"
             size="lg"
-            className="w-full mt-auto"
+            className="w-full mt-auto text-sm md:text-base"
           >
-            Get the Key Challenge Guide
+            Get the Main Challenge Guide
             <ArrowRight className="h-4 w-4 ml-2" />
           </Button>
         </div>
@@ -157,7 +146,7 @@ const OfferSection = ({
           <div className="mb-6">
             <div className="flex items-baseline gap-2 mb-2">
               <span className="text-3xl font-display font-bold text-foreground">
-                {discountExpired ? "$29" : "$17"}
+                {discountExpired ? "$29" : "$18"}
               </span>
 
               {!discountExpired && (
@@ -168,15 +157,14 @@ const OfferSection = ({
             </div>
 
             <p className="text-muted-foreground text-sm leading-relaxed mb-4">
-              A full set of guides that elevate your strengths and strengthen
-              your key challenge for holistic personal growth.
+              A full set of guides that elevates your strongest patterns and improves your main challenge for holistic personal growth.
             </p>
 
             <ul className="space-y-2 text-sm">
               {positiveComponents.map((comp) => (
                 <li key={comp.id} className="flex items-center gap-2 text-success">
                   <span className="w-1.5 h-1.5 rounded-full bg-success" />
-                  <span>Strength Guide: {comp.name}</span>
+                  <span>Elevated Guide: {comp.name}</span>
                 </li>
               ))}
               {negativeComponent && (
@@ -188,17 +176,13 @@ const OfferSection = ({
             </ul>
           </div>
 
-          {!discountExpired && timeLeft !== undefined && (
-            <p className="text-xs text-green-600 font-medium mb-3">
-              You have {formatTime(timeLeft)} left at this price.
-            </p>
-          )}
+          {/* Timer hidden visually */}
 
           <Button
             onClick={handleBundlePurchase}
             variant="hero"
             size="lg"
-            className="w-full mt-auto"
+            className="w-full mt-auto text-sm md:text-base"
           >
             Get the Full Personalized Bundle
             <ArrowRight className="h-4 w-4 ml-2" />
@@ -227,7 +211,7 @@ const OfferSection = ({
           {/* Price */}
           <div className="flex items-baseline gap-2 mb-3">
             <span className="text-3xl font-display font-bold text-foreground">
-              {discountExpired ? "$99" : "$60"}
+              {discountExpired ? "$99" : "$70"}
             </span>
 
             {!discountExpired && (
@@ -245,26 +229,22 @@ const OfferSection = ({
           <ul className="space-y-2 text-sm mb-6">
             <li className="flex items-center gap-2 text-success">
               <span className="w-1.5 h-1.5 rounded-full bg-success" />
-              <span>8 Strength Guides (to elevate strong components)</span>
+              <span>8 Elevated Guides (for strong components)</span>
             </li>
 
             <li className="flex items-center gap-2 text-orange-500">
               <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
-              <span>8 Challenge Guides (to improve low components)</span>
+              <span>8 Challenge Guides (for low components)</span>
             </li>
           </ul>
 
-          {!discountExpired && timeLeft !== undefined && (
-            <p className="text-xs text-green-600 font-medium mb-4">
-              You have {formatTime(timeLeft)} left at this price.
-            </p>
-          )}
+          {/* Timer hidden visually */}
 
           <Button
             onClick={handleFullSeriesPurchase}
-            variant="default"
+            variant="outline"
             size="lg"
-            className="w-full mt-auto"
+            className="w-full mt-auto text-sm md:text-base"
           >
             Get the Full Self Series
             <ArrowRight className="h-4 w-4 ml-2" />
