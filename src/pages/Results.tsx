@@ -180,7 +180,7 @@ const Results = () => {
               onClick={() => setStep(1)}
               className="text-sm text-foreground/80 hover:text-foreground flex items-center gap-1 transition"
             >
-              ← Back
+              Back
             </button>
           </div>
 
@@ -202,7 +202,7 @@ const Results = () => {
                 <div className="flex items-center gap-3 mb-6">
                   <CheckCircle2 className="h-6 w-6 text-green-600" />
                   <h2 className="text-xl font-display font-bold text-foreground">
-                    Your Leading Patterns
+                    Your Highest Scores
                   </h2>
                 </div>
 
