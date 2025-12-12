@@ -178,6 +178,11 @@ const GrowthCurve = () => {
 };
 
 const Transition = () => {
+  // ✅ Force scroll to top on page load
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   return (
     <div className="min-h-screen bg-gradient-hero">
       <header className="container mx-auto px-4 py-6">
