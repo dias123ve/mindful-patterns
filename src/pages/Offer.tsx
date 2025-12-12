@@ -189,7 +189,7 @@ const Offer = () => {
               Your personalized plan is ready.
             </h1>
             <p className="text-muted-foreground max-w-md mx-auto">
-              Built from your strongest patterns and your key challenge.
+              Built around your core patterns and your main challenge.
             </p>
           </div>
 
