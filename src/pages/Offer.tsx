@@ -176,7 +176,7 @@ const Offer = () => {
 
       {/* MAIN */}
       <main className="container mx-auto px-4 py-12 pb-16">
-        <div className="max-w-4xl mx-auto space-y-12">
+        <div className="max-w-screen-2xl mx-auto space-y-12">
 
           <NowToGoalVisual
             positiveComponents={positiveComponents}
