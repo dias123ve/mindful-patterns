@@ -21,29 +21,25 @@ export const NegativityBar = ({
   showImage = true,
   className,
 }: NegativityBarProps) => {
-
   // ==============================
-  // SAFE GENDER SOURCE
+  // GENDER SELECTION (SAFE CLIENT)
   // ==============================
   const [finalGender, setFinalGender] = useState<"male" | "female">("female");
 
   useEffect(() => {
     const stored = sessionStorage.getItem("gender") as "male" | "female" | null;
 
-    if (gender) {
-      setFinalGender(gender);
-    } else if (stored) {
-      setFinalGender(stored);
-    }
+    if (gender) setFinalGender(gender);
+    else if (stored) setFinalGender(stored);
   }, [gender]);
 
   // ==============================
-  // BAR POSITION LOGIC
+  // NORMALIZED BAR POSITION LOGIC
   // ==============================
   const safeMax = Math.max(maxScore ?? score, 1);
   const normalized = Math.min(score / safeMax, 1);
 
-  // Normal zone = 25%
+  // Normal zone = 25% on bar
   const targetPosition = 25 + (1 - normalized) * 75;
 
   const [displayPosition, setDisplayPosition] = useState(
@@ -61,11 +57,11 @@ export const NegativityBar = ({
 
   const imgSrc = finalGender === "male" ? maleImg : femaleImg;
 
-  // Safe position for capsule
+  // capsule safe boundaries (avoid offscreen)
   const clampedLabelPos = Math.max(5, Math.min(displayPosition, 95));
 
   // ==============================
-  // DETERMINE LEVEL TEXT
+  // DETERMINE LEVEL DESCRIPTION
   // ==============================
   let levelTitle = "";
   let levelBody = "";
@@ -98,7 +94,7 @@ export const NegativityBar = ({
           <img
             src={imgSrc}
             alt="Profile"
-            className="w-full h-auto object-cover opacity-90"
+            className="w-full h-auto object-cover opacity-70 brightness-105 transition-opacity duration-700"
           />
         </div>
       )}
@@ -107,9 +103,12 @@ export const NegativityBar = ({
       <div className="px-1 mt-1">
         <div className="relative pt-8 pb-2">
 
-          {/* CAPSULE (Your Level) */}
+          {/* CAPSULE — moves + fades exactly with dot */}
           <div
-            className="absolute -top-5 -translate-x-1/2 z-[999]"
+            className={cn(
+              "absolute -top-5 -translate-x-1/2 z-[999] opacity-0",
+              animated && "transition-all duration-700 ease-out opacity-100"
+            )}
             style={{ left: `${clampedLabelPos}%` }}
           >
             <div className="bg-card/95 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-medium border border-border shadow whitespace-nowrap min-w-[70px] text-center">
@@ -120,8 +119,8 @@ export const NegativityBar = ({
           {/* DOT */}
           <div
             className={cn(
-              "absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-20",
-              animated && "transition-all duration-700 ease-out"
+              "absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-20 opacity-0",
+              animated && "transition-all duration-700 ease-out opacity-100"
             )}
             style={{ left: `${displayPosition}%` }}
           >
@@ -133,22 +132,24 @@ export const NegativityBar = ({
           {/* GRADIENT BAR */}
           <div className="absolute inset-x-0 top-3 h-4">
             <div className="absolute inset-0 bg-card border border-border/50 rounded-full p-0.5 shadow-sm">
-              <div className="w-full h-full rounded-full bg-gradient-to-r 
+              <div
+                className="
+                  w-full h-full rounded-full shadow-inner bg-gradient-to-r 
                   from-[#4ade80]
                   via-[#facc15] via-40%
                   via-[#fb923c] via-70%
                   to-[#ef4444]
-                  shadow-inner relative overflow-hidden
-                ">
+                  relative overflow-hidden
+                "
+              >
                 <div className="absolute inset-0 bg-gradient-to-b from-white/30 to-transparent h-1/2" />
               </div>
             </div>
           </div>
-
         </div>
 
-        {/* LABELS */}
-        <div className="flex justify-between mt-2 text-xs font-medium text-muted-foreground select-none">
+        {/* LABELS — closer to bar */}
+        <div className="flex justify-between mt-1 text-xs font-medium text-muted-foreground select-none">
           <span>Low</span>
           <span>Normal</span>
           <span>Medium</span>
@@ -157,7 +158,7 @@ export const NegativityBar = ({
 
         {/* ==== LEVEL DESCRIPTION BOX ==== */}
         <div className="mt-4 px-1">
-          <div className="bg-card/70 border border-border/40 rounded-xl p-4 shadow-sm space-y-1">
+          <div className="bg-card/70 border border-border/40 rounded-xl p-4 shadow-sm space-y-1 text-left">
             <p className="text-foreground font-semibold text-sm">{levelTitle}</p>
             <p className="text-foreground text-xs leading-relaxed">
               {levelBody}
@@ -165,7 +166,6 @@ export const NegativityBar = ({
           </div>
         </div>
       </div>
-
     </div>
   );
 };
