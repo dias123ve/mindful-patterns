@@ -6,7 +6,9 @@ import { PayPalButton } from "@/components/payments/PayPalButton";
 
 const Checkout = () => {
   const navigate = useNavigate();
+
   const [amount, setAmount] = useState<number | null>(null);
+  const [title, setTitle] = useState<string>("");
 
   useEffect(() => {
     // Check quiz submission
@@ -17,7 +19,10 @@ const Checkout = () => {
       return;
     }
 
-    // Check chosen purchase type
+    // Check discount state
+    const discountExpired = sessionStorage.getItem("discount_expired") === "true";
+
+    // Get purchase type (from OfferSection)
     const purchaseType = sessionStorage.getItem("purchase_type");
 
     if (!purchaseType) {
@@ -26,13 +31,25 @@ const Checkout = () => {
       return;
     }
 
-    // Pricing logic
-    if (purchaseType === "single") setAmount(17);
-    if (purchaseType === "bundle") setAmount(18);
-    if (purchaseType === "full_series") setAmount(70);
+    // Determine dynamic price
+    if (purchaseType === "single") {
+      setTitle("Main Challenge Guide");
+      setAmount(discountExpired ? 20 : 12);
+    }
+
+    if (purchaseType === "bundle") {
+      setTitle("Complete Personalized Bundle (3 ebooks)");
+      setAmount(discountExpired ? 29 : 18);
+    }
+
+    if (purchaseType === "full_series") {
+      setTitle("Full Self Series (16 ebooks)");
+      setAmount(discountExpired ? 99 : 70);
+    }
   }, [navigate]);
 
-  if (amount === null) return <p className="p-6">Loading checkout…</p>;
+  if (amount === null)
+    return <p className="p-6">Loading checkout…</p>;
 
   return (
     <div className="min-h-screen bg-gradient-hero">
@@ -55,7 +72,7 @@ const Checkout = () => {
               Complete Your Purchase
             </h1>
             <p className="text-muted-foreground">
-              Secure checkout for your personalized ebook
+              Secure checkout for your personalized ebook(s)
             </p>
           </div>
 
@@ -65,10 +82,12 @@ const Checkout = () => {
 
             <div className="flex items-center justify-between py-3 border-b border-border">
               <span className="text-muted-foreground">
-                Personalized MindProfile Ebook
+                {title}
               </span>
               <div className="text-right">
-                <span className="font-semibold text-foreground">${amount}</span>
+                <span className="font-semibold text-foreground">
+                  ${amount}
+                </span>
               </div>
             </div>
 
@@ -80,7 +99,7 @@ const Checkout = () => {
             </div>
           </div>
 
-          {/* ⭐ PAYPAL PAYMENT BUTTON */}
+          {/* PayPal Payment */}
           <div className="bg-card rounded-2xl p-6 shadow-soft animate-fade-in-up">
             <h2 className="font-semibold text-foreground mb-4">
               Pay Securely with PayPal
@@ -91,10 +110,9 @@ const Checkout = () => {
               onSuccess={(details) => {
                 console.log("Payment success:", details);
 
-                // Clear quiz flag
+                // Clear quiz state
                 sessionStorage.removeItem("quiz_submission_id");
 
-                // Redirect
                 navigate("/thank-you");
               }}
             />
