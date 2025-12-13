@@ -10,11 +10,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Save, Loader2, Info } from "lucide-react";
+import { Save, Loader2, Info, Mail } from "lucide-react";
 import { toast } from "sonner";
 
 interface EmailTemplate {
   id: string;
+  sender_name: string;
+  sender_email: string;
   subject: string;
   body_template: string;
 }
@@ -25,12 +27,14 @@ const EmailSettingsPage = () => {
   const [saving, setSaving] = useState(false);
 
   const [formData, setFormData] = useState({
+    sender_name: "",
+    sender_email: "",
     subject: "",
     body_template: "",
   });
 
   // ===============================
-  // LOAD SINGLE TEMPLATE
+  // LOAD SINGLE GLOBAL TEMPLATE
   // ===============================
   useEffect(() => {
     fetchTemplate();
@@ -50,12 +54,16 @@ const EmailSettingsPage = () => {
       if (data) {
         setTemplate(data);
         setFormData({
+          sender_name: data.sender_name,
+          sender_email: data.sender_email,
           subject: data.subject,
           body_template: data.body_template,
         });
       } else {
         setTemplate(null);
         setFormData({
+          sender_name: "MindProfile",
+          sender_email: "hello@mymindprofile.com",
           subject: "",
           body_template: "",
         });
@@ -78,6 +86,8 @@ const EmailSettingsPage = () => {
         const { error } = await supabase
           .from("email_templates")
           .update({
+            sender_name: formData.sender_name,
+            sender_email: formData.sender_email,
             subject: formData.subject,
             body_template: formData.body_template,
           })
@@ -86,6 +96,8 @@ const EmailSettingsPage = () => {
         if (error) throw error;
       } else {
         const { error } = await supabase.from("email_templates").insert({
+          sender_name: formData.sender_name,
+          sender_email: formData.sender_email,
           subject: formData.subject,
           body_template: formData.body_template,
           is_active: true,
@@ -120,13 +132,55 @@ const EmailSettingsPage = () => {
           Email Template
         </h1>
         <p className="text-muted-foreground mt-1">
-          Single delivery email used for all packages
+          Global delivery email for all packages
         </p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* FORM */}
         <div className="lg:col-span-2 space-y-6">
+          {/* Sender */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Mail className="h-5 w-5 text-primary" />
+                Sender Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-4 md:grid-cols-2">
+              <div>
+                <Label>Sender Name</Label>
+                <Input
+                  value={formData.sender_name}
+                  onChange={(e) =>
+                    setFormData((p) => ({
+                      ...p,
+                      sender_name: e.target.value,
+                    }))
+                  }
+                  placeholder="MindProfile"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label>Sender Email</Label>
+                <Input
+                  type="email"
+                  value={formData.sender_email}
+                  onChange={(e) =>
+                    setFormData((p) => ({
+                      ...p,
+                      sender_email: e.target.value,
+                    }))
+                  }
+                  placeholder="hello@mymindprofile.com"
+                  className="mt-1"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Content */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Email Content</CardTitle>
