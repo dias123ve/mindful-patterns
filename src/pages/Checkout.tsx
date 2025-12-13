@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Brain } from "lucide-react";
+import { Brain, Pencil, Check } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { PayPalButton } from "@/components/payments/PayPalButton";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 type PurchaseType = "single" | "bundle" | "full_series";
 
@@ -14,6 +16,11 @@ const Checkout = () => {
   const [title, setTitle] = useState("");
   const [orderId, setOrderId] = useState<string | null>(null);
   const [purchaseType, setPurchaseType] = useState<PurchaseType | null>(null);
+
+  // email handling
+  const [email, setEmail] = useState("");
+  const [tempEmail, setTempEmail] = useState("");
+  const [editingEmail, setEditingEmail] = useState(false);
 
   // guard supaya order tidak dibuat dua kali
   const orderCreatedRef = useRef(false);
@@ -82,6 +89,9 @@ const Checkout = () => {
         return;
       }
 
+      setEmail(submission.email);
+      setTempEmail(submission.email);
+
       // ===============================
       // CREATE ORDER (PENDING)
       // ===============================
@@ -111,6 +121,29 @@ const Checkout = () => {
 
     init();
   }, [navigate]);
+
+  const saveEmail = async () => {
+    if (!tempEmail.includes("@")) {
+      toast.error("Please enter a valid email address.");
+      return;
+    }
+
+    if (!orderId) return;
+
+    const { error } = await supabase
+      .from("orders")
+      .update({ user_email: tempEmail.trim() })
+      .eq("id", orderId);
+
+    if (error) {
+      toast.error("Failed to update email. Please try again.");
+      return;
+    }
+
+    setEmail(tempEmail.trim());
+    setEditingEmail(false);
+    toast.success("Delivery email updated.");
+  };
 
   if (amount === null || !purchaseType || !orderId) {
     return <p className="p-6">Preparing checkout…</p>;
@@ -143,7 +176,9 @@ const Checkout = () => {
 
           {/* Order Summary */}
           <div className="bg-card rounded-2xl p-6 shadow-soft mb-6 animate-fade-in-up">
-            <h2 className="font-semibold text-foreground mb-4">Order Summary</h2>
+            <h2 className="font-semibold text-foreground mb-4">
+              Order Summary
+            </h2>
 
             <div className="flex items-center justify-between py-3 border-b border-border">
               <span className="text-muted-foreground">{title}</span>
@@ -156,6 +191,57 @@ const Checkout = () => {
                 ${amount}.00
               </span>
             </div>
+          </div>
+
+          {/* Delivery Email */}
+          <div className="bg-card rounded-2xl p-6 shadow-soft mb-6 animate-fade-in-up">
+            <h2 className="font-semibold text-foreground mb-2">
+              Delivery Email
+            </h2>
+
+            {!editingEmail ? (
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm text-muted-foreground">{email}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Your guides will be sent to this email immediately after
+                    payment.
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setEditingEmail(true)}
+                >
+                  <Pencil className="h-4 w-4 mr-1" />
+                  Edit
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <Input
+                  value={tempEmail}
+                  onChange={(e) => setTempEmail(e.target.value)}
+                  placeholder="Enter your email"
+                />
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={saveEmail}>
+                    <Check className="h-4 w-4 mr-1" />
+                    Save
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setTempEmail(email);
+                      setEditingEmail(false);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* PayPal */}
@@ -175,12 +261,11 @@ const Checkout = () => {
                     return;
                   }
 
-                  // Update order with PayPal Order ID
                   await supabase
                     .from("orders")
                     .update({
                       paypal_order_id: paypalOrderId,
-                      payment_status: "paid", // webhook nanti jadi source of truth
+                      payment_status: "paid",
                     })
                     .eq("id", orderId);
 
