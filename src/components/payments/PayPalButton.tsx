@@ -28,6 +28,7 @@ export function PayPalButton({ amount, onSuccess }: PayPalButtonProps) {
         style={{ layout: "vertical" }}
         createOrder={(_, actions) => {
           return actions.order.create({
+            intent: "CAPTURE",
             purchase_units: [
               {
                 amount: {
@@ -35,6 +36,10 @@ export function PayPalButton({ amount, onSuccess }: PayPalButtonProps) {
                 },
               },
             ],
+            // 🔒 DIGITAL PRODUCT → NO SHIPPING
+            application_context: {
+              shipping_preference: "NO_SHIPPING",
+            },
           });
         }}
         onApprove={(data, actions) => {
@@ -44,10 +49,13 @@ export function PayPalButton({ amount, onSuccess }: PayPalButtonProps) {
 
           return actions.order.capture().then((details) => {
             onSuccess?.({
-              paypalOrderId: data.orderID, // ⭐ INI YANG DIPAKAI BACKEND
+              paypalOrderId: data.orderID, // dipakai backend
               captureDetails: details,
             });
           });
+        }}
+        onError={(err) => {
+          console.error("PayPal error:", err);
         }}
       />
     </PayPalScriptProvider>
