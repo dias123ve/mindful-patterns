@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 const ThankYou = () => {
   const [purchaseType, setPurchaseType] = useState<string | null>(null);
   const [components, setComponents] = useState<any[]>([]);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
 
   useEffect(() => {
     const type = sessionStorage.getItem("purchase_type");
@@ -19,19 +20,22 @@ const ThankYou = () => {
 
     const stored = sessionStorage.getItem("guide_components");
     if (stored) setComponents(JSON.parse(stored));
+
+    const email = sessionStorage.getItem("user_email");
+    setUserEmail(email);
   }, []);
 
   const getPurchasedDescription = () => {
     if (purchaseType === "single") {
-      return "Your personalized challenge guide ebook";
+      return "your personalized Challenge Guide";
     }
     if (purchaseType === "bundle") {
-      return "Your 3-ebook personalized bundle";
+      return "your 3-ebook Personalized Bundle";
     }
     if (purchaseType === "full_series") {
-      return "Your complete 16-ebook Self Series collection";
+      return "your complete 16-ebook Self Series collection";
     }
-    return "Your personalized ebook package";
+    return "your personalized ebook package";
   };
 
   return (
@@ -45,15 +49,14 @@ const ThankYou = () => {
 
           {/* Heading */}
           <h1 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-4 animate-fade-in-up">
-            Thank You for Your Purchase!
+            Thank You for Your Purchase
           </h1>
 
           <p
             className="text-muted-foreground mb-8 animate-fade-in-up"
             style={{ animationDelay: "0.1s" }}
           >
-            {getPurchasedDescription()} is being prepared and will be sent to your
-            email shortly.
+            {getPurchasedDescription()} is now being prepared and delivered.
           </p>
 
           {/* Email Notice */}
@@ -64,12 +67,30 @@ const ThankYou = () => {
             <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
               <Mail className="h-6 w-6 text-primary" />
             </div>
+
             <h2 className="font-semibold text-foreground mb-2">
-              Check Your Inbox
+              Delivery in Progress
             </h2>
-            <p className="text-sm text-muted-foreground">
-              We've sent your download link to your email address.
-              Check your spam folder if you don’t see it within a few minutes.
+
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Your guides will be sent to
+              {userEmail ? (
+                <>
+                  {" "}
+                  <span className="font-medium text-foreground">
+                    {userEmail}
+                  </span>
+                </>
+              ) : (
+                " your email address"
+              )}
+              .  
+              <br />
+              Please allow up to <b>10 minutes</b> for delivery.
+            </p>
+
+            <p className="text-xs text-muted-foreground mt-3">
+              If you don’t see the email, check your Spam or Promotions folder.
             </p>
           </div>
 
@@ -89,7 +110,7 @@ const ThankYou = () => {
                   <li key={i} className="flex items-start gap-2">
                     <CheckCircle2 className="h-4 w-4 text-success mt-0.5 flex-shrink-0" />
                     <span>
-                      <b>{c.name}</b> — {c.includes || `${c.type}: ${c.name}`}
+                      <b>{c.name}</b>
                     </span>
                   </li>
                 ))}
@@ -119,7 +140,7 @@ const ThankYou = () => {
               </span>
             </div>
             <p className="text-xs text-muted-foreground">
-              Questions? Contact us at support@mindprofile.com
+              Need help? Contact us at <b>arsippenma@gmail.com</b>
             </p>
           </div>
         </div>
