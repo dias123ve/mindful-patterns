@@ -2,16 +2,17 @@ import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 
 interface PayPalButtonProps {
   amount: number;
-  onSuccess?: (details: any) => void;
+  onSuccess?: (payload: {
+    paypalOrderId: string;
+    captureDetails: any;
+  }) => void;
 }
 
 export function PayPalButton({ amount, onSuccess }: PayPalButtonProps) {
   const clientId = import.meta.env.VITE_PAYPAL_CLIENT_ID;
 
-  console.log("PAYPAL CLIENT ID →", clientId); // debugging
-
   if (!clientId) {
-    console.error("Missing PayPal Client ID in env: VITE_PAYPAL_CLIENT_ID");
+    console.error("Missing PayPal Client ID");
     return <div>Payment system is not configured.</div>;
   }
 
@@ -20,24 +21,32 @@ export function PayPalButton({ amount, onSuccess }: PayPalButtonProps) {
       options={{
         "client-id": clientId,
         currency: "USD",
-        intent: "capture", // ⭐ penting untuk sandbox stabil!
+        intent: "capture",
       }}
     >
       <PayPalButtons
         style={{ layout: "vertical" }}
-        createOrder={(data, actions) => {
+        createOrder={(_, actions) => {
           return actions.order.create({
             purchase_units: [
               {
-                amount: { value: amount.toString() },
+                amount: {
+                  value: amount.toString(),
+                },
               },
             ],
           });
         }}
         onApprove={(data, actions) => {
-          return actions.order!.capture().then((details) => {
-            console.log("Payment completed:", details);
-            if (onSuccess) onSuccess(details);
+          if (!actions.order) {
+            throw new Error("PayPal order not found");
+          }
+
+          return actions.order.capture().then((details) => {
+            onSuccess?.({
+              paypalOrderId: data.orderID, // ⭐ INI YANG DIPAKAI BACKEND
+              captureDetails: details,
+            });
           });
         }}
       />
