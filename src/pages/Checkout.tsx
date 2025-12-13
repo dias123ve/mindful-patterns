@@ -2,54 +2,112 @@ import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Brain } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { PayPalButton } from "@/components/payments/PayPalButton";
+
+type PurchaseType = "single" | "bundle" | "full_series";
 
 const Checkout = () => {
   const navigate = useNavigate();
 
   const [amount, setAmount] = useState<number | null>(null);
-  const [title, setTitle] = useState<string>("");
+  const [title, setTitle] = useState("");
+  const [orderId, setOrderId] = useState<string | null>(null);
+  const [purchaseType, setPurchaseType] = useState<PurchaseType | null>(null);
 
+  // ===============================
+  // INIT CHECKOUT
+  // ===============================
   useEffect(() => {
-    // Check quiz submission
-    const submissionId = sessionStorage.getItem("quiz_submission_id");
-    if (!submissionId) {
-      toast.error("Please complete the quiz first.");
-      navigate("/quiz");
-      return;
-    }
+    const init = async () => {
+      const submissionId = sessionStorage.getItem("quiz_submission_id");
+      const storedPurchaseType = sessionStorage.getItem("purchase_type") as PurchaseType | null;
+      const discountExpired = sessionStorage.getItem("discount_expired") === "true";
 
-    // Check discount state
-    const discountExpired = sessionStorage.getItem("discount_expired") === "true";
+      if (!submissionId) {
+        toast.error("Please complete the quiz first.");
+        navigate("/quiz");
+        return;
+      }
 
-    // Get purchase type (from OfferSection)
-    const purchaseType = sessionStorage.getItem("purchase_type");
+      if (!storedPurchaseType) {
+        toast.error("Please select an offer first.");
+        navigate("/");
+        return;
+      }
 
-    if (!purchaseType) {
-      toast.error("Please select an offer first.");
-      navigate("/");
-      return;
-    }
+      setPurchaseType(storedPurchaseType);
 
-    // Determine dynamic price
-    if (purchaseType === "single") {
-      setTitle("Main Challenge Guide");
-      setAmount(discountExpired ? 20 : 12);
-    }
+      // ===============================
+      // PRICE LOGIC
+      // ===============================
+      let price = 0;
+      let productTitle = "";
 
-    if (purchaseType === "bundle") {
-      setTitle("Complete Personalized Bundle (3 ebooks)");
-      setAmount(discountExpired ? 29 : 18);
-    }
+      if (storedPurchaseType === "single") {
+        price = discountExpired ? 20 : 12;
+        productTitle = "Main Challenge Guide";
+      }
 
-    if (purchaseType === "full_series") {
-      setTitle("Full Self Series (16 ebooks)");
-      setAmount(discountExpired ? 99 : 70);
-    }
+      if (storedPurchaseType === "bundle") {
+        price = discountExpired ? 29 : 18;
+        productTitle = "Complete Personalized Bundle (3 ebooks)";
+      }
+
+      if (storedPurchaseType === "full_series") {
+        price = discountExpired ? 99 : 70;
+        productTitle = "Full Self Series (16 ebooks)";
+      }
+
+      setAmount(price);
+      setTitle(productTitle);
+
+      // ===============================
+      // LOAD EMAIL FROM QUIZ
+      // ===============================
+      const { data: submission, error: submissionError } = await supabase
+        .from("quiz_submissions")
+        .select("email")
+        .eq("id", submissionId)
+        .single();
+
+      if (submissionError || !submission?.email) {
+        toast.error("Email not found. Please enter your email again.");
+        navigate("/enter-email-form");
+        return;
+      }
+
+      // ===============================
+      // CREATE ORDER (PENDING)
+      // ===============================
+      const { data: order, error: orderError } = await supabase
+        .from("orders")
+        .insert({
+          quiz_submission_id: submissionId,
+          user_email: submission.email,
+          purchase_type: storedPurchaseType,
+          amount: price,
+          payment_status: "pending",
+          email_sent: false,
+        })
+        .select()
+        .single();
+
+      if (orderError || !order) {
+        console.error(orderError);
+        toast.error("Failed to create order. Please try again.");
+        return;
+      }
+
+      setOrderId(order.id);
+    };
+
+    init();
   }, [navigate]);
 
-  if (amount === null)
-    return <p className="p-6">Loading checkout…</p>;
+  if (amount === null || !purchaseType || !orderId) {
+    return <p className="p-6">Preparing checkout…</p>;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-hero">
@@ -66,7 +124,7 @@ const Checkout = () => {
       {/* Main */}
       <main className="container mx-auto px-4 py-8 pb-16">
         <div className="max-w-lg mx-auto">
-
+          {/* Title */}
           <div className="text-center mb-8 animate-fade-in">
             <h1 className="text-3xl font-display font-bold text-foreground mb-2">
               Complete Your Purchase
@@ -81,14 +139,8 @@ const Checkout = () => {
             <h2 className="font-semibold text-foreground mb-4">Order Summary</h2>
 
             <div className="flex items-center justify-between py-3 border-b border-border">
-              <span className="text-muted-foreground">
-                {title}
-              </span>
-              <div className="text-right">
-                <span className="font-semibold text-foreground">
-                  ${amount}
-                </span>
-              </div>
+              <span className="text-muted-foreground">{title}</span>
+              <span className="font-semibold text-foreground">${amount}</span>
             </div>
 
             <div className="flex items-center justify-between py-3">
@@ -99,7 +151,7 @@ const Checkout = () => {
             </div>
           </div>
 
-          {/* PayPal Payment */}
+          {/* PayPal */}
           <div className="bg-card rounded-2xl p-6 shadow-soft animate-fade-in-up">
             <h2 className="font-semibold text-foreground mb-4">
               Pay Securely with PayPal
@@ -107,13 +159,32 @@ const Checkout = () => {
 
             <PayPalButton
               amount={amount}
-              onSuccess={(details) => {
-                console.log("Payment success:", details);
+              onSuccess={async (details) => {
+                try {
+                  const paypalOrderId = details?.id;
 
-                // Clear quiz state
-                sessionStorage.removeItem("quiz_submission_id");
+                  if (!paypalOrderId) {
+                    toast.error("Payment succeeded but PayPal ID missing.");
+                    return;
+                  }
 
-                navigate("/thank-you");
+                  // Save PayPal Order ID
+                  await supabase
+                    .from("orders")
+                    .update({
+                      paypal_order_id: paypalOrderId,
+                      payment_status: "paid",
+                    })
+                    .eq("id", orderId);
+
+                  // Clear quiz session
+                  sessionStorage.removeItem("quiz_submission_id");
+
+                  navigate("/thank-you");
+                } catch (err) {
+                  console.error(err);
+                  toast.error("Payment completed, but failed to finalize order.");
+                }
               }}
             />
           </div>
