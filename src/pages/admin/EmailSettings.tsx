@@ -10,18 +10,30 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Save, Loader2, Info, Mail } from "lucide-react";
+import { Save, Loader2, Mail, Info } from "lucide-react";
 import { toast } from "sonner";
+
+type PackageKey = "single" | "bundle" | "full_series";
 
 interface EmailTemplate {
   id: string;
-  sender_name: string;
+  package_key: PackageKey;
   sender_email: string;
+  sender_name: string;
   subject: string;
   body_template: string;
 }
 
+const PACKAGE_OPTIONS: { key: PackageKey; label: string }[] = [
+  { key: "single", label: "Single – Challenge Guide" },
+  { key: "bundle", label: "Bundle – Elevated + Challenge" },
+  { key: "full_series", label: "Full Series – 16 Guides" },
+];
+
 const EmailSettingsPage = () => {
+  const [selectedPackage, setSelectedPackage] =
+    useState<PackageKey>("single");
+
   const [template, setTemplate] = useState<EmailTemplate | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -34,18 +46,20 @@ const EmailSettingsPage = () => {
   });
 
   // ===============================
-  // LOAD SINGLE GLOBAL TEMPLATE
+  // LOAD TEMPLATE PER PACKAGE
   // ===============================
   useEffect(() => {
-    fetchTemplate();
-  }, []);
+    fetchTemplate(selectedPackage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedPackage]);
 
-  const fetchTemplate = async () => {
+  const fetchTemplate = async (pkg: PackageKey) => {
     setLoading(true);
     try {
       const { data, error } = await supabase
         .from("email_templates")
         .select("*")
+        .eq("package_key", pkg)
         .eq("is_active", true)
         .maybeSingle();
 
@@ -60,10 +74,11 @@ const EmailSettingsPage = () => {
           body_template: data.body_template,
         });
       } else {
+        // reset form if template not exist yet
         setTemplate(null);
         setFormData({
-          sender_name: "MindProfile",
-          sender_email: "hello@mymindprofile.com",
+          sender_name: "",
+          sender_email: "",
           subject: "",
           body_template: "",
         });
@@ -81,6 +96,7 @@ const EmailSettingsPage = () => {
   // ===============================
   const handleSave = async () => {
     setSaving(true);
+
     try {
       if (template) {
         const { error } = await supabase
@@ -96,6 +112,7 @@ const EmailSettingsPage = () => {
         if (error) throw error;
       } else {
         const { error } = await supabase.from("email_templates").insert({
+          package_key: selectedPackage,
           sender_name: formData.sender_name,
           sender_email: formData.sender_email,
           subject: formData.subject,
@@ -104,7 +121,7 @@ const EmailSettingsPage = () => {
         });
 
         if (error) throw error;
-        fetchTemplate();
+        fetchTemplate(selectedPackage);
       }
 
       toast.success("Email template saved");
@@ -129,12 +146,32 @@ const EmailSettingsPage = () => {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-display font-bold text-foreground">
-          Email Template
+          Email Templates
         </h1>
         <p className="text-muted-foreground mt-1">
-          Global delivery email for all packages
+          Configure email delivery per product package
         </p>
       </div>
+
+      {/* Package Selector */}
+      <Card>
+        <CardContent className="pt-6">
+          <Label>Email Template For</Label>
+          <select
+            value={selectedPackage}
+            onChange={(e) =>
+              setSelectedPackage(e.target.value as PackageKey)
+            }
+            className="mt-2 w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+          >
+            {PACKAGE_OPTIONS.map((opt) => (
+              <option key={opt.key} value={opt.key}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* FORM */}
@@ -147,35 +184,37 @@ const EmailSettingsPage = () => {
                 Sender Information
               </CardTitle>
             </CardHeader>
-            <CardContent className="grid gap-4 md:grid-cols-2">
-              <div>
-                <Label>Sender Name</Label>
-                <Input
-                  value={formData.sender_name}
-                  onChange={(e) =>
-                    setFormData((p) => ({
-                      ...p,
-                      sender_name: e.target.value,
-                    }))
-                  }
-                  placeholder="MindProfile"
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label>Sender Email</Label>
-                <Input
-                  type="email"
-                  value={formData.sender_email}
-                  onChange={(e) =>
-                    setFormData((p) => ({
-                      ...p,
-                      sender_email: e.target.value,
-                    }))
-                  }
-                  placeholder="hello@mymindprofile.com"
-                  className="mt-1"
-                />
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <Label>Sender Name</Label>
+                  <Input
+                    value={formData.sender_name}
+                    onChange={(e) =>
+                      setFormData((p) => ({
+                        ...p,
+                        sender_name: e.target.value,
+                      }))
+                    }
+                    placeholder="MindProfile"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label>Sender Email</Label>
+                  <Input
+                    type="email"
+                    value={formData.sender_email}
+                    onChange={(e) =>
+                      setFormData((p) => ({
+                        ...p,
+                        sender_email: e.target.value,
+                      }))
+                    }
+                    placeholder="hello@mindprofile.com"
+                    className="mt-1"
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -202,7 +241,7 @@ const EmailSettingsPage = () => {
               </div>
 
               <div>
-                <Label>Email Body</Label>
+                <Label>Email Body (HTML / Template)</Label>
                 <Textarea
                   rows={14}
                   className="mt-1 font-mono text-sm"
@@ -213,11 +252,15 @@ const EmailSettingsPage = () => {
                       body_template: e.target.value,
                     }))
                   }
-                  placeholder={`Thank you for your purchase.
+                  placeholder={`Hi {{user_name}},
+
+Thank you for completing your purchase.
 
 You’ve unlocked the {{package_name}}.
 
 {{delivery_content}}
+
+If you need help, contact us at {{support_email}}.
 
 — MindProfile`}
                 />
@@ -251,8 +294,10 @@ You’ve unlocked the {{package_name}}.
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               {[
-                ["{{package_name}}", "Resolved package name"],
-                ["{{delivery_content}}", "Download links or access content"],
+                ["{{user_name}}", "User email or name"],
+                ["{{package_name}}", "Purchased package name"],
+                ["{{delivery_content}}", "Download links / access buttons"],
+                ["{{support_email}}", "Sender support email"],
               ].map(([key, desc]) => (
                 <div key={key}>
                   <div className="p-2 bg-secondary/50 rounded font-mono text-xs">
