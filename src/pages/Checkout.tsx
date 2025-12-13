@@ -17,12 +17,12 @@ const Checkout = () => {
   const [orderId, setOrderId] = useState<string | null>(null);
   const [purchaseType, setPurchaseType] = useState<PurchaseType | null>(null);
 
-  // email handling
+  // Email handling
   const [email, setEmail] = useState("");
   const [tempEmail, setTempEmail] = useState("");
   const [editingEmail, setEditingEmail] = useState(false);
 
-  // guard supaya order tidak dibuat dua kali
+  // Guard supaya order tidak dibuat dua kali
   const orderCreatedRef = useRef(false);
 
   useEffect(() => {
@@ -244,11 +244,15 @@ const Checkout = () => {
             )}
           </div>
 
-          {/* PayPal */}
+          {/* Payment */}
           <div className="bg-card rounded-2xl p-6 shadow-soft animate-fade-in-up">
-            <h2 className="font-semibold text-foreground mb-4">
-              Pay Securely with PayPal
+            <h2 className="font-semibold text-foreground mb-1">
+              Pay with PayPal or Credit Card
             </h2>
+            <p className="text-xs text-muted-foreground mb-4">
+              For card payments, billing details may be required for verification.
+              No physical address is used or stored.
+            </p>
 
             <PayPalButton
               amount={amount}
