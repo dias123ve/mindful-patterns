@@ -2,18 +2,17 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "https://esm.sh/resend";
 
+const MAX_EMAIL_ATTEMPTS = 3;
+
 serve(async (req) => {
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+  );
+
+  const resend = new Resend(Deno.env.get("RESEND_API_KEY")!);
+
   try {
-    // =========================
-    // INIT
-    // =========================
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
-
-    const resend = new Resend(Deno.env.get("RESEND_API_KEY")!);
-
     const { order_id } = await req.json();
 
     if (!order_id) {
@@ -23,16 +22,19 @@ serve(async (req) => {
     // =========================
     // LOAD ORDER
     // =========================
-    const { data: order, error: orderError } = await supabase
+    const { data: order } = await supabase
       .from("orders")
       .select("*")
       .eq("id", order_id)
       .single();
 
-    if (orderError || !order) {
-      throw new Error("Order not found");
+    if (!order) {
+      return new Response("Order not found", { status: 404 });
     }
 
+    // =========================
+    // GUARDS
+    // =========================
     if (order.payment_status !== "paid") {
       return new Response("Order not paid", { status: 200 });
     }
@@ -41,36 +43,51 @@ serve(async (req) => {
       return new Response("Email already sent", { status: 200 });
     }
 
+    if (order.email_attempts >= MAX_EMAIL_ATTEMPTS) {
+      return new Response("Email retry limit reached", { status: 200 });
+    }
+
+    if (!order.user_email) {
+      await supabase
+        .from("orders")
+        .update({
+          email_attempts: order.email_attempts + 1,
+          last_email_error: "user_email is undefined",
+          last_email_attempt_at: new Date().toISOString(),
+        })
+        .eq("id", order.id);
+
+      return new Response("User email missing", { status: 400 });
+    }
+
     // =========================
-    // LOAD EMAIL TEMPLATE
+    // LOAD TEMPLATE
     // =========================
-    const { data: template, error: templateError } = await supabase
+    const { data: template } = await supabase
       .from("email_templates")
       .select("*")
       .eq("package_key", order.purchase_type)
       .eq("is_active", true)
       .single();
 
-    if (templateError || !template) {
+    if (!template) {
       throw new Error("Email template not found");
     }
 
     // =========================
-    // BUILD EMAIL CONTENT
+    // BUILD EMAIL
     // =========================
-    const deliveryContent = buildDeliveryContent(order.purchase_type);
-
     const html = renderTemplate(template.body_template, {
       user_name: order.user_email,
       package_name: getPackageName(order.purchase_type),
-      delivery_content: deliveryContent,
+      delivery_content: buildDeliveryContent(order.purchase_type),
       support_email: "support.mindprofile@gmail.com",
     });
 
     // =========================
     // SEND EMAIL
     // =========================
-    const emailResult = await resend.emails.send({
+    await resend.emails.send({
       from: `${template.sender_name} <${template.sender_email}>`,
       to: order.user_email,
       subject: template.subject,
@@ -78,30 +95,35 @@ serve(async (req) => {
     });
 
     // =========================
-    // LOG EMAIL
-    // =========================
-    await supabase.from("email_logs").insert({
-      to_email: order.user_email,
-      subject: template.subject,
-      message: html,
-      status: "sent",
-    });
-
-    // =========================
-    // MARK AS SENT
+    // SUCCESS UPDATE
     // =========================
     await supabase
       .from("orders")
-      .update({ email_sent: true })
+      .update({
+        email_sent: true,
+        email_attempts: order.email_attempts + 1,
+        last_email_error: null,
+        last_email_attempt_at: new Date().toISOString(),
+      })
       .eq("id", order.id);
 
-    return new Response(
-      JSON.stringify({ success: true, emailResult }),
-      { status: 200 }
-    );
-  } catch (err) {
+    return new Response("Email sent successfully", { status: 200 });
+  } catch (err: any) {
     console.error(err);
-    return new Response("Internal error", { status: 500 });
+
+    // fallback update if error
+    if (err?.order?.id) {
+      await supabase
+        .from("orders")
+        .update({
+          email_attempts: err.order.email_attempts + 1,
+          last_email_error: err.message,
+          last_email_attempt_at: new Date().toISOString(),
+        })
+        .eq("id", err.order.id);
+    }
+
+    return new Response("Email send failed", { status: 500 });
   }
 });
 
@@ -110,52 +132,23 @@ serve(async (req) => {
 // =========================
 
 function getPackageName(key: string) {
-  switch (key) {
-    case "single":
-      return "Challenge Guide";
-    case "bundle":
-      return "Personalized Guide Bundle";
-    case "full_series":
-      return "Full Self Series";
-    default:
-      return "Your Purchase";
-  }
+  return {
+    single: "Challenge Guide",
+    bundle: "Personalized Bundle",
+    full_series: "Full Self Series",
+  }[key] || "Your Purchase";
 }
 
-function buildDeliveryContent(packageKey: string) {
-  if (packageKey === "single") {
-    return `
-      <p>Your guide is ready:</p>
-      <a href="https://mymindprofile.com/download/challenge"
-         style="display:inline-block;padding:12px 20px;background:#111;color:#fff;border-radius:6px;text-decoration:none">
-        Download Your Challenge Guide
-      </a>
-    `;
-  }
-
-  if (packageKey === "bundle") {
-    return `
-      <p>You can access your personalized bundle here:</p>
-      <a href="https://mymindprofile.com/dashboard"
-         style="display:inline-block;padding:12px 20px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none">
-        Access Your Bundle
-      </a>
-    `;
-  }
-
+function buildDeliveryContent(key: string) {
   return `
-    <p>You now have full access to the complete 16-guide library.</p>
+    <p>Your content is ready.</p>
     <a href="https://mymindprofile.com/dashboard"
-       style="display:inline-block;padding:12px 20px;background:#6d28d9;color:#fff;border-radius:6px;text-decoration:none">
-      Open Your Full Library
+       style="padding:12px 20px;background:#111;color:#fff;border-radius:6px;text-decoration:none">
+       Access Your Content
     </a>
   `;
 }
 
 function renderTemplate(template: string, vars: Record<string, string>) {
-  let output = template;
-  for (const key in vars) {
-    output = output.replaceAll(`{{${key}}}`, vars[key]);
-  }
-  return output;
+  return template.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] || "");
 }
