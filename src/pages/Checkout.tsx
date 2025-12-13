@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Brain } from "lucide-react";
 import { toast } from "sonner";
@@ -15,14 +15,19 @@ const Checkout = () => {
   const [orderId, setOrderId] = useState<string | null>(null);
   const [purchaseType, setPurchaseType] = useState<PurchaseType | null>(null);
 
-  // ===============================
-  // INIT CHECKOUT
-  // ===============================
+  // guard supaya order tidak dibuat dua kali
+  const orderCreatedRef = useRef(false);
+
   useEffect(() => {
     const init = async () => {
+      if (orderCreatedRef.current) return;
+
       const submissionId = sessionStorage.getItem("quiz_submission_id");
-      const storedPurchaseType = sessionStorage.getItem("purchase_type") as PurchaseType | null;
-      const discountExpired = sessionStorage.getItem("discount_expired") === "true";
+      const storedPurchaseType = sessionStorage.getItem(
+        "purchase_type"
+      ) as PurchaseType | null;
+      const discountExpired =
+        sessionStorage.getItem("discount_expired") === "true";
 
       if (!submissionId) {
         toast.error("Please complete the quiz first.");
@@ -80,6 +85,8 @@ const Checkout = () => {
       // ===============================
       // CREATE ORDER (PENDING)
       // ===============================
+      orderCreatedRef.current = true;
+
       const { data: order, error: orderError } = await supabase
         .from("orders")
         .insert({
@@ -95,7 +102,7 @@ const Checkout = () => {
 
       if (orderError || !order) {
         console.error(orderError);
-        toast.error("Failed to create order. Please try again.");
+        toast.error("Failed to create order. Please refresh and try again.");
         return;
       }
 
@@ -159,38 +166,39 @@ const Checkout = () => {
 
             <PayPalButton
               amount={amount}
-              onSuccess={async (details) => {
+              onSuccess={async ({ paypalOrderId }) => {
                 try {
-                  const paypalOrderId = details?.id;
-
                   if (!paypalOrderId) {
-                    toast.error("Payment succeeded but PayPal ID missing.");
+                    toast.error(
+                      "Payment succeeded but PayPal Order ID missing."
+                    );
                     return;
                   }
 
-                  // Save PayPal Order ID
+                  // Update order with PayPal Order ID
                   await supabase
                     .from("orders")
                     .update({
                       paypal_order_id: paypalOrderId,
-                      payment_status: "paid",
+                      payment_status: "paid", // webhook nanti jadi source of truth
                     })
                     .eq("id", orderId);
 
-                  // Clear quiz session
                   sessionStorage.removeItem("quiz_submission_id");
-
                   navigate("/thank-you");
                 } catch (err) {
                   console.error(err);
-                  toast.error("Payment completed, but failed to finalize order.");
+                  toast.error(
+                    "Payment completed, but failed to finalize the order."
+                  );
                 }
               }}
             />
           </div>
 
           <p className="text-center text-xs text-muted-foreground mt-6">
-            By completing this purchase, you agree to our Terms of Service and Privacy Policy.
+            By completing this purchase, you agree to our Terms of Service and
+            Privacy Policy.
           </p>
         </div>
       </main>
